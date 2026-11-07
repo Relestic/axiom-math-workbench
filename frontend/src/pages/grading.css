@@ -1,3 +1,9 @@
+.answer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .grading-guide {
   display: flex;
   align-items: center;
@@ -41,6 +47,42 @@
 .grading-score.wrong {
   background: #ffebf0;
   color: #c21d4c;
+}
+.grading-score.ai {
+  background: #efeaff;
+  color: #5947d5;
+}
+.ai-review-details {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  background: #f7f5ff;
+  border: 1px solid #e6e0fb;
+}
+.ai-review-details h4 {
+  margin: 0 0 7px;
+  color: #4e43b8;
+  font-size: 10px;
+}
+.ai-review-details ul {
+  margin: 0 0 8px;
+  padding-left: 16px;
+  color: #626078;
+  font-size: 10.5px;
+  line-height: 1.7;
+}
+.ai-review-details li::marker {
+  color: #8272e8;
+}
+.ai-review-details p {
+  margin: 5px 0 0;
+  color: #8b879f;
+  font-size: 9.5px;
+  line-height: 1.6;
+}
+.ai-review-details strong {
+  color: #5f568f;
+  font-weight: 600;
 }
 .grading-score strong {
   font: 700 25px/1 var(--font-mono, monospace);

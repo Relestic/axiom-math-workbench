@@ -231,6 +231,7 @@ def submit_attempt(
     solution_viewed: bool = False,
     self_rating: str = "pending",
     idempotency_key: str | None = None,
+    feedback_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     exercise = _require_exercise(session, user, exercise_id)
     if idempotency_key:
@@ -270,7 +271,7 @@ def submit_attempt(
             solution_viewed or views.get("solution_view", 0) > 0
         ),
     }
-    feedback = build_feedback(exercise, answer_text, assistance)
+    feedback = feedback_override or build_feedback(exercise, answer_text, assistance)
     attempt = Attempt(
         user_id=user.id,
         exercise_id=exercise.id,

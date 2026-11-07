@@ -43,8 +43,8 @@
 
 ## 3. 练习与复盘
 
-- **负责范围**：模板/变式出题、提示、完整解答、作答提交、自动批改、反馈、错因、自评与复盘。
-- **对外接口**：`GET /api/v1/exercises`、`/hint`、`/solution`、`POST /api/v1/attempts`、`PATCH /api/v1/attempts/{id}`、`GET /api/v1/attempts`；批改结果字段 `status`、`score`、`feedback.criteria`、`feedback.correct`、`feedback.reference_answer`。
+- **负责范围**：模板/变式出题、提示、完整解答、AI 实时讨论、作答提交、AI 最终批改、反馈、错因、自评与复盘。**讨论不等于提交**：讨论不落库、不评分；只有提交答案才创建 Attempt。
+- **对外接口**：`GET /api/v1/exercises`、`/hint`、`/solution`、`POST /api/v1/attempts`、`PATCH /api/v1/attempts/{id}`、`GET /api/v1/attempts`；AI 讨论 `POST /api/v1/ai/exercises/discuss`；AI 提交 `POST /api/v1/ai/exercises/submit`。批改结果字段 `status`、`score`、`feedback.criteria`、`feedback.ai`、`feedback.reference_answer`。
 - **数据归属**：练习模块是 `Exercise` 与 `Attempt` 的唯一写入者；用户只能写自己的 Attempt。进度模块只读 Attempt 计算掌握度；个人记录模块只读 Attempt 生成笔记。
 - **验收**：计算题最终表达式错误返回 0 分与参考结果；无法解析不强行判错；证明题返回结构分和逐项覆盖，且 `needs_review=true`；幂等键重复提交返回同一 Attempt；越权读取返回 404。
 

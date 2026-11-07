@@ -2,6 +2,14 @@
 
 日期：2026-11-02。环境：Windows、Node.js 24.19.0、Codex 内置浏览器。
 
+## AI 讨论式练习（2026-11-07）
+
+- 练习页现在是两个按钮：**和 AI 讨论**、**提交答案**。讨论只调用 `/api/v1/ai/exercises/discuss`，不会创建 Attempt；提交才调用 `/api/v1/ai/exercises/submit`，用答案+讨论记录生成最终 AI 评语并写入一条 Attempt。
+- 实测讨论：AI 根据错误草稿指出“本题是 f(x)=2|x|，你的 x²/[0,1] 属于另一道题”，并追问左右差商。
+- 实测提交：AI 给出 90/100、连续性/左右差商优点、缺失条件和下一步；页面显示“AI 批改”及详情，Attempt 状态为 `ai_reviewed`。
+- 后端测试新增讨论不落库、提交落库、AI 反馈字段；**106 passed**；前端 **21/21**。
+- 截图：[AI 讨论后提交批改](ai-discussion.png)。
+
 ## 教材/证明排版修复（2026-11-07）
 
 - 根因：模块拆分后 `App.tsx` 直接加载 `modules/teaching`，绕过了原 `pages/Learning.tsx` 里的 `learning.css` 导入，导致教材定义、证明、练习页面共用样式丢失。
@@ -9,7 +17,7 @@
 - 实测：教材页恢复为两栏讲义+定义卡；证明页恢复 `260px + 797px` 网格和步骤导航。
 - 截图：[教材排版](layout-textbook.png)、[证明排版](layout-proof.png)。
 - 修复前备份：`backup/pre-layout-fix-20261107`（tag/branch）；修复后发布标签 `release/2026-11-07-layout-fix`。
-- 后端 **104 passed**，前端 **21/21**，在线构建通过。
+- 后端 **106 passed**，前端 **21/21**，在线构建通过。
 
 ## 用户接入 DeepSeek（2026-11-07）
 
@@ -17,7 +25,7 @@
 - 后端 `PUT /api/v1/ai/credentials` 保存 Fernet 加密凭据；`GET /api/v1/ai/status` 只返回 `source`、模型和末四位提示；`DELETE` 回退系统默认。
 - 真实 Key 实测：保存后 `/api/v1/ai/test` 返回 200、`source=user`、`provider=deepseek`；移除后回到 `source=system`。二维 `/api/v1/ai/plot` 也返回 200，将曲线改为 `cos(x)`。
 - UI 实测：表单保存后显示“已接入我的 Key · deepseek-chat · …7890”，移除后恢复“当前使用系统默认模型”。
-- 后端新增 `tests/test_ai_credentials.py`（加密、隔离、测试调用、移除）；后端 **104 passed**，前端 **21/21**。
+- 后端新增 `tests/test_ai_credentials.py`（加密、隔离、测试调用、移除）；后端 **106 passed**，前端 **21/21**。
 - 截图：[用户接入 DeepSeek](ai-user-key.png)。
 
 ## 业务模块拆分（2026-11-07）
@@ -31,7 +39,7 @@
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
 - 发布产物：`releases/Axiom-Windows-Full-20261107T081135Z.zip`，41,341,120 字节、4,190 个文件，由 `npm run package:windows` 生成。
-- 后端 **104 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
+- 后端 **106 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）
 
@@ -39,7 +47,7 @@
 - 证明题实测：`uniform-3` 的完整结构作答返回 100/100、5 项全部覆盖，页面标注“结构批改”；计算题 `primitive-2` 输入 `F(x)=exp(2*x)*(2*x-1)/4+C` 返回 100/100、“自动批改通过”和参考结果 `x*exp(2*x)`。
 - 错误最终表达式返回 0 分与参考结果；无法解析时保留 `needs_review`，不强行判错。
 - 新增根目录 `启动本地预览.cmd` / `停止本地预览.cmd`：单端口 `127.0.0.1:8080` 同时提供前端与 API，不依赖隧道、外网或系统代理；实测停止后重新启动、健康检查 200 均正常。
-- 后端测试 **104 passed**；前端 **21/21**；在线构建通过。
+- 后端测试 **106 passed**；前端 **21/21**；在线构建通过。
 - 截图：[证明题结构批改](grading-proof.png)、[计算题符号批改](grading-computation.png)。
 
 ## 完整 Windows 分享包（2026-11-07）
@@ -58,7 +66,7 @@
 - AI 交互实测：DeepSeek `POST /api/v1/ai/surface` 返回 200，将曲面改为 `sin(x)*cos(y)`，视角改为 60°/35°；页面实际更新。
 - 撤销、重置、表达式错误保护、AI 失败保留原场景已实现。
 - 后端新增 `SurfaceScene`/`SurfaceAIRequest` 与 `compile_surface_expression`；`test_surface_adapter.py` 覆盖表达式校验、未知符号拒绝、mock 三维接口。
-- 后端测试 **104 passed**；前端 21/21；构建通过。
+- 后端测试 **106 passed**；前端 21/21；构建通过。
 - 截图：[三维曲面](3d-surface.png)、[AI 改曲面](3d-surface-ai.png)。
 
 ## DeepSeek API 接入（2026-11-06）
@@ -66,7 +74,7 @@
 - 后端 `AXIOM_AI_PROVIDER=deepseek` 预设：默认 `https://api.deepseek.com` / `deepseek-chat`；支持 `deepseek-reasoner`（自动跳过 `temperature` / `response_format`）。
 - 适配器新增 JSON 空内容重试、402 余额不足提示、DeepSeek 错误正文截取；AI 状态返回 `provider_label` / `reasoner` / 有效 `json_mode`。
 - 新增 `POST /api/v1/ai/test` 真实连通性测试；前端图像工作区的“连接 AI”面板增加“测试连接”，并给出 DeepSeek 配置示例。
-- `backend/tests/test_deepseek_adapter.py` 用模拟 HTTP 响应覆盖 URL、鉴权头、JSON 参数、reasoner 降级和 402；后端 104 项测试通过。
+- `backend/tests/test_deepseek_adapter.py` 用模拟 HTTP 响应覆盖 URL、鉴权头、JSON 参数、reasoner 降级和 402；后端 106 项测试通过。
 - **真实 DeepSeek 已实测**（2026-11-06）：
   - `/api/v1/ai/test` 200，返回 `provider=DeepSeek`，实际模型 `deepseek-flash`，约 2.2 秒；
   - `/api/ai/plot` 成功把 `x^2` 改为 `sin(x)`，返回的 scene 通过 Pydantic 校验；

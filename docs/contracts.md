@@ -74,6 +74,31 @@ feedback {
 - 越权读取/修改 Attempt 返回 404；
 - 前端 DTO 类型、mapper 与后端 serializer 同步更新。
 
+## 4. 练习讨论与 AI 提交
+
+| 动作 | 接口 | 是否落库 | 输入 | 输出 |
+| --- | --- | --- | --- | --- |
+| 实时讨论 | `POST /api/v1/ai/exercises/discuss` | 否 | exercise_id、当前答案、消息、最近讨论 | `{message, provider, model}` |
+| 提交答案 | `POST /api/v1/ai/exercises/submit` | 是，一条 Attempt | exercise_id、最终答案、讨论、提示/解答使用 | Attempt（`status=ai_reviewed`） |
+
+`Attempt.feedback` 的 AI 字段：
+
+```text
+feedback.ai {
+  verdict: strong | partial | needs_work,
+  strengths[], gaps[], next_steps[],
+  provider, model
+}
+```
+
+验收：
+
+- 讨论前后 Attempt 数量不变；
+- 讨论不返回分数；
+- 提交才创建 Attempt，score 0–100，`feedback.grading_scope="ai"`；
+- AI 不可用时不创建 Attempt，保留答案；
+- 讨论历史只作为上下文，不把 AI 的话当成学生答案。
+
 ## 5. 用户 AI 凭据
 
 | 字段 | 方向 | 说明 |

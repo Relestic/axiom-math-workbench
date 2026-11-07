@@ -18,7 +18,7 @@ python -m pytest -q
 ```text
 ........................................................................ [ 80%]
 .................                                                        [100%]
-104 passed in 32.48s
+106 passed in 50.12s
 ```
 
 按文件：
@@ -32,6 +32,7 @@ python -m pytest -q
 | `test_catalog.py` | 9 | 目录、概念卡、证明/案例/命题、搜索、工具解锁、草稿隔离 |
 | `test_exercises.py` | 7 | 列表筛选、提示/解答、作答记录、幂等、符号检查、越权、变式生成 |
 | `test_ai_credentials.py` | 2 | 用户 Key 加密保存/读取、末四位提示、测试调用使用个人凭据、移除回退、跨用户隔离 |
+| `test_ai_discussion.py` | 2 | AI 讨论不创建 Attempt、提交时 AI 评分并落库、空答案拒绝 |
 | `test_grading.py` | 3 | 证明结构分、错误最终答案 0 分与参考结果、从文字中提取最终表达式 |
 | `test_progress_notes.py` | 7 | 仪表盘、热力矩阵、活动、复习队列、诊断、笔记导出、收藏、纠错处理 |
 | `test_visual.py` | 6 | 模板、校验、分析、版本冲突、撤销、观察、所有权、模板建场景 |
@@ -40,6 +41,10 @@ python -m pytest -q
 
 ## 2. 练习批改验证
 
+- AI 讨论：`POST /api/v1/ai/exercises/discuss` 只调用模型并返回追问，前后 Attempt 数量不变；讨论历史进入下一轮上下文。
+- AI 提交：`POST /api/v1/ai/exercises/submit` 用一个最终评分调用生成 `ai_reviewed` Attempt，`feedback.ai` 包含 verdict/strengths/gaps/next_steps；答案、讨论和提示/解答使用记录写入同一条 Attempt。
+- 确定性符号/结构批改仍保留在通用 `POST /api/v1/attempts`，但练习页现在默认走 AI 讨论+提交。
+- 计算题、证明题和 AI 批改的边界测试见 `test_ai_discussion.py`、`test_grading.py`。
 - 计算题：从作答最后一行/“答案/得到”等标记提取最终表达式；`primitive-2` 的
   `F(x)=exp(2*x)*(2*x-1)/4+C` 返回 `auto_checked`、100 分；错误表达式返回 0 分、
   `correct=false` 和参考结果；无法解析时保留 `needs_review`，不强行判错。

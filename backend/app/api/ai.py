@@ -12,8 +12,12 @@ from ..db import get_session
 from ..errors import ApiError, parse_json
 from ..models import Attempt, Conversation, Exercise
 from ..modules import ai_service, surface_service, visual_service
-from ..modules import ai_credentials
-from ..schemas.ai import AICredentialRequest
+from ..modules import ai_credentials, exercise_discussion
+from ..schemas.ai import (
+    AICredentialRequest,
+    ExerciseDiscussionRequest,
+    ExerciseSubmitAIRequest,
+)
 from ..schemas.visual import (
     AIPlotRequest,
     GenerateCounterexamplesRequest,
@@ -117,6 +121,49 @@ def remove_credentials():
     data = ai_credentials.delete_user_credential(session, user)
     session.commit()
     return data
+
+
+@bp.post("/exercises/discuss")
+@require_auth()
+def discuss_exercise():
+    """Real-time tutor discussion. Never creates an Attempt."""
+
+    user = current_user()
+    limit("ai", user.id)
+    payload = parse_json(ExerciseDiscussionRequest)
+    session = get_session()
+    result = exercise_discussion.discuss(
+        session,
+        user,
+        exercise_id=payload.exercise_id,
+        answer_text=payload.answer_text,
+        message=payload.message,
+        history=payload.history,
+    )
+    session.commit()
+    return result
+
+
+@bp.post("/exercises/submit")
+@require_auth()
+def submit_exercise_ai():
+    """AI final grading + one recorded Attempt."""
+
+    user = current_user()
+    limit("ai", user.id)
+    payload = parse_json(ExerciseSubmitAIRequest)
+    session = get_session()
+    result = exercise_discussion.grade_and_record(
+        session,
+        user,
+        exercise_id=payload.exercise_id,
+        answer_text=payload.answer_text,
+        history=payload.history,
+        hints_used=payload.hints_used,
+        solution_viewed=payload.solution_viewed,
+    )
+    session.commit()
+    return result, 201
 
 
 @bp.post("/surface")

@@ -15,6 +15,7 @@ import {
   Lightbulb,
   ListChecks,
   Lock,
+  MessageCircle,
   RefreshCw,
   Send,
   Sparkles,
@@ -22,7 +23,13 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { mapAttempt } from "../../domain/mappers";
 import type { Attempt } from "../../domain/types";
+import { ExerciseDiscussion } from "../../modules/practice/ExerciseDiscussion";
+import {
+  submitExerciseWithAI,
+  type DiscussionTurn,
+} from "../../modules/practice/api";
 import "../grading.css";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
@@ -50,6 +57,8 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
   const [usedHint, setUsedHint] = useState(false);
   const [seenSolution, setSeenSolution] = useState(false);
   const [selfChecks, setSelfChecks] = useState<number[]>([]);
+  const [discussionOpen, setDiscussionOpen] = useState(false);
+  const [discussion, setDiscussion] = useState<DiscussionTurn[]>([]);
   useEffect(() => {
     try {
       setAnswer(localStorage.getItem(`axiom-draft-${exercise.id}`) || "");
@@ -63,6 +72,8 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
     setHintText(exercise.hint);
     setServerSolution(null);
     setFeedback(null);
+    setDiscussionOpen(false);
+    setDiscussion([]);
     let assistance = { hint: false, solution: false };
     try {
       assistance =
@@ -95,35 +106,35 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
       localStorage.setItem(`axiom-draft-${exercise.id}`, value);
     } catch {}
   };
-  const storeAttempt = async () => {
+  const submitAnswer = async () => {
     if (!answer.trim()) {
-      notify("请先写下你的思路或证明，再保存作答");
+      notify("请先写下你的思路或证明，再提交答案");
       return;
     }
     setSaving(true);
     try {
-      const attempt = await app.submitAttempt({
-        exerciseId: exercise.id,
-        answer: answer.trim(),
-        hintsUsed: usedHint ? 1 : 0,
-        solutionViewed: seenSolution,
+      const dto = await submitExerciseWithAI({
+        exercise_id: exercise.id,
+        answer_text: answer.trim(),
+        history: discussion,
+        hints_used: usedHint ? 1 : 0,
+        solution_viewed: seenSolution,
       });
+      const attempt = mapAttempt(dto);
+      app.recordAttempt(attempt);
       setFeedback(attempt.feedback || null);
       setSaved(true);
+      setDiscussionOpen(false);
       notify(
         typeof attempt.feedback?.score === "number"
-          ? `已批改：${attempt.feedback.score} / 100`
-          : attempt.feedback?.summary
-            ? `已提交：${attempt.feedback.summary}`
-            : app.data.source === "server"
-              ? "作答已保存到服务端"
-              : "作答已保存到本地。启动本地预览后可获得批改",
+          ? `AI 批改完成：${attempt.feedback.score} / 100`
+          : "AI 已给出反馈",
       );
     } catch (cause) {
       notify(
         cause instanceof Error
           ? cause.message
-          : "保存失败，请先复制你的作答",
+          : "AI 批改失败，请保留作答后重试",
       );
     } finally {
       setSaving(false);
@@ -135,6 +146,8 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
     localStorage.setItem(`axiom-exercise-variant-${unit.id}`, String(next));
     notify("已切换到本地模板的下一道参数变式");
   };
+  const aiGraded =
+    feedback?.grading_scope === "ai" || feedback?.status === "ai_reviewed";
   return (
     <div className="learning-page exercises-page">
       <Heading
@@ -185,7 +198,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
               : "我的证明与思路"}{" "}
             <span>
               {app.data.source === "server"
-                ? "提交后自动批改并写入学习记录"
+                ? "可以先和 AI 讨论，再提交最终答案"
                 : "离线模式只保存草稿"}
             </span>
           </label>
@@ -195,28 +208,47 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             onChange={(e) => updateAnswer(e.target.value)}
             placeholder={
               exercise.type === "computation"
-                ? "写出关键步骤，并在最后单独一行写最终答案，例如：\nF(x)=2*x^3/3\n\n自动批改会提取这一行做符号检查。"
-                : "从定义和条件出发，写下你的证明……\n例如：任给 ε > 0，我们选择……"
+                ? "写出关键步骤和最终答案。\n卡住时可以先点“和 AI 讨论”，讨论不会提交。"
+                : "从定义和条件出发，写下你的证明。\n卡住时可以先点“和 AI 讨论”，让 AI 追问你的思路。"
             }
             rows={9}
           />
           <div className="answer-footer">
             <span className="muted">
-              {answer.length} 字 · {saved ? "已提交保存" : "草稿自动保存"}
+              {answer.length} 字 · {saved ? "已提交" : "草稿自动保存"}
             </span>
-            <button
-              className="btn primary"
-              disabled={saved || saving}
-              onClick={() => void storeAttempt()}
-            >
-              <Send size={15} />
-              {saved ? "已批改" : saving ? "正在批改…" : "提交批改"}
-            </button>
+            <div className="answer-actions">
+              <button
+                className={"btn " + (discussionOpen ? "selected" : "")}
+                disabled={saved || saving}
+                onClick={() => setDiscussionOpen((value) => !value)}
+              >
+                <MessageCircle size={15} />
+                {discussionOpen ? "收起讨论" : "和 AI 讨论"}
+              </button>
+              <button
+                className="btn primary"
+                disabled={saved || saving}
+                onClick={() => void submitAnswer()}
+              >
+                <Send size={15} />
+                {saved ? "已提交" : saving ? "AI 批改中…" : "提交答案"}
+              </button>
+            </div>
           </div>
           <div className="grading-guide">
             <Check size={13} />
-            计算题检查最终表达式；证明题按关键步骤给结构分，不代替人工复核。
+            讨论只帮你理清思路；“提交答案”才会让 AI 写最终评语并记录。
           </div>
+          {discussionOpen && !saved && (
+            <ExerciseDiscussion
+              exerciseId={exercise.id}
+              answer={answer}
+              messages={discussion}
+              setMessages={setDiscussion}
+              onClose={() => setDiscussionOpen(false)}
+            />
+          )}
           <div className="exercise-disclosure">
             <button
               className={"btn " + (hint ? "selected" : "")}
@@ -277,11 +309,13 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                   <div
                     className={
                       "grading-score " +
-                      (feedback.correct === true
-                        ? "correct"
-                        : feedback.correct === false
-                          ? "wrong"
-                          : "structural")
+                      (aiGraded
+                        ? "ai"
+                        : feedback.correct === true
+                          ? "correct"
+                          : feedback.correct === false
+                            ? "wrong"
+                            : "structural")
                     }
                   >
                     <strong>{feedback.score}</strong>
@@ -292,20 +326,24 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                   <span
                     className={
                       "badge " +
-                      (feedback.correct === true
-                        ? "green"
-                        : feedback.correct === false
-                          ? "rose"
-                          : "purple")
+                      (aiGraded
+                        ? "purple"
+                        : feedback.correct === true
+                          ? "green"
+                          : feedback.correct === false
+                            ? "rose"
+                            : "purple")
                     }
                   >
-                    {feedback.correct === true
-                      ? "自动批改通过"
-                      : feedback.correct === false
-                        ? "答案需要订正"
-                        : typeof feedback.score === "number"
-                          ? "结构批改"
-                          : "已保存，待人工复核"}
+                    {aiGraded
+                      ? "AI 批改"
+                      : feedback.correct === true
+                        ? "自动批改通过"
+                        : feedback.correct === false
+                          ? "答案需要订正"
+                          : typeof feedback.score === "number"
+                            ? "结构批改"
+                            : "已保存，待人工复核"}
                   </span>
                   <p>
                     {feedback.summary ||
@@ -346,10 +384,40 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                 </div>
               )}
 
+              {feedback.ai && (
+                <div className="ai-review-details">
+                  <h4>AI 批改详情</h4>
+                  {feedback.ai.strengths && feedback.ai.strengths.length > 0 && (
+                    <ul>
+                      <strong>做得好的地方</strong>
+                      {feedback.ai.strengths.map((item, index) => (
+                        <li key={`strength-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {feedback.ai.gaps && feedback.ai.gaps.length > 0 && (
+                    <ul>
+                      <strong>可以补强的地方</strong>
+                      {feedback.ai.gaps.map((item, index) => (
+                        <li key={`gap-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {feedback.ai.next_steps &&
+                    feedback.ai.next_steps.length > 0 && (
+                      <p>
+                        <strong>下一步：</strong>
+                        {feedback.ai.next_steps.join("；")}
+                      </p>
+                    )}
+                </div>
+              )}
+
               {feedback.observations
                 ?.filter(
                   (item) =>
                     !item.type?.startsWith("criterion_") &&
+                    !item.type?.startsWith("ai_") &&
                     item.type !== "symbolic_check" &&
                     item.type !== "symbolic_mismatch",
                 )
@@ -360,11 +428,13 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                 ))}
 
               <div className="grading-caveat">
-                {feedback.grading_scope === "structural"
-                  ? "结构分只检查关键步骤是否出现，不能证明推理论证正确；不同解法只要满足题意同样有效。"
-                  : feedback.grading_scope === "symbolic"
-                    ? "符号检查只验证最终表达式，不评价证明方法；无法化简时会保留不确定性。"
-                    : "自动批改有边界，请结合完整解答和教师反馈复核。"}
+                {aiGraded
+                  ? "AI 批改基于当前答案和讨论记录，仍可能误判；不同但有效的证明路径应同样被接受。"
+                  : feedback.grading_scope === "structural"
+                    ? "结构分只检查关键步骤是否出现，不能证明推理论证正确；不同解法只要满足题意同样有效。"
+                    : feedback.grading_scope === "symbolic"
+                      ? "符号检查只验证最终表达式，不评价证明方法；无法化简时会保留不确定性。"
+                      : "自动批改有边界，请结合完整解答和教师反馈复核。"}
               </div>
             </div>
           )}
@@ -389,7 +459,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                 ))}
               </ol>
               <div className="solution-note">
-                参考解答展示一种完整路径。提交后计算题会做符号检查，证明题按关键步骤给结构分；结构分不能证明推理正确，也不排斥其他有效证明。
+                参考解答展示一种完整路径。提交答案后由 AI 结合讨论记录批改；AI 评语仍可能出错，不排斥其他有效证明。
               </div>
             </div>
           )}

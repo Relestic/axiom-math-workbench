@@ -1,0 +1,124 @@
+.exercise-discussion {
+  margin-top: 18px;
+  border: 1px solid #dcd6f5;
+  border-radius: 14px;
+  background: #fbfaff;
+  padding: 16px;
+}
+.exercise-discussion-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.exercise-discussion-head h3 {
+  margin: 7px 0 2px;
+  font-size: 14px;
+  color: #2e2d45;
+}
+.exercise-discussion-head p {
+  margin: 0;
+  color: #9290a6;
+  font-size: 10px;
+}
+.exercise-discussion-messages {
+  max-height: 330px;
+  overflow-y: auto;
+  margin-top: 12px;
+  padding: 8px 2px;
+  border-top: 1px solid #efecf8;
+}
+.exercise-discussion-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 8px;
+  color: #9c99ae;
+  font-size: 11px;
+}
+.exercise-discussion-message {
+  max-width: 88%;
+  margin: 0 0 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f4f2ee;
+}
+.exercise-discussion-message.user {
+  margin-left: auto;
+  background: #efedff;
+}
+.exercise-discussion-message small {
+  display: block;
+  margin-bottom: 3px;
+  color: #9692b4;
+  font-size: 9px;
+}
+.exercise-discussion-message p {
+  margin: 0;
+  color: #414158;
+  font-size: 11.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+.exercise-discussion-thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #7b6de0;
+  font-size: 10px;
+  padding: 6px 2px;
+}
+.exercise-discussion-thinking svg {
+  animation: exercise-discussion-spin 1s linear infinite;
+}
+.exercise-discussion-error {
+  margin: 6px 2px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff0f4;
+  color: #b4234d;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.exercise-discussion-composer {
+  border-top: 1px solid #efecf8;
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.exercise-discussion-composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 56px;
+  border: 1px solid #ddd8ee;
+  border-radius: 8px;
+  padding: 8px 9px;
+  color: #393950;
+  background: #fff;
+  font: 11.5px/1.65 var(--font-sans, sans-serif);
+  outline: none;
+}
+.exercise-discussion-composer textarea:focus {
+  border-color: #8b7cf6;
+  box-shadow: 0 0 0 3px #7c6cf615;
+}
+.exercise-discussion-composer > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+}
+.exercise-discussion-composer span {
+  color: #9c99ae;
+  font-size: 9px;
+}
+.exercise-discussion-composer .btn {
+  padding: 7px 10px;
+  font-size: 10px;
+}
+@keyframes exercise-discussion-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

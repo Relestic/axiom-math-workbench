@@ -15,7 +15,7 @@
 | 知识图谱 | 20 节点/28 条关系、11 种受控关系、来源与条件、按用户的当前/已掌握/未学/前置缺口状态、节点依赖、可追溯路径 |
 | 图像 | 8 个模板（含 3D 视角元数据）、场景保存/版本/冲突检测/撤销、观察记录、服务端受限表达式校验、导数/Taylor/Riemann 和/ε–δ 数值分析、对话动作 |
 | 练习 | 8 个已审核模板 × 4 个参数变式 = 32 道题；按需变式生成；提示/完整解答分入口并记录查看；常见错误；校验记录 |
-| 作答 | 原始作答、提示与解答使用、独立/辅助标记、自我评级、幂等提交、符号等价检查、证明结构分与不确定性保留 |
+| 作答 | 原始作答、AI 实时讨论、AI 最终批改、提示与解答使用、独立/辅助标记、自我评级、幂等提交、符号等价检查与不确定性保留 |
 | 进度 | 仪表盘聚合、练习热力矩阵、活动热力图、复习队列、前置缺口、诊断题与诊断记录、最近学习位置 |
 | 笔记 | 增删改查、按知识点筛选、Markdown 导出、收藏 |
 | 纠错 | 学生上报、管理员查看/处理、审核记录 |
@@ -84,7 +84,7 @@ python -m app.cli seed --demo         # 另建演示学生、8 条示例作答�
 python -m app.cli stats               # 内容与使用统计
 python -m app.cli invite --role student --days 7
 python -m app.cli reset --yes --demo  # 演示环境重置
-python -m pytest -q                   # 104 项测试
+python -m pytest -q                   # 106 项测试
 ```
 
 ## 4. 配置
@@ -153,7 +153,7 @@ backend/
     workers/queue.py     任务表、Worker、处理器、用量统计
     seed/                8 单元内容、图、模板、32 道练习、诊断题
   migrations/            迁移器与版本（0001 baseline、0002 索引）
-  tests/                 104 项 pytest
+  tests/                 106 项 pytest
   docs/verification.md   验证记录与限制
   run.py                 开发服务入口
 ```
@@ -183,6 +183,7 @@ backend/
 | 数学总地图 | `GET /api/v1/graph`、`GET /api/v1/graph/gaps`、`GET /api/v1/graph/nodes/{id}`、`GET /api/v1/graph/path` |
 | 证明思路 | `GET /api/v1/proofs/{id}`、`POST /api/v1/visualizations/conversations/{id}/actions`（`open_proof_step`） |
 | 练习/完整解答/复盘 | `GET /api/v1/exercises`、`GET /api/v1/exercises/{id}/hint`、`/solution`、`POST /api/v1/attempts`、`PATCH /api/v1/attempts/{id}` |
+| AI 讨论与提交批改 | `POST /api/v1/ai/exercises/discuss`（不落库）、`POST /api/v1/ai/exercises/submit`（AI 评分并记录 Attempt） |
 
 ### 关键请求示例
 
@@ -259,7 +260,7 @@ cd backend
 python -m pytest -q
 ```
 
-当前结果：**104 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
+当前结果：**106 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
 
 ## 12. 与前端的关系
 

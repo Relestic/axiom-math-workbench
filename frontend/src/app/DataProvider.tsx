@@ -54,6 +54,7 @@ type DataContextValue = {
   refresh: () => Promise<void>;
   retry: () => void;
   getExercise: (topicId: string, coefficient: number) => Exercise | undefined;
+  recordAttempt: (attempt: Attempt) => void;
   submitAttempt: (input: {
     exerciseId: string;
     answer: string;
@@ -268,6 +269,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const { submitAttempt, rateAttempt, loadHint, loadSolution } =
     usePracticeActions({ session, data, setData, refreshDerived });
+  const recordAttempt = useCallback((attempt: Attempt) => {
+    setData((current) => ({
+      ...current,
+      attempts: [
+        attempt,
+        ...current.attempts.filter((item) => item.id !== attempt.id),
+      ],
+    }));
+    void refreshDerived();
+  }, [refreshDerived]);
   const { saveNote, deleteNote, toggleBookmark } = useRecordActions({
     session,
     data,
@@ -285,6 +296,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       refresh,
       retry,
       getExercise,
+      recordAttempt,
       submitAttempt,
       rateAttempt,
       saveNote,
@@ -304,6 +316,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       refresh,
       retry,
       getExercise,
+      recordAttempt,
       submitAttempt,
       rateAttempt,
       saveNote,

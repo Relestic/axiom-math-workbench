@@ -43,6 +43,14 @@ export type AttemptFeedback = {
   answer_candidate?: string;
   grading_scope?: string;
   missing_steps?: string[];
+  ai?: {
+    verdict?: "strong" | "partial" | "needs_work";
+    strengths?: string[];
+    gaps?: string[];
+    next_steps?: string[];
+    provider?: string;
+    model?: string;
+  };
 };
 
 export type Attempt = {
