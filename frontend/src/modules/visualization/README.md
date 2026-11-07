@@ -22,9 +22,10 @@ visualization/
 | `two-d/FunctionWorkspace` | `onNavigate`、`onSaveNote`、`notify` | 页面 | 现有 `/explore` 页面入口；`pages/FunctionWorkspace.tsx` 仅重新导出 |
 | `three-d/SurfaceWorkspace` | 无 | 页面 | 现有 `/surface` 页面入口 |
 | `scene/functionScene` | `unknown` | 已校验的 `Scene` | `applyFunctionScene` 是唯一写入口 |
-| `api.requestPlotChange` | 消息、当前 `Scene`、历史、`AbortSignal` | `{message, scene}` | 调 `/api/ai/plot` |
+| `api.requestPlotChange` | 消息、当前 `Scene`、历史、`AbortSignal` | `{message, scene}` | 调 `/api/v1/ai/plot` |
 | `api.requestSurfaceChange` | 消息、当前 `SurfaceScene`、历史 | `{message, scene}` | 调 `/api/v1/ai/surface` |
-| `api.fetchAIStatus` / `testAIConnection` | — | 状态/延迟 | `/api/ai/status`、`/api/v1/ai/test` |
+| `api.fetchAIStatus` / `testAIConnection` | — | 状态/延迟 | `/api/v1/ai/status`、`/api/v1/ai/test` |
+| `api.saveAICredentials` / `deleteAICredentials` | Key 与模型 | 状态 | `/api/v1/ai/credentials` |
 
 `Scene` 的规范定义仍在共享的 `frontend/src/lib/plotScene.ts`（二维）和
 `three-d/types.ts`（三维）；本模块只负责加载、校验和更新，不复制第二套契约。
@@ -37,6 +38,8 @@ visualization/
   或学习进度数据。
 - **跨模块**：`onSaveNote` 交给个人记录模块；`onNavigate` 只做导航；AI 改图的结果
   必须经过 `applyFunctionScene` / `normalizeSurfaceScene` 才能进入状态。
+- **用户 Key**：加密凭据归账号模块；本模块只通过 `api.saveAICredentials` /
+  `deleteAICredentials` / `fetchAIStatus` 调用，不读取数据库，也不把 Key 写入 localStorage。
 
 ## 统一校验与更新入口
 

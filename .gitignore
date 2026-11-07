@@ -44,3 +44,9 @@ releases/
 Thumbs.db
 .dsh_tmp/
 
+
+# Local browser test profiles / scratch scripts
+_ai-ui-profile/
+_*.tmp.*
+_*.py
+

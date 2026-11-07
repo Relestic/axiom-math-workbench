@@ -5,6 +5,7 @@ migrations in ``backend/migrations`` use the same metadata.
 """
 
 from .base import Base, isoformat, new_id, utcnow  # noqa: F401
+from .ai import UserAICredential  # noqa: F401
 from .content import (  # noqa: F401
     Asset,
     Chapter,
@@ -53,6 +54,7 @@ __all__ = [
     "Invite",
     "RefreshToken",
     "AuthEvent",
+    "UserAICredential",
     "Textbook",
     "Chapter",
     "Section",

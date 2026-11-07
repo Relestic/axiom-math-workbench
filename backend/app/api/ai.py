@@ -12,6 +12,8 @@ from ..db import get_session
 from ..errors import ApiError, parse_json
 from ..models import Attempt, Conversation, Exercise
 from ..modules import ai_service, surface_service, visual_service
+from ..modules import ai_credentials
+from ..schemas.ai import AICredentialRequest
 from ..schemas.visual import (
     AIPlotRequest,
     GenerateCounterexamplesRequest,
@@ -36,7 +38,8 @@ def _config() -> Config:
 def status():
     session = get_session()
     user = current_user()
-    data = provider_status()
+    data = ai_credentials.user_ai_status(session, user.id)
+    data["daily_limit"] = _config().ai_daily_call_limit
     data["authenticated"] = True
     data["daily_calls"] = daily_call_count(session, user.id)
     data["prompt_version"] = _config().ai_prompt_version
@@ -50,13 +53,14 @@ def test_model():
     """Make one tiny live call so the UI can distinguish config from a working key."""
 
     config = _config()
-    if not config.ai_active:
-        raise ApiError(
-            "service_unavailable",
-            "模型尚未配置。请设置 AXIOM_AI_PROVIDER=deepseek、AI_MODEL 和 AI_API_KEY。",
-        )
     session = get_session()
     user = current_user()
+    ai_status = ai_credentials.user_ai_status(session, user.id)
+    if not ai_status.get("active"):
+        raise ApiError(
+            "service_unavailable",
+            "模型尚未配置。请先接入自己的 DeepSeek API Key，或由管理员设置系统 AI_API_KEY。",
+        )
     limit("ai", user.id)
     result, _ = chat(
         session,
@@ -76,12 +80,43 @@ def test_model():
     session.commit()
     return {
         "ok": True,
-        "provider": config.ai_provider,
-        "provider_label": config.ai_provider_label,
+        "provider": result.provider,
+        "provider_label": ai_status.get("provider_label", result.provider),
         "model": result.model,
         "latency_ms": result.latency_ms,
         "reply": result.text[:80],
+        "source": ai_status.get("source", "system"),
+        "key_hint": ai_status.get("key_hint", ""),
     }
+
+
+@bp.put("/credentials")
+@require_auth()
+def save_credentials():
+    """Store a user-owned DeepSeek key encrypted at rest."""
+
+    user = current_user()
+    session = get_session()
+    payload = parse_json(AICredentialRequest)
+    data = ai_credentials.save_user_credential(
+        session,
+        user,
+        api_key=payload.api_key,
+        model=payload.model,
+        secret_key=_config().secret_key,
+    )
+    session.commit()
+    return data
+
+
+@bp.delete("/credentials")
+@require_auth()
+def remove_credentials():
+    user = current_user()
+    session = get_session()
+    data = ai_credentials.delete_user_credential(session, user)
+    session.commit()
+    return data
 
 
 @bp.post("/surface")

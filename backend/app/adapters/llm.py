@@ -43,6 +43,31 @@ class LLMResult:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AICredentials:
+    """Effective endpoint credentials for one call.
+
+    ``source="user"`` means a per-user encrypted key; only this adapter receives
+    the decrypted value. ``source="system"`` is never constructed here; the
+    caller falls back to Config when no override exists.
+    """
+
+    provider: str
+    base_url: str
+    model: str
+    api_key: str
+    source: str = "user"
+    key_hint: str = ""
+
+    @property
+    def is_reasoner(self) -> bool:
+        return "reasoner" in self.model.lower() or "thinking" in self.model.lower()
+
+    @property
+    def endpoint(self) -> str:
+        return self.base_url.rstrip("/") + "/chat/completions"
+
+
 def _config():
     return current_app.config["AXIOM"]
 
@@ -173,14 +198,27 @@ def _post_chat(
     json_mode: bool,
     timeout: int,
     max_tokens: int,
+    credentials: AICredentials | None = None,
 ) -> LLMResult:
     config = _config()
-    if config.ai_provider == "mock":
+    if credentials is None and config.ai_provider == "mock":
         return _MockProvider().complete(messages, purpose=purpose, json_mode=json_mode)
-    if not config.ai_configured:
+    if credentials is None and not config.ai_configured:
         raise LLMError("模型尚未配置", kind="unconfigured")
+    if credentials is not None:
+        endpoint = credentials.endpoint
+        api_key = credentials.api_key
+        model = credentials.model
+        provider = credentials.provider
+        is_reasoner = credentials.is_reasoner
+    else:
+        endpoint = config.ai_endpoint
+        api_key = config.ai_api_key
+        model = config.ai_model
+        provider = config.ai_provider
+        is_reasoner = config.ai_is_reasoner
     payload: dict[str, Any] = {
-        "model": config.ai_model,
+        "model": model,
         "messages": messages,
         "stream": False,
         "max_tokens": max_tokens,
@@ -188,18 +226,18 @@ def _post_chat(
     # DeepSeek thinking/reasoner models do not accept temperature or
     # response_format. Their prompt still asks for JSON and the schema validator
     # is the final gate.
-    if not config.ai_is_reasoner:
+    if not is_reasoner:
         payload["temperature"] = 0.2
-    if json_mode and config.ai_json_effective:
+    if json_mode and config.ai_json_mode and not is_reasoner:
         payload["response_format"] = {"type": "json_object"}
     started = time.perf_counter()
     last_error: Exception | None = None
     for attempt in range(2):
         try:
             response = httpx.post(
-                config.ai_endpoint,
+                endpoint,
                 headers={
-                    "Authorization": f"Bearer {config.ai_api_key}",
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 },
                 json=payload,
@@ -268,8 +306,8 @@ def _post_chat(
         elapsed = int((time.perf_counter() - started) * 1000)
         return LLMResult(
             text=_clean_content(content),
-            provider=config.ai_provider,
-            model=str(data.get("model") or config.ai_model),
+            provider=provider,
+            model=str(data.get("model") or model),
             input_tokens=int(usage.get("prompt_tokens") or 0),
             output_tokens=int(usage.get("completion_tokens") or 0),
             latency_ms=elapsed,
@@ -320,11 +358,24 @@ def chat(
     validator: Callable[[str], Any] | None = None,
 ) -> tuple[LLMResult, Any | None]:
     config = _config()
-    if config.ai_provider != "mock" and not config.ai_configured:
+    credentials: AICredentials | None = None
+    if user_id:
+        # Imported lazily to keep the adapter usable without the models layer
+        # during simple config/mock tests.
+        from ..modules.ai_credentials import resolve_user_credentials
+
+        credentials = resolve_user_credentials(
+            session, user_id, secret_key=config.secret_key
+        )
+    if (
+        credentials is None
+        and config.ai_provider != "mock"
+        and not config.ai_configured
+    ):
         raise ApiError(
             "service_unavailable",
-            "模型尚未配置。请设置 AXIOM_AI_PROVIDER=deepseek、AI_MODEL 和 AI_API_KEY，"
-            "或继续使用本地公式编辑与模板练习。",
+            "模型尚未配置。请在图像工作区接入自己的 DeepSeek API Key，"
+            "或由管理员设置系统 AI_API_KEY。",
         )
     if user_id and daily_call_count(session, user_id) >= config.ai_daily_call_limit:
         raise ApiError("rate_limited", "今日模型调用额度已用完")
@@ -348,8 +399,13 @@ def chat(
     record = ModelCall(
         user_id=user_id,
         job_id=job_id,
-        provider=config.ai_provider,
-        model=config.ai_model or ("axiom-mock-1" if config.ai_provider == "mock" else ""),
+        provider=credentials.provider if credentials else config.ai_provider,
+        model=(
+            credentials.model
+            if credentials
+            else config.ai_model
+            or ("axiom-mock-1" if config.ai_provider == "mock" else "")
+        ),
         purpose=purpose,
         prompt_version=config.ai_prompt_version,
         status="ok",
@@ -361,6 +417,7 @@ def chat(
             json_mode=json_mode,
             timeout=timeout,
             max_tokens=max_tokens,
+            credentials=credentials,
         )
         record.provider = result.provider
         record.model = result.model

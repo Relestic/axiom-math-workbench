@@ -22,7 +22,11 @@ export function WorkspaceHeader({
             onClick={() => state.setSettings((value) => !value)}
           >
             <Settings2 size={15} />
-            {state.status?.configured ? "模型已配置" : "连接 AI"}
+            {state.status?.using_user_key
+              ? "我的 DeepSeek"
+              : state.status?.configured
+                ? "模型已配置"
+                : "接入 DeepSeek"}
           </button>
           <button className="btn primary" onClick={state.save}>
             <BookmarkPlus size={15} />
@@ -36,7 +40,7 @@ export function WorkspaceHeader({
         >
           <i />
           {state.status?.configured
-            ? `${state.status.provider_label || state.status.provider} · ${state.status.model}`
+            ? `${state.status.using_user_key ? "我的 " : ""}${state.status.provider_label || state.status.provider} · ${state.status.model}`
             : "AI 未连接 · 可先直接编辑公式"}
         </span>
         <button className="text-button" onClick={() => onNavigate("surface")}>

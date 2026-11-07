@@ -268,7 +268,13 @@
   color: #262e46;
   font-size: 15px;
 }
-.surface-chat-heading > span {
+.surface-chat-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.surface-chat-actions > span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -276,17 +282,17 @@
   color: #7d8496;
   white-space: nowrap;
 }
-.surface-chat-heading > span i {
+.surface-chat-actions > span i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #b8bcc9;
 }
-.surface-chat-heading > span.fw-online i {
+.surface-chat-actions > span.fw-online i {
   background: #18b981;
   box-shadow: 0 0 0 3px #18b9811c;
 }
-.surface-chat-heading > span.fw-offline i {
+.surface-chat-actions > span.fw-offline i {
   background: #e2a23b;
 }
 .surface-chat-messages {

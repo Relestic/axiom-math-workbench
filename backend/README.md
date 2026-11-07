@@ -84,7 +84,7 @@ python -m app.cli seed --demo         # 另建演示学生、8 条示例作答�
 python -m app.cli stats               # 内容与使用统计
 python -m app.cli invite --role student --days 7
 python -m app.cli reset --yes --demo  # 演示环境重置
-python -m pytest -q                   # 102 项测试
+python -m pytest -q                   # 104 项测试
 ```
 
 ## 4. 配置
@@ -107,6 +107,16 @@ python -m pytest -q                   # 102 项测试
 | `AXIOM_TIMEZONE` | “今天”、连续打卡与活动热力图的时区，默认 `Asia/Shanghai` |
 
 模型密钥只在服务端读取；不会进入前端包、日志或 API 响应。
+
+### 用户级 DeepSeek Key
+
+登录用户可以在前端直接接入自己的 Key，不需要改 `.env` 或重启：
+
+- `GET /api/v1/ai/status`：返回当前账号的 `source`（`user`/`system`/`none`）、模型和 Key 末四位。
+- `PUT /api/v1/ai/credentials`：保存 `{api_key, model}`；Key 用 `AXIOM_SECRET_KEY` 派生的 Fernet key 加密后存入 `user_ai_credentials`。
+- `DELETE /api/v1/ai/credentials`：移除个人 Key，回退到系统默认。
+- `POST /api/v1/ai/test`、`POST /api/v1/ai/plot`、`POST /api/v1/ai/surface` 自动优先使用当前用户的 Key；只有没有个人 Key 时才使用环境变量中的系统 Key。
+- 接口只返回末四位提示，绝不回传明文；密钥不写 ModelCall、错误记录或日志。更换 `AXIOM_SECRET_KEY` 会导致旧 Key 无法解密，用户需要重新填写。
 
 DeepSeek 配置示例：
 
@@ -143,7 +153,7 @@ backend/
     workers/queue.py     任务表、Worker、处理器、用量统计
     seed/                8 单元内容、图、模板、32 道练习、诊断题
   migrations/            迁移器与版本（0001 baseline、0002 索引）
-  tests/                 102 项 pytest
+  tests/                 104 项 pytest
   docs/verification.md   验证记录与限制
   run.py                 开发服务入口
 ```
@@ -168,6 +178,7 @@ backend/
 | 学习工作台 | `GET /api/v1/dashboard`、`GET /api/v1/progress/summary`、`GET /api/v1/progress/review-queue` |
 | 图像探索（2D/3D） | `GET /api/v1/visualizations/templates`、`POST /api/v1/visualizations/validate`、`GET /api/v1/visualizations/analyze`、场景与观察接口 |
 | 三维曲面实验室 | `POST /api/v1/ai/surface`（鉴权、场景/表达式校验）、`POST /api/v1/ai/test` |
+| 用户级 AI 凭据 | `GET /api/v1/ai/status`、`PUT/DELETE /api/v1/ai/credentials`、`POST /api/v1/ai/test` |
 | 练习可视化 | `GET /api/v1/progress/practice-map`、`GET /api/v1/progress/heatmap` |
 | 数学总地图 | `GET /api/v1/graph`、`GET /api/v1/graph/gaps`、`GET /api/v1/graph/nodes/{id}`、`GET /api/v1/graph/path` |
 | 证明思路 | `GET /api/v1/proofs/{id}`、`POST /api/v1/visualizations/conversations/{id}/actions`（`open_proof_step`） |
@@ -248,7 +259,7 @@ cd backend
 python -m pytest -q
 ```
 
-当前结果：**102 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
+当前结果：**104 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
 
 ## 12. 与前端的关系
 

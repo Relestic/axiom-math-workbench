@@ -74,7 +74,26 @@ feedback {
 - 越权读取/修改 Attempt 返回 404；
 - 前端 DTO 类型、mapper 与后端 serializer 同步更新。
 
-## 4. 接口与 schema 对照
+## 5. 用户 AI 凭据
+
+| 字段 | 方向 | 说明 |
+| --- | --- | --- |
+| `api_key` | 仅写入 | 只接受 `sk-` 开头、12–200 字符；不在响应返回 |
+| `model` | 写入/读取 | `deepseek-chat` 或 `deepseek-reasoner` |
+| `source` | 读取 | `user` / `system` / `none` |
+| `using_user_key` | 读取 | 当前请求是否使用个人凭据 |
+| `key_hint` | 读取 | 仅末四位，如 `…7890` |
+| `encrypted_api_key` | 仅数据库 | Fernet 加密，不进入任何 API/日志 |
+
+验收：
+
+- 两个用户各自保存 Key，互相不能读取或覆盖；
+- 保存后 `/api/v1/ai/test` 使用用户 Key；
+- 移除后回退系统 Key；
+- 响应和日志中不出现明文；
+- 修改 `AXIOM_SECRET_KEY` 后旧 Key 解密失败并提示重新填写，不静默使用系统 Key。
+
+## 6. 接口与 schema 对照
 
 | 前端调用 | 后端路由 | Schema |
 | --- | --- | --- |
@@ -86,7 +105,7 @@ feedback {
 | `progress/api.submitDiagnosticTyped` | `POST /api/v1/diagnostic` | `DiagnosticSubmitRequest` |
 | `identity/api.useSession` | `/api/v1/auth/*` | auth schemas |
 
-## 5. 修改流程
+## 7. 修改流程
 
 1. 先改 `backend/app/schemas/*.py` 与 serializer，补后端测试；
 2. 同一次提交改 `frontend/src/domain/dto.ts` / `types.ts` / `mappers.ts` 和模块 API；

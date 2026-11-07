@@ -21,6 +21,7 @@ from .schemas.auth import (
     RegisterRequest,
     UpdateMeRequest,
 )
+from .schemas.ai import AICredentialRequest
 from .schemas.content import GraphQuery, ImportTextRequest
 from .schemas.learning import (
     AttemptCreateRequest,
@@ -68,6 +69,7 @@ REQUEST_MODELS: dict[tuple[str, str], type[BaseModel]] = {
     ("post", "/api/v1/visualizations/scenes/{scene_id}/observations"): ObservationCreateRequest,
     ("post", "/api/v1/ai/plot"): AIPlotRequest,
     ("post", "/api/v1/ai/surface"): SurfaceAIRequest,
+    ("put", "/api/v1/ai/credentials"): AICredentialRequest,
     ("post", "/api/ai/plot"): AIPlotRequest,
     ("post", "/api/v1/ai/interpret"): InterpretRequest,
     ("post", "/api/v1/attempts"): AttemptCreateRequest,
@@ -93,6 +95,7 @@ SCHEMAS: dict[str, type[BaseModel]] = {
     "ObservationCreateRequest": ObservationCreateRequest,
     "AIPlotRequest": AIPlotRequest,
     "SurfaceAIRequest": SurfaceAIRequest,
+    "AICredentialRequest": AICredentialRequest,
     "InterpretRequest": InterpretRequest,
     "AttemptCreateRequest": AttemptCreateRequest,
     "NoteCreateRequest": NoteCreateRequest,

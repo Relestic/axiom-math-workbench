@@ -16,7 +16,7 @@
 - **练习批改**：计算题从作答中提取最终表达式，使用 SymPy 做符号等价检查；证明题按 ε、δ、条件、估计、结论等关键步骤输出 0–100 结构分、逐项覆盖/缺失和参考结果。结构分明确标注“不判断证明是否数学正确”，避免把关键词匹配冒充人工评阅。
 - **稳定本地预览**：双击根目录 `启动本地预览.cmd`，在 <http://127.0.0.1:8080/> 同时运行前端与后端，不依赖隧道、公网或系统代理；`停止本地预览.cmd` 只停止该服务。详见 [LOCAL_PREVIEW.md](LOCAL_PREVIEW.md)。
 
-- **后端（新增）**：`backend/` 提供可运行的单机演示后端，覆盖邀请账号与权限、教材导入与发布、定义/条件/证明/经典案例、知识图谱、图像场景与数学校验、练习与完整解答、作答记录与反馈、练习热力图、诊断、笔记、内容纠错、后台任务与模型用量。102 项 pytest 通过；启动、接口清单与验证边界见 [后端说明](backend/README.md) 与 [验证记录](backend/docs/verification.md)。
+- **后端（新增）**：`backend/` 提供可运行的单机演示后端，覆盖邀请账号与权限、教材导入与发布、定义/条件/证明/经典案例、知识图谱、图像场景与数学校验、练习与完整解答、作答记录与反馈、练习热力图、诊断、笔记、内容纠错、后台任务与模型用量。104 项 pytest 通过；启动、接口清单与验证边界见 [后端说明](backend/README.md) 与 [验证记录](backend/docs/verification.md)。
 - **运行入口**：稳定本地预览双击 `启动本地预览.cmd`（`http://127.0.0.1:8080/`）；完整前后端演示双击 `启动完整演示.cmd`；也可进入 `frontend` 后运行 `npm ci`、`npm run dev`。后端在 `backend` 下运行 `python -m app.cli seed --demo` 与 `python run.py`，API 文档为 <http://127.0.0.1:8000/api/docs>。
 - **文件分享**：`releases/` 中提供 Windows x64 免安装 ZIP，解压后双击包内的 `启动 Axiom.cmd`；随包提供运行环境，AI 需接收者自行配置密钥。该 ZIP 是 2026-11-02 的前端独立包，不含本次后端联调；联调版请使用 `启动完整演示.cmd`，待正式发布前再重新打包。
 - **前端说明**：[功能、运行与实现边界](frontend/README.md)；[数据层与迭代指南](frontend/docs/architecture.md)；[验证记录](frontend/docs/verification.md)。
@@ -24,6 +24,7 @@
 - **自由函数与 AI 改图**：新增 Math.js 表达式引擎、Plotly 交互绘图和本地 Node API。支持通过可配置的 OpenAI 兼容接口生成函数、参数、比较曲线与分析配置，经过校验后应用；未填写模型配置时可直接编辑公式。配置方法见 [AI 改图说明](frontend/docs/ai-functions.md)。
 - **三维曲面实验室**：新增 `z=f(x,y)` 的可交互三维曲面，支持拖动旋转、滚轮缩放、范围/网格/高度/透明度/配色控制，并可通过 DeepSeek 对话修改曲面与视角；场景经后端 `SurfaceScene` 与表达式白名单校验。
 - **DeepSeek API**：支持 `AXIOM_AI_PROVIDER=deepseek`，默认 `https://api.deepseek.com` / `deepseek-chat`；在线预览已配置并实测 `/api/v1/ai/test` 与 `/api/ai/plot`。`deepseek-reasoner` 会自动跳过不支持的 `temperature` / `response_format`；未配置密钥时明确显示未连接，不伪造 AI 回答。
+- **用户自助接入 DeepSeek**：登录后在图像探索/三维曲面面板粘贴自己的 `sk-...`，选择模型并保存即可使用，无需改 `.env` 或重启；Key 使用 Fernet 加密存入 `user_ai_credentials`，接口只返回末四位，支持测试连接和移除回退系统默认。
 - **范围**：8 个代表性学习单元和 32 道参数变式；前后端已完成联调，登录、内容卡片、练习、作答、笔记、收藏、诊断、图谱与热力矩阵默认读取/写入后端。自由函数场景仍保存在浏览器，正反例曲线与性质矩阵仍是前端教学示意；AI 出题的真实模型联调与完整教材解析仍待完成。AI 改图已通过本地模拟服务验证，真实模型仍需用户配置后联调。
 - **完整 MVP 验收**：仍按本文以下范围与标准执行。后端演示不代替全部章节内容建设、数学审核、正式权限与试用验收。
 
@@ -515,7 +516,7 @@ MVP 可使用一台云主机运行反向代理、API、Worker、PostgreSQL 和 R
 | `infra/` | 容器与部署配置 |
 | `docs/` | 数据与接口规范、审核规则、验收和用户试用记录 |
 
-**前端演示代码位于 `frontend/`，后端演示代码位于 `backend/`。** 一键启动可双击根目录 [`启动完整演示.cmd`](<启动完整演示.cmd>)；也可前端运行 `npm ci`、`npm run dev`，后端进入 `backend` 后运行 `python -m app.cli init`、`python -m app.cli seed --demo`、`python run.py`。前端通过 `frontend/.env` 的 `VITE_API_BASE` 指向后端，默认 `http://127.0.0.1:8000`。运行 `npm test`（21 项）、`npm run build` 检查前端，运行 `python -m pytest -q` 执行 102 项后端测试。数据层与扩展方式见 [前端架构指南](frontend/docs/architecture.md)，联调边界与验证见 [前端说明](frontend/README.md)、[前端验证](frontend/docs/verification.md) 与 [后端说明](backend/README.md)。
+**前端演示代码位于 `frontend/`，后端演示代码位于 `backend/`。** 一键启动可双击根目录 [`启动完整演示.cmd`](<启动完整演示.cmd>)；也可前端运行 `npm ci`、`npm run dev`，后端进入 `backend` 后运行 `python -m app.cli init`、`python -m app.cli seed --demo`、`python run.py`。前端通过 `frontend/.env` 的 `VITE_API_BASE` 指向后端，默认 `http://127.0.0.1:8000`。运行 `npm test`（21 项）、`npm run build` 检查前端，运行 `python -m pytest -q` 执行 104 项后端测试。数据层与扩展方式见 [前端架构指南](frontend/docs/architecture.md)，联调边界与验证见 [前端说明](frontend/README.md)、[前端验证](frontend/docs/verification.md) 与 [后端说明](backend/README.md)。
 
 后端实际目录与本表规划对应：`backend/app/api/` 对应 API，`backend/app/modules/` 对应业务，`backend/app/adapters/` 对应模型/文件/解析/数学适配，`backend/app/workers/` 对应导入与生成任务，`backend/migrations/` 对应迁移，`backend/app/seed/` 与 `backend/tests/` 分别保存示例内容和测试；根目录的 `content/`、`infra/` 尚未建立。`backend/app/seed/` 中的 8 个示例单元是演示内容，不是 `content/curriculum/` 的正式课程矩阵。
 

@@ -66,6 +66,13 @@ tools\cloudflared.exe tunnel --url http://127.0.0.1:8080 --protocol http2 --no-a
 
 ## 接入 DeepSeek API
 
+在线版有两层接入方式：
+
+1. **用户自己的 Key（推荐）**：登录 → 图像探索 → “接入 DeepSeek” → 粘贴 `sk-...` → 选择 `deepseek-chat` / `deepseek-reasoner` → 保存 → 测试连接。无需重启服务，Key 加密保存，接口只回传末四位。三维曲面页的 AI 面板也有同样入口。
+2. **系统默认 Key**：管理员在 `backend/.env.online` 配置，作为未接入用户的回退。
+
+用户 Key 优先于系统 Key；移除后立即回退。更换 `AXIOM_SECRET_KEY` 会使已保存的个人 Key 无法解密，用户需要重新填写。
+
 在线版**已经配置 DeepSeek API Key**（密钥只存在于 `backend/.env.online`，不写在此文档、不进入前端包）。已实测：
 
 - `/api/v1/ai/test` 返回 200，模型显示 `deepseek-flash`，约 1.3–2.8 秒；

@@ -12,8 +12,12 @@ import {
   Undo2,
   Wand2,
 } from "lucide-react";
-import { apiUrl } from "../../../lib/api";
-import { requestSurfaceChange } from "../api";
+import {
+  fetchAIStatus,
+  requestSurfaceChange,
+  type AIStatus,
+} from "../api";
+import { AICredentialSettings } from "../components/AICredentialSettings";
 import { normalizeSurfaceScene } from "./engine";
 import { SurfacePlot3D } from "./SurfacePlot3D";
 import {
@@ -64,21 +68,18 @@ export default function SurfaceWorkspace() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState<{
-    configured: boolean;
-    provider_label?: string;
-    model?: string;
-  } | null>(null);
+  const [showAISetup, setShowAISetup] = useState(false);
+  const [status, setStatus] = useState<AIStatus | null>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch(apiUrl("/api/ai/status"))
-      .then((response) => {
-        if (!response.ok) throw new Error();
-        return response.json();
-      })
+  const refreshStatus = () => {
+    fetchAIStatus()
       .then(setStatus)
-      .catch(() => setStatus({ configured: false }));
+      .catch(() => setStatus({ configured: false, source: "none" }));
+  };
+
+  useEffect(() => {
+    refreshStatus();
   }, []);
 
   useEffect(() => {
@@ -453,13 +454,32 @@ export default function SurfaceWorkspace() {
               </span>
               <h3>让 AI 改变这张曲面</h3>
             </div>
-            <span className={status?.configured ? "fw-online" : "fw-offline"}>
-              <i />
-              {status?.configured
-                ? `${status.provider_label || "模型"} · ${status.model || ""}`
-                : "AI 未连接"}
-            </span>
+            <div className="surface-chat-actions">
+              <span className={status?.configured ? "fw-online" : "fw-offline"}>
+                <i />
+                {status?.configured
+                  ? `${status.using_user_key ? "我的 " : ""}${status.provider_label || "模型"} · ${status.model || ""}`
+                  : "AI 未连接"}
+              </span>
+              <button
+                className="text-button"
+                onClick={() => setShowAISetup((value) => !value)}
+              >
+                {showAISetup
+                  ? "收起"
+                  : status?.using_user_key
+                    ? "管理 Key"
+                    : "接入我的 Key"}
+              </button>
+            </div>
           </div>
+          {showAISetup && (
+            <AICredentialSettings
+              status={status}
+              onUpdated={refreshStatus}
+              compact
+            />
+          )}
           <div className="surface-chat-messages" aria-live="polite">
             {!messages.length && (
               <div className="surface-chat-empty">
