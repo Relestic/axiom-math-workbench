@@ -129,7 +129,7 @@ AI 改图指令示例：`换成 sin(a*x)，让 a 在 0.5 到 5 之间变化`、`
 
 ## 模块结构
 
-六个业务模块的边界见 [MODULES.md](../MODULES.md)。可视化已落地到 [`src/modules/visualization/`](src/modules/visualization/README.md)，页面入口 `pages/FunctionWorkspace.tsx` 仅兼容导出；其他模块已有边界说明和数据访问适配器，状态逻辑按顺序迁移。
+六个业务模块的边界见 [MODULES.md](../MODULES.md)。可视化已落地到 [`src/modules/visualization/`](src/modules/visualization/README.md)，页面入口 `pages/FunctionWorkspace.tsx` 仅兼容导出；练习、记录、进度的写操作已迁到模块 hooks，`DataProvider` 从 594 行降到 326 行，只负责组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。公共字段契约见 [docs/contracts.md](../docs/contracts.md)。
 
 ## 源码结构
 
