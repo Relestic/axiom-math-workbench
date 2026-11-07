@@ -95,4 +95,4 @@
 1. **可视化工作区（已完成第一步）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
 2. **数据管理（下一步）**：把 `DataProvider` 的练习、记录、进度、身份操作提取为模块 hooks；`DataProvider` 只保留组合、刷新和错误边界。
 3. **公共接口**：统一场景/题目/作答/知识点的字段与编号；前后端契约同一次变更、同一次验收。
-4. **任务与版本**：源码用 Git，每次任务一个可验收提交；发布 ZIP 由独立打包脚本生成，不把 `node_modules`、数据库、`.env` 或密钥放入版本库。
+4. **任务与版本**：源码用 Git，每次任务一个可验收提交；发布 ZIP 由独立打包脚本生成，不把 `node_modules`、数据库、`.env` 或密钥放入版本库。现有命令是 `cd frontend && npm run package:windows`，产物写在 `releases/` 并且不进入 Git。

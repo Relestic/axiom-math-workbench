@@ -2,6 +2,18 @@
 
 日期：2026-11-02。环境：Windows、Node.js 24.19.0、Codex 内置浏览器。
 
+## 业务模块拆分（2026-11-07）
+
+- 建立 `frontend/src/modules/`：可视化模块已落地，另五个模块已有边界 README 与数据访问适配器。
+- `pages/FunctionWorkspace.tsx` 从 988 行降为兼容导出；实现迁到 `modules/visualization/two-d/FunctionWorkspace.tsx`（76 行组合层）。
+- 拆出 `components/`（编辑器、图表、AI 对话、模型设置、下一步）、`hooks/useFunctionWorkspace.ts`（状态/撤销/请求/持久化）、`scene/functionScene.ts`（唯一校验入口）、`api.ts`。
+- 三维页面从 `pages/surface/` 迁入 `modules/visualization/three-d/`；`App.tsx` 懒加载路径更新。
+- 人工编辑、AI 返回、撤销共用 `applyFunctionScene`；实测公式 `x^2 → sin(x)`、撤销回 `x^2`、AI 改 `cos(x)` 均正常，三维页面 904 个投影路径正常。
+- `DataProvider` 的 API 调用已通过 practice/progress/records/identity 适配器进入模块边界；完整状态逻辑迁移留作下一步。
+- 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
+- Git 首个模块化提交：`fd7f6fb refactor: establish visualization module and business boundaries`。
+- 后端 **102 passed**，前端 **21/21**，`npm run build:online` 通过。
+
 ## 练习批改与稳定本地预览（2026-11-07）
 
 - 练习提交改为“提交批改”：计算题从作答中提取最终表达式，后端 SymPy 等价检查；证明题按关键步骤给 0–100 结构分，返回逐项 ✓/✗、权重、参考结果与人工复核提示。

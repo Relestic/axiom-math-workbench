@@ -127,6 +127,10 @@ AI 改图指令示例：`换成 sin(a*x)，让 a 在 0.5 到 5 之间变化`、`
 - **数学内容为代表性样例**：不包含需求文档中所有定理、题型、案例与审核流程。
 - **绘图与计算有范围限制**：自由函数由 Plotly.js 绘制，Math.js 提供受限表达式求值、符号求导和部分 Taylor 系数。数值切线、有限采样与 Riemann 和不构成可导、连续或可积的证明。窄小间断、快速振荡可能被漏采样。尚未接入 MathJax；3D 为经典示例的可调视角投影。
 
+## 模块结构
+
+六个业务模块的边界见 [MODULES.md](../MODULES.md)。可视化已落地到 [`src/modules/visualization/`](src/modules/visualization/README.md)，页面入口 `pages/FunctionWorkspace.tsx` 仅兼容导出；其他模块已有边界说明和数据访问适配器，状态逻辑按顺序迁移。
+
 ## 源码结构
 
 ```text
