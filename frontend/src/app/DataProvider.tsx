@@ -9,21 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { fetchDataBundle } from "../lib/api";
-import {
-  fetchExerciseHint,
-  fetchExerciseSolution,
-  rateAttemptTyped,
-  submitAttemptTyped,
-} from "../modules/practice/api";
-import {
-  createNoteTyped,
-  deleteNoteRequest,
-  toggleBookmarkRequest,
-} from "../modules/records/api";
-import {
-  fetchDashboardBundle,
-  submitDiagnosticTyped,
-} from "../modules/progress/api";
+import { usePracticeActions } from "../modules/practice/usePracticeActions";
+import { useRecordActions } from "../modules/records/useRecordActions";
+import { readOfflineBookmarks } from "../modules/records/offline";
+import { fetchDashboardBundle } from "../modules/progress/api";
+import { useProgressActions } from "../modules/progress/useProgressActions";
 import { useSession } from "../modules/identity/api";
 import {
   buildExercises,
@@ -33,7 +23,6 @@ import {
   mapClassicSets,
   mapDashboard,
   mapDiagnostic,
-  mapDiagnosticResult,
   mapGraph,
   mapNotes,
   mapPractice,
@@ -52,8 +41,6 @@ import {
   makeOfflineExercise,
   offlineClassics,
   offlineSources,
-  saveOfflineAttempts,
-  saveOfflineNotes,
 } from "../data/offline";
 
 type DataStatus = "loading" | "ready" | "error";
@@ -89,7 +76,6 @@ type DataContextValue = {
 
 const DataContext = createContext<DataContextValue | null>(null);
 
-const OFFLINE_BOOKMARKS = "axiom-offline-bookmarks";
 const LEGACY_SNAPSHOTS = [
   "axiom-notes",
   "axiom-attempts",
@@ -105,56 +91,6 @@ function clearLegacySnapshots(): void {
   } catch {
     /* ignore */
   }
-}
-
-function readOfflineBookmarks(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(OFFLINE_BOOKMARKS) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveOfflineBookmarks(ids: string[]): void {
-  try {
-    localStorage.setItem(OFFLINE_BOOKMARKS, JSON.stringify(ids));
-  } catch {
-    /* ignore */
-  }
-}
-
-function bumpOfflineDashboard(
-  dashboard: DashboardData,
-  attempts: Attempt[],
-): DashboardData {
-  const summary = {
-    ...dashboard.summary,
-    practice: {
-      ...dashboard.summary.practice,
-      attemptsTotal: attempts.length,
-    },
-    today: {
-      ...dashboard.summary.today,
-      attempts: attempts.filter(
-        (attempt) =>
-          new Date(attempt.createdAt).toDateString() === new Date().toDateString(),
-      ).length,
-    },
-    review: {
-      count: attempts.filter(
-        (attempt) =>
-          attempt.selfRating === "revisit" || attempt.selfRating === "pending",
-      ).length,
-    },
-  };
-  return {
-    ...dashboard,
-    summary,
-    practiceTotals: {
-      ...dashboard.practiceTotals,
-      attempts: attempts.length,
-    },
-  };
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -330,218 +266,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [data.exercises],
   );
 
-  const submitAttempt = useCallback(
-    async (input: {
-      exerciseId: string;
-      answer: string;
-      hintsUsed: number;
-      solutionViewed: boolean;
-      selfRating?: Attempt["selfRating"];
-    }): Promise<Attempt> => {
-      if (session.mode === "server") {
-        const dto = await submitAttemptTyped({
-          exerciseId: input.exerciseId,
-          answer: input.answer,
-          hintsUsed: input.hintsUsed,
-          solutionViewed: input.solutionViewed,
-        });
-        const attempt = mapAttempt(dto);
-        setData((current) => ({
-          ...current,
-          attempts: [attempt, ...current.attempts],
-        }));
-        void refreshDerived();
-        return attempt;
-      }
-      const exercise = data.exercises.find(
-        (item) => item.id === input.exerciseId,
-      );
-      const attempt: Attempt = {
-        id: crypto.randomUUID(),
-        exerciseId: input.exerciseId,
-        topicId: exercise?.topicId || input.exerciseId.split("-")[0],
-        coefficient: exercise?.coefficient || 2,
-        title: exercise?.title || input.exerciseId,
-        answer: input.answer,
-        hints: input.hintsUsed > 0,
-        solutionSeen: input.solutionViewed,
-        createdAt: new Date().toISOString(),
-        selfRating: input.selfRating || "pending",
-      };
-      setData((current) => {
-        const attempts = [attempt, ...current.attempts];
-        saveOfflineAttempts(attempts);
-        return {
-          ...current,
-          attempts,
-          dashboard: bumpOfflineDashboard(current.dashboard, attempts),
-        };
-      });
-      return attempt;
-    },
-    [data.exercises, refreshDerived, session.mode],
-  );
-
-  const rateAttempt = useCallback(
-    async (id: string, rating: Attempt["selfRating"]) => {
-      if (session.mode === "server") {
-        await rateAttemptTyped(id, rating);
-      }
-      setData((current) => {
-        const attempts = current.attempts.map((attempt) =>
-          attempt.id === id ? { ...attempt, selfRating: rating } : attempt,
-        );
-        if (session.mode === "offline") saveOfflineAttempts(attempts);
-        return {
-          ...current,
-          attempts,
-          dashboard: bumpOfflineDashboard(current.dashboard, attempts),
-        };
-      });
-      if (session.mode === "server") void refreshDerived();
-    },
-    [refreshDerived, session.mode],
-  );
-
-  const saveNote = useCallback(
-    async (text: string, conceptId?: string): Promise<Note> => {
-      if (session.mode === "server") {
-        const dto = await createNoteTyped(text, conceptId);
-        const note = mapNotes([dto])[0];
-        setData((current) => ({
-          ...current,
-          notes: [note, ...current.notes],
-        }));
-        return note;
-      }
-      const note: Note = {
-        id: crypto.randomUUID(),
-        text,
-        date: new Date().toLocaleString("zh-CN"),
-        conceptId: conceptId || null,
-      };
-      setData((current) => {
-        const notes = [note, ...current.notes];
-        saveOfflineNotes(notes);
-        return { ...current, notes };
-      });
-      return note;
-    },
-    [session.mode],
-  );
-
-  const deleteNote = useCallback(
-    async (id: string) => {
-      if (session.mode === "server") {
-        await deleteNoteRequest(id);
-      }
-      setData((current) => {
-        const notes = current.notes.filter((note) => note.id !== id);
-        if (session.mode === "offline") saveOfflineNotes(notes);
-        return { ...current, notes };
-      });
-    },
-    [session.mode],
-  );
-
-  const toggleBookmark = useCallback(
-    async (conceptId: string) => {
-      const active = data.bookmarks.includes(conceptId);
-      if (session.mode === "server") {
-        await toggleBookmarkRequest(conceptId, !active);
-      }
-      setData((current) => {
-        const bookmarks = active
-          ? current.bookmarks.filter((id) => id !== conceptId)
-          : [...current.bookmarks, conceptId];
-        if (session.mode === "offline") saveOfflineBookmarks(bookmarks);
-        return { ...current, bookmarks };
-      });
-    },
-    [data.bookmarks, session.mode],
-  );
-
-  const loadHint = useCallback(
-    async (exerciseId: string): Promise<string> => {
-      if (session.mode !== "server") {
-        return (
-          data.exercises.find((exercise) => exercise.id === exerciseId)?.hint ||
-          ""
-        );
-      }
-      const result = await fetchExerciseHint(exerciseId);
-      return result.hint;
-    },
-    [data.exercises, session.mode],
-  );
-
-  const loadSolution = useCallback(
-    async (exerciseId: string): Promise<string[]> => {
-      if (session.mode !== "server") {
-        return (
-          data.exercises.find((exercise) => exercise.id === exerciseId)
-            ?.solution || []
-        );
-      }
-      const result = await fetchExerciseSolution(exerciseId);
-      return (result.steps || [])
-        .map((step) =>
-          step.title ? `${step.title}：${step.text || ""}` : step.text || "",
-        )
-        .filter(Boolean);
-    },
-    [data.exercises, session.mode],
-  );
-
-  const submitDiagnostic = useCallback(
-    async (answers: Record<string, number>): Promise<DiagnosticResult> => {
-      if (session.mode === "server") {
-        const dto = await submitDiagnosticTyped(answers);
-        const result = mapDiagnosticResult(dto);
-        setData((current) => ({
-          ...current,
-          diagnostic: { ...current.diagnostic, answers, result },
-        }));
-        return result;
-      }
-      const questions = data.diagnostic.questions;
-      const results = questions.map((question, index) => {
-        const selected = answers[index] ?? -1;
-        const correctIndex = question.correctIndex ?? 0;
-        return {
-          questionId: question.id,
-          selected,
-          correctIndex,
-          correct: selected === correctIndex,
-          reason: question.reason || "",
-          conceptId: question.conceptId || null,
-        };
-      });
-      const correctCount = results.filter((item) => item.correct).length;
-      const recommendations = Array.from(
-        new Set(
-          results
-            .filter((item) => !item.correct && item.conceptId)
-            .map((item) => item.conceptId as string),
-        ),
-      )
-        .map((id) => data.units.find((unit) => unit.id === id))
-        .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit))
-        .map((unit) => ({ id: unit.id, name: unit.title }));
-      const result: DiagnosticResult = {
-        correctCount,
-        total: questions.length,
-        results,
-        recommendations,
-      };
-      setData((current) => ({
-        ...current,
-        diagnostic: { ...current.diagnostic, answers, result },
-      }));
-      return result;
-    },
-    [data.diagnostic.questions, data.units, session.mode],
-  );
+  const { submitAttempt, rateAttempt, loadHint, loadSolution } =
+    usePracticeActions({ session, data, setData, refreshDerived });
+  const { saveNote, deleteNote, toggleBookmark } = useRecordActions({
+    session,
+    data,
+    setData,
+  });
+  const { submitDiagnostic } = useProgressActions({ session, data, setData });
 
   const value = useMemo<DataContextValue>(
     () => ({

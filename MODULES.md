@@ -92,7 +92,7 @@
 
 ## 9. 迁移顺序与当前状态
 
-1. **可视化工作区（已完成第一步）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
-2. **数据管理（下一步）**：把 `DataProvider` 的练习、记录、进度、身份操作提取为模块 hooks；`DataProvider` 只保留组合、刷新和错误边界。
-3. **公共接口**：统一场景/题目/作答/知识点的字段与编号；前后端契约同一次变更、同一次验收。
-4. **任务与版本**：源码用 Git，每次任务一个可验收提交；发布 ZIP 由独立打包脚本生成，不把 `node_modules`、数据库、`.env` 或密钥放入版本库。现有命令是 `cd frontend && npm run package:windows`，产物写在 `releases/` 并且不进入 Git。
+1. **可视化工作区（已完成）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
+2. **数据管理（已完成主要提取）**：`DataProvider` 的练习、记录、进度写操作已迁入 `modules/practice/usePracticeActions`、`modules/records/useRecordActions`、`modules/progress/useProgressActions`；DataProvider 从 594 行降到 326 行，只保留组合、加载、刷新、错误边界和 context。
+3. **公共接口（已完成基础契约）**：`frontend/src/modules/contracts.ts` 统一 ID/领域类型；[docs/contracts.md](docs/contracts.md) 记录场景、题目、作答、知识点字段及前后端 schema 对照；离线/服务端校验入口一致。
+4. **任务与版本（已完成基础设置）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；`node_modules`、数据库、`.env` 和密钥均在忽略列表。

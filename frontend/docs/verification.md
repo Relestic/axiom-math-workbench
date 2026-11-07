@@ -9,8 +9,8 @@
 - 拆出 `components/`（编辑器、图表、AI 对话、模型设置、下一步）、`hooks/useFunctionWorkspace.ts`（状态/撤销/请求/持久化）、`scene/functionScene.ts`（唯一校验入口）、`api.ts`。
 - 三维页面从 `pages/surface/` 迁入 `modules/visualization/three-d/`；`App.tsx` 懒加载路径更新。
 - 人工编辑、AI 返回、撤销共用 `applyFunctionScene`；实测公式 `x^2 → sin(x)`、撤销回 `x^2`、AI 改 `cos(x)` 均正常，三维页面 904 个投影路径正常。
-- `DataProvider` 的 API 调用已通过 practice/progress/records/identity 适配器进入模块边界；完整状态逻辑迁移留作下一步。
-- 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
+- `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
+- 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 首个模块化提交：`fd7f6fb refactor: establish visualization module and business boundaries`。
 - 后端 **102 passed**，前端 **21/21**，`npm run build:online` 通过。
 

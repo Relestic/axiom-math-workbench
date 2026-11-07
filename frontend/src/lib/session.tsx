@@ -21,7 +21,7 @@ import {
 
 type Mode = "server" | "offline";
 
-type SessionValue = {
+export type SessionValue = {
   ready: boolean;
   busy: boolean;
   mode: Mode | null;

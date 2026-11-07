@@ -36,34 +36,40 @@ import {
 } from "lucide-react";
 const Exploration = lazy(() => import("./pages/FunctionWorkspace"));
 const Textbook = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Textbook })),
+  import("./modules/teaching").then((module) => ({ default: module.Textbook })),
 );
 const Examples = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Examples })),
+  import("./modules/teaching").then((module) => ({ default: module.Examples })),
 );
 const Proof = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Proof })),
+  import("./modules/teaching").then((module) => ({ default: module.Proof })),
 );
 const Exercises = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Exercises })),
+  import("./modules/practice").then((module) => ({ default: module.Exercises })),
 );
 const Review = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Review })),
+  import("./modules/practice").then((module) => ({ default: module.Review })),
 );
 const KnowledgeMap = lazy(() =>
-  import("./pages/Maps").then((module) => ({ default: module.KnowledgeMap })),
+  import("./modules/progress").then((module) => ({
+    default: module.KnowledgeMap,
+  })),
 );
 const PracticeMap = lazy(() =>
-  import("./pages/Maps").then((module) => ({ default: module.PracticeMap })),
+  import("./modules/progress").then((module) => ({
+    default: module.PracticeMap,
+  })),
 );
 const Dashboard = lazy(() =>
-  import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })),
+  import("./modules/progress").then((module) => ({ default: module.Dashboard })),
 );
 const Notes = lazy(() =>
-  import("./pages/Notes").then((module) => ({ default: module.Notes })),
+  import("./modules/records").then((module) => ({ default: module.Notes })),
 );
 const Diagnostic = lazy(() =>
-  import("./pages/Diagnostic").then((module) => ({ default: module.Diagnostic })),
+  import("./modules/progress").then((module) => ({
+    default: module.Diagnostic,
+  })),
 );
 const LocalTextbook = lazy(() =>
   import("./pages/LocalTextbook").then((module) => ({

@@ -1,6 +1,6 @@
 import { AlertCircle, LoaderCircle, RotateCcw } from "lucide-react";
 import App from "./App";
-import AuthScreen from "./pages/Auth";
+import { AuthScreen } from "./modules/identity";
 import { useAppData } from "./app/DataProvider";
 import { useSession } from "./lib/session";
 
