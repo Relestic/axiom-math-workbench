@@ -21,7 +21,7 @@
 - `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
-- 发布产物：`releases/Axiom-Windows-Full-20261107T054723Z.zip`，41,328,635 字节、4,181 个文件，由 `npm run package:windows` 生成。
+- 发布产物：`releases/Axiom-Windows-Full-20261107T064249Z.zip`，41,336,872 字节、4,189 个文件，由 `npm run package:windows` 生成。
 - 后端 **104 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）
