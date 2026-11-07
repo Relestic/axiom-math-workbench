@@ -42,7 +42,24 @@ if (!existsSync(join(runtime, "python.exe")))
     "Add-Type -AssemblyName System.IO.Compression.FileSystem\n[IO.Compression.ZipFile]::ExtractToDirectory($env:AXIOM_RUNTIME_ZIP, $env:AXIOM_RUNTIME_DIR)",
     { AXIOM_RUNTIME_ZIP: zip, AXIOM_RUNTIME_DIR: runtime },
   );
-if (!existsSync(join(runtime, "site-packages", "flask")))
+
+const requirementsFile = join(project, "backend", "requirements.txt");
+const requirementsHash = createHash("sha256")
+  .update(await readFile(requirementsFile))
+  .digest("hex");
+const dependencyMarker = join(
+  runtime,
+  "site-packages",
+  ".axiom-dependencies.sha256",
+);
+const installedHash = existsSync(dependencyMarker)
+  ? (await readFile(dependencyMarker, "utf8")).trim()
+  : "";
+if (
+  !existsSync(join(runtime, "site-packages", "flask")) ||
+  !existsSync(join(runtime, "site-packages", "cryptography")) ||
+  installedHash !== requirementsHash
+) {
   execFileSync(
     "python",
     [
@@ -54,13 +71,19 @@ if (!existsSync(join(runtime, "site-packages", "flask")))
       "--only-binary=:all:",
       "--no-compile",
       "-r",
-      join(project, "backend", "requirements.txt"),
+      requirementsFile,
       "tzdata",
       "--report",
       join(cache, "python-dependencies.json"),
     ],
     { windowsHide: true, stdio: "inherit" },
   );
+  await writeFile(
+    dependencyMarker,
+    requirementsHash + "\n",
+    "utf8",
+  );
+}
 
 const name = `Axiom-Windows-Full-${new Date()
   .toISOString()
