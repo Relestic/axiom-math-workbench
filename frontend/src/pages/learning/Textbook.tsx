@@ -1,3 +1,4 @@
+import "../learning.css";
 import {
   ArrowRight,
   Bookmark,

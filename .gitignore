@@ -46,7 +46,7 @@ Thumbs.db
 
 
 # Local browser test profiles / scratch scripts
-_ai-ui-profile/
+_*-profile/
 _*.tmp.*
 _*.py
 

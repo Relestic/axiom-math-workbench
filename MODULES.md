@@ -96,3 +96,22 @@
 2. **数据管理（已完成主要提取）**：`DataProvider` 的练习、记录、进度写操作已迁入 `modules/practice/usePracticeActions`、`modules/records/useRecordActions`、`modules/progress/useProgressActions`；DataProvider 从 594 行降到 326 行，只保留组合、加载、刷新、错误边界和 context。
 3. **公共接口（已完成基础契约）**：`frontend/src/modules/contracts.ts` 统一 ID/领域类型；[docs/contracts.md](docs/contracts.md) 记录场景、题目、作答、知识点字段及前后端 schema 对照；离线/服务端校验入口一致。
 4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261107T064249Z.zip`（41,336,872 字节，4,189 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
+
+### Git 备份约定
+
+改动前先留备份标签：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/git-backup.ps1 -Label "before-layout-fix"
+```
+
+脚本会创建 `backup/<label>-<timestamp>` annotated tag，并打印回退命令。每个可验收功能单独提交；发布前额外打 `release/<version>` 标签。不要用 `git reset --hard` 覆盖未提交内容。
+
+本次排版修复前的备份：
+
+```text
+tag/branch: backup/pre-layout-fix-20261107
+```
+
+修复提交后再打 `release/2026-11-07-layout-fix`。
+

@@ -2,6 +2,15 @@
 
 日期：2026-11-02。环境：Windows、Node.js 24.19.0、Codex 内置浏览器。
 
+## 教材/证明排版修复（2026-11-07）
+
+- 根因：模块拆分后 `App.tsx` 直接加载 `modules/teaching`，绕过了原 `pages/Learning.tsx` 里的 `learning.css` 导入，导致教材定义、证明、练习页面共用样式丢失。
+- 修复：`Textbook`、`Examples`、`Proof`、`Exercises`、`Review` 各自导入 `../learning.css`，不再依赖某个父入口的副作用。
+- 实测：教材页恢复为两栏讲义+定义卡；证明页恢复 `260px + 797px` 网格和步骤导航。
+- 截图：[教材排版](layout-textbook.png)、[证明排版](layout-proof.png)。
+- 修复前备份：`backup/pre-layout-fix-20261107`（tag/branch）；修复后发布标签 `release/2026-11-07-layout-fix`。
+- 后端 **104 passed**，前端 **21/21**，在线构建通过。
+
 ## 用户接入 DeepSeek（2026-11-07）
 
 - 图像探索和三维曲面页均可打开“接入 DeepSeek”，输入个人 Key、选择 `deepseek-chat` / `deepseek-reasoner`、保存并测试，不需要改 `.env` 或重启后端。
