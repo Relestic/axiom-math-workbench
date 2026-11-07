@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-online/
+dist-portable/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+.test-build/
+.test-build-mappers/
+.portable-test-*/
+.tmp/

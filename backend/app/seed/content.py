@@ -1,0 +1,945 @@
+"""Seed content for the Axiom backend demo.
+
+The curriculum is a project-written representative sample for the eight MVP
+modules in ``readme.md``. It is not a transcription of a published textbook:
+page numbers are demo index pages attached to a clearly labelled sample
+textbook, and the API marks this origin so reviewers do not mistake it for
+verified textbook content.
+"""
+
+from __future__ import annotations
+
+TEXTBOOK = {
+    "id": "tb-analysis",
+    "slug": "analysis-4e-sample",
+    "title": "数学分析教程 第 4 版 · 上册",
+    "edition": "第 4 版",
+    "author": "项目自编示例讲义",
+    "subject": "数学分析",
+    "is_primary": True,
+    "status": "published",
+    "page_count": 326,
+    "parse_state": "ready",
+    "parse_meta": {
+        "origin": "project_written_sample",
+        "note": "演示用教材元数据；正文为项目自编示例，不是出版社原文，页码只作导航示例。",
+        "parsed_by": "seed",
+    },
+    "source_note": "演示内容按 readme.md 的 MVP 模块编写；正式产品需替换为获授权的教材并重新审核。",
+}
+
+CHAPTERS = [
+    {
+        "id": "ch-1",
+        "number": 1,
+        "title": "实数系与完备性",
+        "summary": "上确界原理、确界与实数系的连续性，作为后续极限论证的存在性基础。",
+        "week_start": 1,
+        "week_end": 2,
+        "page_start": 1,
+        "page_end": 42,
+    },
+    {
+        "id": "ch-2",
+        "number": 2,
+        "title": "数列极限",
+        "summary": "ε–N 语言、收敛数列性质、子列与单调有界定理。",
+        "week_start": 3,
+        "week_end": 3,
+        "page_start": 43,
+        "page_end": 70,
+    },
+    {
+        "id": "ch-3",
+        "number": 3,
+        "title": "函数极限与连续",
+        "summary": "去心邻域、函数极限、点连续与间断点分类。",
+        "week_start": 4,
+        "week_end": 5,
+        "page_start": 71,
+        "page_end": 100,
+    },
+    {
+        "id": "ch-4",
+        "number": 4,
+        "title": "连续性",
+        "summary": "区间上连续、一致连续、闭区间连续函数性质与康托尔定理。",
+        "week_start": 6,
+        "week_end": 7,
+        "page_start": 101,
+        "page_end": 134,
+    },
+    {
+        "id": "ch-5",
+        "number": 5,
+        "title": "导数与微分",
+        "summary": "导数定义、单侧导数、可导与连续、求导法则与局部线性近似。",
+        "week_start": 8,
+        "week_end": 9,
+        "page_start": 135,
+        "page_end": 170,
+    },
+    {
+        "id": "ch-6",
+        "number": 6,
+        "title": "中值定理及应用",
+        "summary": "Fermat、Rolle、Lagrange、Cauchy 中值定理与辅助函数构造。",
+        "week_start": 10,
+        "week_end": 10,
+        "page_start": 171,
+        "page_end": 194,
+    },
+    {
+        "id": "ch-7",
+        "number": 7,
+        "title": "Taylor 公式",
+        "summary": "有限阶 Taylor 公式、余项形式与误差估计。",
+        "week_start": 11,
+        "week_end": 11,
+        "page_start": 195,
+        "page_end": 218,
+    },
+    {
+        "id": "ch-8",
+        "number": 8,
+        "title": "原函数与不定积分",
+        "summary": "原函数、基本积分方法、换元与分部积分。",
+        "week_start": 12,
+        "week_end": 12,
+        "page_start": 219,
+        "page_end": 242,
+    },
+    {
+        "id": "ch-9",
+        "number": 9,
+        "title": "定积分与可积性",
+        "summary": "分割、Riemann 和、Darboux 上下和与可积判据。",
+        "week_start": 13,
+        "week_end": 13,
+        "page_start": 243,
+        "page_end": 272,
+    },
+    {
+        "id": "ch-10",
+        "number": 10,
+        "title": "微积分基本定理",
+        "summary": "变上限积分、Newton–Leibniz 公式与积分性质。",
+        "week_start": 14,
+        "week_end": 14,
+        "page_start": 273,
+        "page_end": 296,
+    },
+    {
+        "id": "ch-11",
+        "number": 11,
+        "title": "定积分的应用",
+        "summary": "面积、累积量与积分不等式的基础应用。",
+        "week_start": 15,
+        "week_end": 15,
+        "page_start": 297,
+        "page_end": 314,
+    },
+    {
+        "id": "ch-12",
+        "number": 12,
+        "title": "综合与复习",
+        "summary": "跨章节证明训练、条件核对与迁移练习。",
+        "week_start": 16,
+        "week_end": 16,
+        "page_start": 315,
+        "page_end": 326,
+    },
+]
+
+SECTIONS = [
+    {
+        "id": "sec-4-1",
+        "chapter": "ch-4",
+        "title": "4.1 点连续与区间连续",
+        "page_start": 101,
+        "page_end": 110,
+        "printed_page_start": 101,
+        "printed_page_end": 110,
+        "sort_order": 1,
+        "text": (
+            "【项目自编示例讲义，非出版社原文】\n\n"
+            "设 f 定义在集合 D 上，x₀∈D。若对任意 ε>0，存在 δ>0，"
+            "使得对任意 x∈D，只要 |x−x₀|<δ，就有 |f(x)−f(x₀)|<ε，"
+            "则称 f 在 x₀ 连续。这里 δ 可以同时依赖 ε 与 x₀。\n\n"
+            "若 f 在 D 中每一点连续，则称 f 在 D 上连续。点连续关注单个点的局部行为；"
+            "区间连续要求每个点都满足定义，但不同点可以使用不同的 δ。\n\n"
+            "教材把“函数值存在”“极限存在”“极限等于函数值”三件事分开陈述。"
+            "讨论连续性前必须先确认 x₀ 属于定义域。"
+        ),
+        "anchors": [
+            {"label": "定义 4.1.1（点连续）", "page": 101, "concept_id": "continuous"},
+            {"label": "定义 4.1.2（区间连续）", "page": 103, "concept_id": "continuous"},
+            {"label": "例 4.1.3（可去间断）", "page": 107, "concept_id": "continuous"},
+        ],
+    },
+    {
+        "id": "sec-4-2",
+        "chapter": "ch-4",
+        "title": "4.2 一致连续与康托尔定理",
+        "page_start": 128,
+        "page_end": 134,
+        "printed_page_start": 128,
+        "printed_page_end": 134,
+        "sort_order": 2,
+        "text": (
+            "【项目自编示例讲义，非出版社原文】\n\n"
+            "设 f 定义在区间 I 上。若对任意 ε>0，存在 δ>0，使得对所有 x₁,x₂∈I，"
+            "只要 |x₁−x₂|<δ，就有 |f(x₁)−f(x₂)|<ε，则称 f 在 I 上一致连续。\n\n"
+            "与点连续对比：这里的 δ 只依赖 ε，不依赖具体位置。定义中的量词顺序是"
+            "“∀ε ∃δ ∀x₁∀x₂”，若把 δ 写成 δ(ε,x₁)，就退化为逐点连续。\n\n"
+            "定理 4.2.5（康托尔定理） 若 f 在闭区间 [a,b] 上连续，则 f 在 [a,b] 上一致连续。\n\n"
+            "证明思路一（反证） 假定结论不成立，则可取 ε₀>0 与两列 xₙ,yₙ∈[a,b]，"
+            "满足 |xₙ−yₙ|<1/n，但 |f(xₙ)−f(yₙ)|≥ε₀。由有界数列的收敛子列定理，"
+            "xₙ 有子列收敛到某 c∈[a,b]；相应地 yₙ 的子列也收敛到 c。"
+            "f 在 c 连续使两个函数值都趋于 f(c)，与函数值差始终不小于 ε₀ 矛盾。\n\n"
+            "证明思路二（有限覆盖） 对每个 x∈[a,b]，取 δₓ>0 使 f 在 (x−δₓ,x+δₓ)∩[a,b] "
+            "上的振幅小于 ε₀。这些邻域覆盖 [a,b]，由有限覆盖定理取出有限个，"
+            "令 δ 为所得覆盖的 Lebesgue 数，即得到与位置无关的控制。\n\n"
+            "注意：区间必须闭且有界；开区间上的 1/x 说明去掉闭区间条件后结论失效。"
+        ),
+        "anchors": [
+            {"label": "定义 4.2.3（一致连续）", "page": 128, "concept_id": "uniform"},
+            {"label": "定理 4.2.5（康托尔定理）", "page": 133, "concept_id": "uniform"},
+            {"label": "例 4.2.6（1/x 反例）", "page": 129, "concept_id": "uniform"},
+        ],
+    },
+    {
+        "id": "sec-4-3",
+        "chapter": "ch-4",
+        "title": "4.3 闭区间上连续函数的性质",
+        "page_start": 111,
+        "page_end": 127,
+        "printed_page_start": 111,
+        "printed_page_end": 127,
+        "sort_order": 3,
+        "text": (
+            "【项目自编示例讲义，非出版社原文】\n\n"
+            "闭区间上的连续函数具有有界性、最值性、介值性与一致连续性。"
+            "这些结论各自需要不同的条件：有界性只需要连续与紧致性；"
+            "最值性还需要函数取实值；介值性依赖区间连通。\n\n"
+            "逐项检查条件比记住结论名称更重要。开区间上的 1/x 连续但无界；"
+            "闭区间上连续函数的介值性不能推出可导性；"
+            "一致连续是比连续更强的整体性质，但导数有界只是充分条件之一。"
+        ),
+        "anchors": [
+            {"label": "定理 4.3.1（有界性）", "page": 111, "concept_id": "uniform"},
+            {"label": "定理 4.3.2（最值）", "page": 113, "concept_id": "uniform"},
+            {"label": "定理 4.3.4（介值）", "page": 118, "concept_id": "uniform"},
+        ],
+    },
+]
+
+CONCEPTS = [
+    {
+        "id": "continuous",
+        "chapter": "ch-4",
+        "name": "函数的连续性",
+        "short_name": "连续性",
+        "english_name": "Continuity",
+        "kind": "definition",
+        "scope": "mvp_core",
+        "week": 4,
+        "page_start": 101,
+        "page_end": 110,
+        "summary": "函数在一点的极限等于该点函数值；区间连续要求每个点满足定义。",
+        "definition": (
+            "设 f:D→ℝ，x₀∈D。对任意 ε>0，存在 δ>0，使得对任意 x∈D，"
+            "只要 |x−x₀|<δ，就有 |f(x)−f(x₀)|<ε，则称 f 在 x₀ 连续。"
+            "若 f 在 D 中每一点连续，则称 f 在 D 上连续。"
+        ),
+        "formula": "∀ ε>0，∃ δ>0，∀ x∈D：|x−x₀|<δ ⇒ |f(x)−f(x₀)|<ε",
+        "quantifiers": [
+            {"symbol": "∀ε>0", "kind": "given", "text": "先任意给定误差上界 ε"},
+            {"symbol": "∃δ>0", "kind": "chosen", "text": "再选择 δ；允许它依赖 ε 与 x₀"},
+            {"symbol": "∀x∈D", "kind": "all", "text": "对定义域内所有靠近 x₀ 的点"},
+            {"symbol": "|x−x₀|<δ", "kind": "hypothesis", "text": "前提：距离足够近"},
+            {"symbol": "|f(x)−f(x₀)|<ε", "kind": "conclusion", "text": "结论：函数值差被控制"},
+        ],
+        "symbols": [
+            {"symbol": "ε", "reading": "epsilon", "meaning": "任意给定的正数，表示输出精度", "first_page": 101},
+            {"symbol": "δ", "reading": "delta", "meaning": "由 ε 与 x₀ 共同决定的输入容差", "first_page": 101},
+            {"symbol": "D", "reading": "定义域", "meaning": "函数有定义的点的集合", "first_page": 101},
+        ],
+        "conditions": [
+            {"text": "x₀ 属于定义域 D", "why": "必须先有函数值 f(x₀) 才谈得上比较", "source_page": 101, "kind": "domain"},
+            {"text": "ε 可以任意小", "why": "结论必须对所有 ε>0 成立，不能只验证一个精度", "source_page": 101, "kind": "quantifier"},
+            {"text": "δ 允许依赖 ε 与 x₀", "why": "逐点连续不要求统一的 δ", "source_page": 103, "kind": "quantifier"},
+        ],
+        "goals": ["写出点连续定义的量词结构", "用 ε–δ 证明线性函数的连续性", "区分可去间断与跳跃间断"],
+        "prerequisites": [],
+        "tags": ["连续性", "量词", "ε–δ"],
+        "sort_order": 1,
+    },
+    {
+        "id": "uniform",
+        "chapter": "ch-4",
+        "name": "一致连续",
+        "short_name": "一致连续",
+        "english_name": "Uniform continuity",
+        "kind": "definition",
+        "scope": "mvp_core",
+        "week": 7,
+        "page_start": 128,
+        "page_end": 134,
+        "summary": "一个只依赖 ε 的 δ 同时控制定义域内所有点对。",
+        "definition": (
+            "设 f 定义在区间 I 上。对任意 ε>0，存在 δ>0，使得对所有 x₁、x₂∈I，"
+            "只要 |x₁−x₂|<δ，就有 |f(x₁)−f(x₂)|<ε，则称 f 在 I 上一致连续。"
+        ),
+        "formula": "∀ ε>0，∃ δ>0，∀ x₁,x₂∈I：|x₁−x₂|<δ ⇒ |f(x₁)−f(x₂)|<ε",
+        "quantifiers": [
+            {"symbol": "∀ε>0", "kind": "given", "text": "误差上界由外部给定"},
+            {"symbol": "∃δ>0", "kind": "chosen", "text": "只依赖 ε，不依赖 x"},
+            {"symbol": "∀x₁,x₂∈I", "kind": "all", "text": "对所有点对统一适用"},
+            {"symbol": "|x₁−x₂|<δ", "kind": "hypothesis", "text": "两点靠近的前提"},
+            {"symbol": "|f(x₁)−f(x₂)|<ε", "kind": "conclusion", "text": "函数值差统一受控"},
+        ],
+        "symbols": [
+            {"symbol": "ε", "reading": "epsilon", "meaning": "给定输出精度", "first_page": 128},
+            {"symbol": "δ", "reading": "delta", "meaning": "对全部点对通用的输入容差", "first_page": 128},
+            {"symbol": "I", "reading": "区间", "meaning": "任意区间（开、闭、半开、无界均可）", "first_page": 128},
+            {"symbol": "ω(f,E)", "reading": "振幅", "meaning": "f 在集合 E 上的上确界与下确界之差", "first_page": 131},
+        ],
+        "conditions": [
+            {"text": "定义域是指定区间 I", "why": "一致连续是相对于定义域的全局性质", "source_page": 128, "kind": "domain"},
+            {"text": "先给定 ε，再选择 δ", "why": "量词顺序颠倒会改变命题含义", "source_page": 128, "kind": "quantifier"},
+            {"text": "δ 对 I 内所有点对同时有效", "why": "这是与逐点连续的唯一本质差别", "source_page": 128, "kind": "quantifier"},
+            {"text": "闭区间 [a,b] 上连续是 Heine–Cantor 定理的充分条件", "why": "闭与有界共同保证有限覆盖论证可用", "source_page": 133, "kind": "theorem"},
+        ],
+        "goals": ["辨认 δ 是否依赖位置", "证明闭区间连续函数一致连续", "构造 1/x 在 (0,1) 上的反例"],
+        "prerequisites": ["continuous"],
+        "tags": ["一致连续", "量词", "Heine–Cantor"],
+        "sort_order": 2,
+    },
+    {
+        "id": "derivative",
+        "chapter": "ch-5",
+        "name": "导数与微分",
+        "short_name": "导数",
+        "english_name": "Derivative",
+        "kind": "definition",
+        "scope": "mvp_core",
+        "week": 8,
+        "page_start": 138,
+        "page_end": 146,
+        "summary": "差商的有限极限；可导蕴含连续，反之不成立。",
+        "definition": (
+            "若函数在内点 x₀ 的差商 [f(x₀+h)−f(x₀)]/h 在 h→0 时有有限极限，"
+            "则称 f 在 x₀ 可导，该极限称为导数，记为 f′(x₀)。"
+        ),
+        "formula": "f′(x₀) = lim(h→0) [f(x₀+h) − f(x₀)] / h",
+        "quantifiers": [
+            {"symbol": "∀h≠0", "kind": "all", "text": "差商只考虑非零增量"},
+            {"symbol": "lim(h→0)", "kind": "conclusion", "text": "双侧极限存在且有限"},
+        ],
+        "symbols": [
+            {"symbol": "h", "reading": "增量", "meaning": "自变量的非零改变量", "first_page": 138},
+            {"symbol": "f′(x₀)", "reading": "f prime", "meaning": "x₀ 处的导数（局部线性近似系数）", "first_page": 138},
+        ],
+        "conditions": [
+            {"text": "x₀ 是定义域内点", "why": "需要双侧邻域内的函数值", "source_page": 138, "kind": "domain"},
+            {"text": "差商中的 h≠0", "why": "h=0 时分母为零，差商无定义", "source_page": 138, "kind": "definition"},
+            {"text": "双侧极限存在且有限", "why": "左右差商不相等时导数不存在", "source_page": 140, "kind": "existence"},
+        ],
+        "goals": ["由定义计算导数", "证明可导蕴含连续", "构造连续不可导的反例"],
+        "prerequisites": ["continuous"],
+        "tags": ["导数", "差商", "切线"],
+        "sort_order": 3,
+    },
+    {
+        "id": "mean-value",
+        "chapter": "ch-6",
+        "name": "中值定理及应用",
+        "short_name": "中值定理",
+        "english_name": "Mean value theorem",
+        "kind": "theorem",
+        "scope": "mvp_core",
+        "week": 10,
+        "page_start": 174,
+        "page_end": 186,
+        "summary": "用辅助函数把割线斜率转化为某内点的导数。",
+        "definition": (
+            "设 a<b，f 在 [a,b] 上连续、在 (a,b) 上可导，则存在 ξ∈(a,b)，"
+            "使 f′(ξ)=[f(b)−f(a)]/(b−a)。"
+        ),
+        "formula": "f(b) − f(a) = f′(ξ)(b − a)，ξ ∈ (a,b)",
+        "quantifiers": [
+            {"symbol": "∃ξ∈(a,b)", "kind": "conclusion", "text": "存在一个内部点，通常不唯一"},
+            {"symbol": "∀x∈(a,b)", "kind": "all", "text": "在开区间内处处可导"},
+        ],
+        "symbols": [
+            {"symbol": "ξ", "reading": "xi", "meaning": "中值点，位于区间内部", "first_page": 174},
+            {"symbol": "m", "reading": "割线斜率", "meaning": "[f(b)−f(a)]/(b−a)", "first_page": 175},
+        ],
+        "conditions": [
+            {"text": "a<b", "why": "区间非退化，否则无法定义割线斜率", "source_page": 174, "kind": "domain"},
+            {"text": "闭区间 [a,b] 上连续", "why": "保证函数在端点有定义并可应用最值定理", "source_page": 174, "kind": "theorem"},
+            {"text": "开区间 (a,b) 上可导", "why": "Rolle 定理需要在内部找到导数为零的点", "source_page": 174, "kind": "theorem"},
+        ],
+        "goals": ["构造辅助函数", "逐项检查中值定理条件", "用中值定理证明不等式"],
+        "prerequisites": ["derivative"],
+        "tags": ["中值定理", "辅助函数", "Rolle"],
+        "sort_order": 4,
+    },
+    {
+        "id": "taylor",
+        "chapter": "ch-7",
+        "name": "Taylor 公式与余项",
+        "short_name": "Taylor 公式",
+        "english_name": "Taylor's theorem",
+        "kind": "theorem",
+        "scope": "mvp_core",
+        "week": 11,
+        "page_start": 200,
+        "page_end": 210,
+        "summary": "有限阶多项式近似，误差由余项控制。",
+        "definition": (
+            "在展开点附近，用有限阶多项式近似函数，并通过余项描述误差。"
+            "在足够光滑的条件下，可以使用 Lagrange 余项。"
+        ),
+        "formula": "eˣ = 1 + x + x²/2 + eᶿ x³/6，θ 介于 0 与 x 之间",
+        "quantifiers": [
+            {"symbol": "∃θ", "kind": "conclusion", "text": "余项中的中间点依赖于 x 与阶数"},
+        ],
+        "symbols": [
+            {"symbol": "Pₙ(x)", "reading": "n 阶 Taylor 多项式", "meaning": "展开到 n 阶的多项式部分", "first_page": 200},
+            {"symbol": "Rₙ(x)", "reading": "余项", "meaning": "函数与多项式之差", "first_page": 200},
+            {"symbol": "θ", "reading": "theta", "meaning": "Lagrange 余项中的中间点", "first_page": 202},
+        ],
+        "conditions": [
+            {"text": "检查所用余项形式的光滑性条件", "why": "Lagrange 余项需要 n+1 阶导数存在并连续", "source_page": 200, "kind": "theorem"},
+            {"text": "明确展开点和有限阶数", "why": "多项式与误差界都依赖于展开点", "source_page": 200, "kind": "definition"},
+            {"text": "误差估计限定在给定区间", "why": "超出区间时余项上界不再适用", "source_page": 202, "kind": "estimate"},
+        ],
+        "goals": ["写出指定阶的 Taylor 多项式", "用 Lagrange 余项估计误差", "说明近似的有效范围"],
+        "prerequisites": ["derivative", "mean-value"],
+        "tags": ["Taylor", "余项", "误差估计"],
+        "sort_order": 5,
+    },
+    {
+        "id": "primitive",
+        "chapter": "ch-8",
+        "name": "原函数与不定积分",
+        "short_name": "原函数",
+        "english_name": "Antiderivative",
+        "kind": "definition",
+        "scope": "mvp_core",
+        "week": 12,
+        "page_start": 225,
+        "page_end": 234,
+        "summary": "同一区间上任意两个原函数相差常数。",
+        "definition": (
+            "若 F 在区间 I 上的导数等于 f，则称 F 是 f 在 I 上的原函数。"
+            "区间上任意两个原函数之差为常数。"
+        ),
+        "formula": "F′=f ⇒ ∫ f(x) dx = F(x)+C",
+        "quantifiers": [
+            {"symbol": "∀x∈I", "kind": "all", "text": "原函数关系必须在整个区间上成立"},
+        ],
+        "symbols": [
+            {"symbol": "F", "reading": "原函数", "meaning": "满足 F′=f 的函数", "first_page": 225},
+            {"symbol": "C", "reading": "积分常数", "meaning": "同一原函数族的任意常数差", "first_page": 225},
+        ],
+        "conditions": [
+            {"text": "原函数关系在同一区间内成立", "why": "跨区间时“相差常数”可能失效", "source_page": 225, "kind": "domain"},
+            {"text": "通过求导验证", "why": "积分结果必须回代求导检查", "source_page": 228, "kind": "verification"},
+            {"text": "不定积分保留常数 C", "why": "C 表示整个原函数族，不是装饰", "source_page": 225, "kind": "definition"},
+        ],
+        "goals": ["验证原函数", "完成分部积分", "解释常数差的来源"],
+        "prerequisites": ["derivative"],
+        "tags": ["原函数", "不定积分", "分部积分"],
+        "sort_order": 6,
+    },
+    {
+        "id": "riemann",
+        "chapter": "ch-9",
+        "name": "定积分与可积性",
+        "short_name": "Riemann 积分",
+        "english_name": "Riemann integrability",
+        "kind": "definition",
+        "scope": "mvp_core",
+        "week": 13,
+        "page_start": 247,
+        "page_end": 260,
+        "summary": "用 Darboux 上下和之差判断有界函数是否 Riemann 可积。",
+        "definition": (
+            "对有限闭区间上的有界函数，如果任给 ε>0，都存在一个分割 P，"
+            "使 Darboux 上和 U(f,P) 与下和 L(f,P) 的差小于 ε，则函数 Riemann 可积。"
+        ),
+        "formula": "∀ ε>0，∃ P：U(f,P)−L(f,P)<ε",
+        "quantifiers": [
+            {"symbol": "∀ε>0", "kind": "given", "text": "任意给定精度"},
+            {"symbol": "∃P", "kind": "chosen", "text": "找到一个分割，而不是固定等分"},
+        ],
+        "symbols": [
+            {"symbol": "P", "reading": "分割", "meaning": "有限闭区间的有限划分", "first_page": 247},
+            {"symbol": "U(f,P)", "reading": "Darboux 上和", "meaning": "各小区间上确界乘以长度之和", "first_page": 247},
+            {"symbol": "L(f,P)", "reading": "Darboux 下和", "meaning": "各小区间下确界乘以长度之和", "first_page": 247},
+        ],
+        "conditions": [
+            {"text": "区间有限且闭", "why": "Riemann 积分在本课程中只定义在有限闭区间上", "source_page": 247, "kind": "domain"},
+            {"text": "函数有界", "why": "无界函数的上下和可能无定义", "source_page": 247, "kind": "definition"},
+            {"text": "上下确界是数学上的界，不是采样极值", "why": "采样最大值不能冒充上确界", "source_page": 250, "kind": "estimate"},
+        ],
+        "goals": ["用 Darboux 判据证明可积", "构造不可积反例", "解释数值采样的局限"],
+        "prerequisites": ["uniform"],
+        "tags": ["Riemann 积分", "Darboux", "可积性"],
+        "sort_order": 7,
+    },
+    {
+        "id": "integral",
+        "chapter": "ch-10",
+        "name": "微积分基本定理",
+        "short_name": "微积分基本定理",
+        "english_name": "Fundamental theorem of calculus",
+        "kind": "theorem",
+        "scope": "mvp_core",
+        "week": 14,
+        "page_start": 278,
+        "page_end": 290,
+        "summary": "变上限积分的导数等于被积函数；用原函数计算定积分。",
+        "definition": (
+            "若 f 在 [a,b] 上连续，令 F(x)=∫ₐˣf(t)dt，则 F 在 (a,b) 内可导且 F′(x)=f(x)。"
+            "若 G 是 f 的一个原函数，则 ∫ₐᵇf(x)dx=G(b)−G(a)。"
+        ),
+        "formula": "d/dx [∫ₐˣ f(t)dt] = f(x)；∫ₐᵇ f(x)dx = G(b)−G(a)",
+        "quantifiers": [
+            {"symbol": "∀x∈(a,b)", "kind": "all", "text": "内点处讨论变上限积分的导数"},
+        ],
+        "symbols": [
+            {"symbol": "F(x)", "reading": "变上限积分", "meaning": "从 a 累积到 x 的有向面积函数", "first_page": 278},
+            {"symbol": "G", "reading": "原函数", "meaning": "满足 G′=f 的任意函数", "first_page": 283},
+        ],
+        "conditions": [
+            {"text": "被积函数在闭区间上连续", "why": "当前定理版本要求连续性以保证可积与变上限积分可导", "source_page": 278, "kind": "theorem"},
+            {"text": "导数结论在区间内点使用", "why": "端点只能讨论相应单侧导数", "source_page": 279, "kind": "domain"},
+            {"text": "检查原函数和积分区间", "why": "Newton–Leibniz 公式要求原函数在区间上适用", "source_page": 283, "kind": "theorem"},
+        ],
+        "goals": ["求变上限积分及其导数", "用原函数计算定积分", "核对基本定理条件"],
+        "prerequisites": ["riemann", "primitive", "continuous"],
+        "tags": ["微积分基本定理", "变上限积分", "Newton–Leibniz"],
+        "sort_order": 8,
+    },
+]
+
+PROOFS = [
+    {
+        "id": "proof-continuous-linear",
+        "concept": "continuous",
+        "title": "用 ε–δ 定义证明 2x+1 在任意点连续",
+        "idea": "先把函数值之差写成自变量之差的倍数，再反推 δ。",
+        "key_construction": "取 δ=ε/2；δ 不依赖 x₀，因此还得到一致连续。",
+        "tools": ["eps-delta", "absolute-value"],
+        "source_page": 106,
+        "steps": [
+            {"n": 1, "text": "固定任意 x₀∈ℝ，任给 ε>0。", "uses": [], "conditions": ["ε 任意"]},
+            {"n": 2, "text": "取 δ=ε/2。对满足 |x−x₀|<δ 的 x，有 |f(x)−f(x₀)|=2|x−x₀|<2δ=ε。", "uses": ["eps-delta"], "conditions": ["δ>0"]},
+            {"n": 3, "text": "因此 f 在 x₀ 连续。由于 δ 不依赖 x₀，f 在 ℝ 上一致连续。", "uses": ["eps-delta"], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-heine-cantor",
+        "concept": "uniform",
+        "title": "Heine–Cantor 定理（反证法）",
+        "idea": "把“不存在统一 δ”翻译成两列点，再用收敛子列把整体问题压缩到一点。",
+        "key_construction": "否定一致连续定义，得到 |xₙ−yₙ|<1/n 但函数值差不小于 ε₀ 的两列点。",
+        "tools": ["bolzano-weierstrass", "compact-interval", "contradiction"],
+        "source_page": 133,
+        "steps": [
+            {"n": 1, "text": "设 f 在 [a,b] 上连续。反设 f 在 [a,b] 上不一致连续。", "uses": ["contradiction"], "conditions": ["闭区间"]},
+            {"n": 2, "text": "按定义否定：存在 ε₀>0，对每个 n 可取 xₙ,yₙ∈[a,b]，使 |xₙ−yₙ|<1/n 且 |f(xₙ)−f(yₙ)|≥ε₀。", "uses": ["eps-delta"], "conditions": ["否定量词顺序"]},
+            {"n": 3, "text": "由有界数列的收敛子列定理，存在子列 xₙₖ→c。因区间闭，c∈[a,b]。", "uses": ["bolzano-weierstrass"], "conditions": ["有界", "闭"]},
+            {"n": 4, "text": "由 |yₙₖ−c|≤|yₙₖ−xₙₖ|+|xₙₖ−c|→0，得 yₙₖ→c。", "uses": ["absolute-value"], "conditions": []},
+            {"n": 5, "text": "f 在 c 连续，故 f(xₙₖ)、f(yₙₖ) 都趋于 f(c)，其差趋于 0，与始终不小于 ε₀ 矛盾。", "uses": ["continuous-definition"], "conditions": ["f 在 c 连续"]},
+            {"n": 6, "text": "因此 f 在 [a,b] 上一致连续。", "uses": [], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-derivative-continuous",
+        "concept": "derivative",
+        "title": "可导蕴含连续",
+        "idea": "把函数增量写成 h 与差商的乘积，利用差商有界。",
+        "key_construction": "f(x₀+h)−f(x₀)=h·([f(x₀+h)−f(x₀)]/h)。",
+        "tools": ["difference-quotient", "continuity-definition", "absolute-value"],
+        "source_page": 142,
+        "steps": [
+            {"n": 1, "text": "设 f 在 x₀ 可导，差商在 h→0 时趋于有限值 f′(x₀)。", "uses": ["difference-quotient"], "conditions": ["双侧极限存在且有限"]},
+            {"n": 2, "text": "当 h≠0 时，f(x₀+h)−f(x₀)=h·[f(x₀+h)−f(x₀)]/h。", "uses": [], "conditions": ["h≠0"]},
+            {"n": 3, "text": "右侧是趋于 0 的量与有界量的乘积，因此趋于 0；故 f 在 x₀ 连续。", "uses": ["continuity-definition"], "conditions": []},
+            {"n": 4, "text": "逆命题不成立：|x| 在 0 连续，但左右差商分别为 −1 与 1。", "uses": ["one-sided-limits"], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-lagrange-mvt",
+        "concept": "mean-value",
+        "title": "Lagrange 中值定理",
+        "idea": "减去割线对应的线性函数，制造两个相等端点值，再应用 Rolle 定理。",
+        "key_construction": "g(x)=f(x)−f(a)−m(x−a)，其中 m=[f(b)−f(a)]/(b−a)。",
+        "tools": ["rolle", "auxiliary-function", "derivative-rules"],
+        "source_page": 176,
+        "steps": [
+            {"n": 1, "text": "记 m=[f(b)−f(a)]/(b−a)，构造 g(x)=f(x)−f(a)−m(x−a)。", "uses": ["auxiliary-function"], "conditions": ["a<b"]},
+            {"n": 2, "text": "g 在 [a,b] 连续、在 (a,b) 可导，且 g(a)=g(b)=0。", "uses": ["derivative-rules"], "conditions": ["f 在闭区间连续", "f 在开区间可导"]},
+            {"n": 3, "text": "由 Rolle 定理，存在 ξ∈(a,b) 使 g′(ξ)=0。", "uses": ["rolle"], "conditions": []},
+            {"n": 4, "text": "由 g′(ξ)=f′(ξ)−m=0 得 f′(ξ)=m，即 f(b)−f(a)=f′(ξ)(b−a)。", "uses": ["derivative-rules"], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-taylor-exp",
+        "concept": "taylor",
+        "title": "eˣ 的二阶 Taylor 公式与 Lagrange 余项",
+        "idea": "指数函数各阶导数均为自身，逐阶求导后余项可用中间点的指数值控制。",
+        "key_construction": "eˣ=1+x+x²/2+eᶿx³/6，θ 介于 0 与 x 之间。",
+        "tools": ["taylor-theorem", "high-derivative", "inequality"],
+        "source_page": 202,
+        "steps": [
+            {"n": 1, "text": "指数函数在实数轴上有各阶连续导数，可在 0 处使用二阶 Taylor 公式。", "uses": ["taylor-theorem"], "conditions": ["所需光滑性"]},
+            {"n": 2, "text": "0 处的函数值、一阶与二阶导数均为 1，故多项式为 1+x+x²/2。", "uses": ["high-derivative"], "conditions": []},
+            {"n": 3, "text": "存在介于 0 与 x 之间的 θ，使 R₂(x)=eᶿx³/6。", "uses": ["taylor-theorem"], "conditions": []},
+            {"n": 4, "text": "若 |x|≤r，则 θ≤r，故 |R₂(x)|≤eʳr³/6；这是定理给出的误差上界。", "uses": ["inequality"], "conditions": ["x 限定在区间"]},
+        ],
+    },
+    {
+        "id": "proof-primitive-constant",
+        "concept": "primitive",
+        "title": "同一区间上的两个原函数相差常数",
+        "idea": "先证明导数为零的函数是常数，再把这一结论用于两个原函数之差。",
+        "key_construction": "H=F−G，则 H′=0，对任意 x<y 在 [x,y] 上用中值定理。",
+        "tools": ["mvt", "derivative-rules"],
+        "source_page": 226,
+        "steps": [
+            {"n": 1, "text": "设 F、G 是同一区间 I 上 f 的两个原函数，令 H=F−G。", "uses": [], "conditions": ["同一区间"]},
+            {"n": 2, "text": "则 H′=F′−G′=0。", "uses": ["derivative-rules"], "conditions": []},
+            {"n": 3, "text": "对区间内任意 x<y，H 在 [x,y] 连续、在 (x,y) 可导，由中值定理 H(y)−H(x)=H′(ξ)(y−x)=0。", "uses": ["mvt"], "conditions": ["区间内任意两点"]},
+            {"n": 4, "text": "因此 H 在整个区间上为常数，即两个原函数相差常数。", "uses": [], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-riemann-2x",
+        "concept": "riemann",
+        "title": "用 Darboux 判据证明 2x 在 [0,1] 上可积",
+        "idea": "利用单调性把每段的上、下确界放在端点，等分后估计上下和之差。",
+        "key_construction": "n 等分时 Lₙ=(n−1)/n，Uₙ=(n+1)/n，差为 2/n。",
+        "tools": ["darboux", "sup-inf", "finite-sum"],
+        "source_page": 252,
+        "steps": [
+            {"n": 1, "text": "将 [0,1] 等分为 n 份，每段长 1/n。因为 f(x)=2x 递增，每段下确界在左端、上确界在右端。", "uses": ["sup-inf"], "conditions": ["有限闭区间", "有界"]},
+            {"n": 2, "text": "下和 Lₙ=(2/n²)∑ᵢ₌₀ⁿ⁻¹i=(n−1)/n，上和 Uₙ=(2/n²)∑ᵢ₌₁ⁿi=(n+1)/n。", "uses": ["finite-sum"], "conditions": []},
+            {"n": 3, "text": "Uₙ−Lₙ=2/n。任给 ε>0，取 n>2/ε，就有上下和之差小于 ε。", "uses": ["darboux"], "conditions": ["ε 任意"]},
+            {"n": 4, "text": "由 Darboux 判据，f 可积；上下和都趋于 1，故积分值为 1。", "uses": ["darboux"], "conditions": []},
+        ],
+    },
+    {
+        "id": "proof-ftc",
+        "concept": "integral",
+        "title": "微积分基本定理",
+        "idea": "用积分可加性把增量写成小区间上的平均，再用连续性控制被积函数的变化。",
+        "key_construction": "F(x+h)−F(x)=∫ₓˣ⁺ʰf(t)dt，减去 f(x)h 后估计。",
+        "tools": ["integral-additivity", "continuity-definition", "mvt"],
+        "source_page": 280,
+        "steps": [
+            {"n": 1, "text": "固定 x∈(a,b)，取非零 h 且 x+h∈[a,b]。由积分可加性，[F(x+h)−F(x)]/h=(1/h)∫ₓˣ⁺ʰf(t)dt。", "uses": ["integral-additivity"], "conditions": ["x 为内点"]},
+            {"n": 2, "text": "减去 f(x) 后，其绝对值不超过连接 x 与 x+h 的区间上 |f(t)−f(x)| 的上确界。", "uses": ["sup-inf"], "conditions": []},
+            {"n": 3, "text": "f 在 x 连续，故该上界随 h→0 趋于 0，因此 F′(x)=f(x)。", "uses": ["continuity-definition"], "conditions": ["f 在 x 连续"]},
+            {"n": 4, "text": "若 G′=f，则 (G−F)′=0，由中值定理 G−F 为常数，故 G(b)−G(a)=F(b)−F(a)=∫ₐᵇf。", "uses": ["mvt"], "conditions": ["G 是原函数"]},
+        ],
+    },
+]
+
+PROPOSITIONS = [
+    {
+        "id": "prop-uniform-converse",
+        "concept": "uniform",
+        "statement": "若函数 f 在区间 I 上连续，则 f 在 I 上一致连续。",
+        "truth": "false",
+        "given_text": "f 在 I 上逐点连续",
+        "desired_text": "δ 可取为与 x 无关",
+        "missing_conditions": ["I 必须是闭区间（或有界闭区间）"],
+        "explanation": (
+            "连续只保证每个点各自有 δ(x,ε)。一致连续要求一个 δ 同时服务所有点。"
+            "1/x 在 (0,1) 上连续但不一致连续，反驳了该命题；康托尔定理需要在闭区间上。"
+        ),
+        "source_page": 129,
+    },
+    {
+        "id": "prop-derivative-converse",
+        "concept": "derivative",
+        "statement": "若函数 f 在 x₀ 连续，则 f 在 x₀ 可导。",
+        "truth": "false",
+        "given_text": "f 在 x₀ 连续",
+        "desired_text": "差商双侧极限存在且有限",
+        "missing_conditions": ["左右差商必须相等且有限"],
+        "explanation": "|x| 在 0 连续，但左差商为 −1、右差商为 1，因此不可导。",
+        "source_page": 141,
+    },
+    {
+        "id": "prop-bounded-sum",
+        "concept": "riemann",
+        "statement": "有界函数在有限闭区间上必定 Riemann 可积。",
+        "truth": "false",
+        "given_text": "f 在 [a,b] 上有界",
+        "desired_text": "Darboux 上下和之差可任意小",
+        "missing_conditions": ["还需排除间断点造成的上下和差，例如要求间断点集为零测集"],
+        "explanation": "Dirichlet 函数在任何非退化区间上的上下和差恒为区间长度，因此不可积。",
+        "source_page": 255,
+    },
+    {
+        "id": "prop-cantor",
+        "concept": "uniform",
+        "statement": "闭区间 [a,b] 上的连续函数在 [a,b] 上一致连续。",
+        "truth": "true",
+        "given_text": "f 在闭区间 [a,b] 上连续",
+        "desired_text": "f 在 [a,b] 上一致连续",
+        "missing_conditions": [],
+        "explanation": "这是 Heine–Cantor 定理；闭与有界是证明中使用有限覆盖或收敛子列的关键条件。",
+        "source_page": 133,
+    },
+    {
+        "id": "prop-bounded-derivative",
+        "concept": "uniform",
+        "statement": "若 f 在区间 I 上可导且 |f′| 有上界，则 f 在 I 上一致连续。",
+        "truth": "true",
+        "given_text": "f 在 I 上可导，存在 L 使 |f′(x)|≤L",
+        "desired_text": "f 在 I 上一致连续",
+        "missing_conditions": [],
+        "explanation": "由中值定理 |f(x)−f(y)|≤L|x−y|，取 δ=ε/L 即可。但导数有界不是必要条件：√x 在 [0,1] 上一致连续而导数无界。",
+        "source_page": 131,
+    },
+]
+
+CLASSICS = [
+    {
+        "id": "abs-kink",
+        "slug": "abs-kink",
+        "name": "绝对值函数 |x| 在原点",
+        "english_name": "Absolute value at the origin",
+        "kind": "counterexample",
+        "object_definition": "f(x)=|x|，定义在包含 0 的区间上，例如 [−1,1]。",
+        "refutes_proposition_id": "prop-derivative-converse",
+        "refutes_text": "取 h>0 时差商为 1，h<0 时差商为 −1，左右极限不相等，因此 f 在 0 不可导。",
+        "concept_id": "derivative",
+        "source_title": "项目自编讲义，例 4.3.6",
+        "source_url": "",
+        "source_page": 140,
+        "image_kind": "interactive",
+        "license": "项目重绘",
+        "historical_note": "绝对值函数是最常用的连续不可导例子；它说明“尖点”不是形式化定义，左右差商才是判据。",
+        "display_limit": "在 0 附近绘制时必须保留尖点，不能用光滑曲线替代。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "satisfies", "evidence": "三角不等式：||x|−|y||≤|x−y|。"},
+            {"name": "可导", "status": "violates", "evidence": "0 处左右差商分别为 −1 与 1。"},
+            {"name": "一致连续", "status": "satisfies", "evidence": "Lipschitz 常数 1，取 δ=ε。"},
+            {"name": "导数在区间上有界", "status": "satisfies", "evidence": "除 0 外 |f′|=1；0 处不可导但导数几乎处处有界。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "取 [−1,1] 时满足。"},
+        ],
+    },
+    {
+        "id": "reciprocal-1x",
+        "slug": "reciprocal-1x",
+        "name": "1/x 在 (0,1) 上",
+        "english_name": "Reciprocal on the open unit interval",
+        "kind": "counterexample",
+        "object_definition": "f(x)=1/x，定义域为开区间 (0,1)。",
+        "refutes_proposition_id": "prop-uniform-converse",
+        "refutes_text": (
+            "取 xₙ=1/n、yₙ=1/(n+1)，则 |xₙ−yₙ|→0，但 |f(xₙ)−f(yₙ)|=1。"
+            "固定 ε₀=1/2，不存在对所有点对有效的 δ。"
+        ),
+        "concept_id": "uniform",
+        "source_title": "项目自编讲义，例 4.2.6",
+        "source_url": "",
+        "source_page": 129,
+        "image_kind": "interactive",
+        "license": "项目重绘",
+        "historical_note": "该例同时说明“连续”“有界”“闭区间”“导数有界”四个条件在康托尔定理中的作用各不相同。",
+        "display_limit": "靠近 0 时函数值发散；绘图需截断显示并明确标注，不能把截断当成函数有界。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "satisfies", "evidence": "1/x 在 (0,1) 上每点连续。"},
+            {"name": "一致连续", "status": "violates", "evidence": "xₙ=1/n、yₙ=1/(n+1) 的反例序列。"},
+            {"name": "导数在区间上有界", "status": "violates", "evidence": "f′(x)=−1/x² 在 (0,1) 上无界。"},
+            {"name": "定义域为闭区间", "status": "violates", "evidence": "(0,1) 不是闭区间。"},
+            {"name": "Heine–Cantor 定理可直接套用", "status": "violates", "evidence": "定理要求闭区间上的连续函数。"},
+        ],
+    },
+    {
+        "id": "sqrt-x",
+        "slug": "sqrt-x",
+        "name": "√x 在 [0,1] 上",
+        "english_name": "Square root on the closed unit interval",
+        "kind": "example",
+        "object_definition": "f(x)=√x，定义域为 [0,1]。",
+        "refutes_proposition_id": None,
+        "refutes_text": "",
+        "concept_id": "uniform",
+        "source_title": "项目自编讲义，例 4.2.8",
+        "source_url": "",
+        "source_page": 132,
+        "image_kind": "interactive",
+        "license": "项目重绘",
+        "historical_note": "说明导数有界只是判断一致连续的充分条件之一，不是必要条件。",
+        "display_limit": "0 处右导数不存在；图像在 0 附近很陡，采样密集也不能证明一致连续。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "satisfies", "evidence": "√x 在 [0,1] 上连续。"},
+            {"name": "一致连续", "status": "satisfies", "evidence": "对 0≤x≤y≤1，|√y−√x|≤√(y−x)。"},
+            {"name": "导数在区间上有界", "status": "violates", "evidence": "f′(x)=1/(2√x) 在 0 附近无界。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "[0,1] 闭且有界。"},
+            {"name": "Heine–Cantor 定理可直接套用", "status": "satisfies", "evidence": "闭区间上连续，满足定理条件。"},
+        ],
+    },
+    {
+        "id": "dirichlet",
+        "slug": "dirichlet",
+        "name": "Dirichlet 函数",
+        "english_name": "Dirichlet function",
+        "kind": "counterexample",
+        "object_definition": "D(x)=1（x 为有理数），D(x)=0（x 为无理数），定义在 [0,1] 上。",
+        "refutes_proposition_id": "prop-bounded-sum",
+        "refutes_text": (
+            "任意分割的每个小区间内都同时含有有理数与无理数，因此上和恒为 1、下和恒为 0，"
+            "上下和之差恒为 1，不可能小于 ε。"
+        ),
+        "concept_id": "riemann",
+        "source_title": "项目自编讲义，例 5.1.9",
+        "source_url": "",
+        "source_page": 255,
+        "image_kind": "construction",
+        "license": "项目重绘",
+        "historical_note": "Dirichlet 函数说明有界远不足以保证 Riemann 可积，也说明依赖浮点采样“判断有理性”的绘图方法是错误的。",
+        "display_limit": "不能用普通浮点采样逐点绘制；应使用分层示意图并说明有理数、无理数的稠密性。",
+        "properties": [
+            {"name": "在给定区间上有界", "status": "satisfies", "evidence": "函数值只取 0 与 1。"},
+            {"name": "Riemann 可积", "status": "violates", "evidence": "任意分割的上下和差恒为 1。"},
+            {"name": "在给定区间上连续", "status": "violates", "evidence": "有理点与无理点都稠密，任何点都不连续。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "[0,1] 满足。"},
+        ],
+    },
+    {
+        "id": "step-function",
+        "slug": "step-function",
+        "name": "阶跃函数在 [0,1] 上",
+        "english_name": "Step function",
+        "kind": "example",
+        "object_definition": "f(x)=0（0≤x<1/2），f(x)=1（1/2≤x≤1）。",
+        "refutes_proposition_id": None,
+        "refutes_text": "",
+        "concept_id": "riemann",
+        "source_title": "项目自编讲义，例 5.1.4",
+        "source_url": "",
+        "source_page": 253,
+        "image_kind": "construction",
+        "license": "项目重绘",
+        "historical_note": "有间断点仍然可能可积；关键是间断点对上下和差的贡献可以被分割控制。",
+        "display_limit": "在间断点处必须画空心/实心端点，不能跨间断点连线。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "violates", "evidence": "x=1/2 处左右极限不同。"},
+            {"name": "Riemann 可积", "status": "satisfies", "evidence": "把 1/2 单独放入长度为 ε 的小区间即可。"},
+            {"name": "在给定区间上有界", "status": "satisfies", "evidence": "函数值只取 0 与 1。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "[0,1] 满足。"},
+        ],
+    },
+    {
+        "id": "x2sin1x",
+        "slug": "x2sin1x",
+        "name": "x²sin(1/x) 在 0 处补定义",
+        "english_name": "x squared sine reciprocal",
+        "kind": "example",
+        "object_definition": "f(x)=x²sin(1/x)（x≠0），f(0)=0。",
+        "refutes_proposition_id": None,
+        "refutes_text": "",
+        "concept_id": "derivative",
+        "source_title": "项目自编讲义，例 4.4.5",
+        "source_url": "",
+        "source_page": 145,
+        "image_kind": "interactive",
+        "license": "项目重绘",
+        "historical_note": "可导函数的导数可以不连续；但导数仍具有介值性（Darboux 定理）。",
+        "display_limit": "在 0 附近振荡极快，有限采样会漏掉结构；需标注为示意。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "satisfies", "evidence": "补定义后在 0 连续。"},
+            {"name": "可导", "status": "satisfies", "evidence": "0 处差商为 h·sin(1/h)→0。"},
+            {"name": "导数连续", "status": "violates", "evidence": "f′(x) 在 0 附近振荡，0 处不连续。"},
+            {"name": "一致连续", "status": "satisfies", "evidence": "在 [−1,1] 上连续，故一致连续。"},
+        ],
+    },
+    {
+        "id": "thomae",
+        "slug": "thomae",
+        "name": "Thomae 函数",
+        "english_name": "Thomae's function",
+        "kind": "example",
+        "object_definition": "f(x)=1/q（x=p/q 为最简有理数），f(x)=0（x 为无理数）。",
+        "refutes_proposition_id": None,
+        "refutes_text": "",
+        "concept_id": "riemann",
+        "source_title": "选学索引；证明依赖可数集与振幅估计",
+        "source_url": "",
+        "source_page": 258,
+        "image_kind": "construction",
+        "license": "项目重绘",
+        "historical_note": "间断点稠密但仍 Riemann 可积，是理解“间断集大小”的经典例子；完整证明超出当前周次，只作索引。",
+        "display_limit": "只能展示有限分母的近似，不能声称绘出了整个函数。",
+        "properties": [
+            {"name": "在给定区间上有界", "status": "satisfies", "evidence": "0≤f≤1。"},
+            {"name": "Riemann 可积", "status": "satisfies", "evidence": "间断点集为有理数集，可数；对 ε 取有限分母控制。"},
+            {"name": "在给定区间上连续", "status": "violates", "evidence": "在有理点不连续，在无理点连续。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "[0,1] 满足。"},
+        ],
+    },
+    {
+        "id": "weierstrass",
+        "slug": "weierstrass",
+        "name": "Weierstrass 函数",
+        "english_name": "Weierstrass function",
+        "kind": "example",
+        "object_definition": "形如 ∑ aⁿcos(bⁿπx) 的连续函数，在适当参数下处处不可导。",
+        "refutes_proposition_id": None,
+        "refutes_text": "",
+        "concept_id": "continuous",
+        "source_title": "正式版拓展索引；完整证明不作为 MVP 必修",
+        "source_url": "https://www.math.ucdavis.edu/~hunter/intro_analysis_pdf/ch9.pdf",
+        "source_page": None,
+        "image_kind": "construction",
+        "license": "项目重绘（有限项近似）",
+        "historical_note": "历史上说明“连续”远比直观曲线更宽泛；本项目只展示有限项近似并标明超出 MVP 进度。",
+        "display_limit": "任何有限项图像都不是原函数；必须标注近似与拓展范围。",
+        "properties": [
+            {"name": "在给定区间上连续", "status": "satisfies", "evidence": "一致收敛的连续函数级数。"},
+            {"name": "处处可导", "status": "violates", "evidence": "适当参数下处处不可导（拓展结论）。"},
+            {"name": "一致连续", "status": "satisfies", "evidence": "闭区间上连续。"},
+            {"name": "定义域为闭区间", "status": "satisfies", "evidence": "取 [0,1]。"},
+        ],
+    },
+]
+
+TOOLS = [
+    ("eps-delta", "ε–δ 语言", "用给定量与待求量的顺序表达极限与连续。", 1, "prerequisite"),
+    ("absolute-value", "绝对值与三角不等式", "把距离与误差转化为可估计的不等式。", 1, "prerequisite"),
+    ("contradiction", "反证法", "否定目标命题并推导矛盾。", 2, "prerequisite"),
+    ("sup-inf", "上确界与下确界", "确界原理与集合的界。", 2, "prerequisite"),
+    ("finite-sum", "有限求和", "求和符号与裂项、等差数列求和。", 3, "prerequisite"),
+    ("sequence-limit", "数列极限", "ε–N 语言与收敛数列性质。", 3, "prerequisite"),
+    ("function-limit", "函数极限", "去心邻域与双侧极限。", 4, "prerequisite"),
+    ("continuity-definition", "连续定义", "点连续与区间连续的定义。", 4, "mvp_core"),
+    ("compact-interval", "闭区间性质", "闭区间上的有界性与最值性。", 5, "mvp_core"),
+    ("bolzano-weierstrass", "收敛子列定理", "有界数列存在收敛子列。", 5, "mvp_core"),
+    ("finite-cover", "有限覆盖定理", "Heine–Borel 覆盖论证。", 6, "mvp_core"),
+    ("one-sided-limits", "左右极限与单侧导数", "双侧结论需要用左右两侧核对。", 6, "mvp_core"),
+    ("lipschitz", "Lipschitz 条件", "用统一常数控制增量。", 7, "mvp_core"),
+    ("difference-quotient", "差商与导数", "由定义计算导数。", 8, "mvp_core"),
+    ("derivative-rules", "求导法则", "线性、乘积、链式法则。", 8, "mvp_core"),
+    ("high-derivative", "高阶导数", "逐阶求导与多项式系数。", 9, "mvp_core"),
+    ("rolle", "Rolle 定理", "端点相等时内部存在零导点。", 10, "mvp_core"),
+    ("auxiliary-function", "辅助函数", "构造满足 Rolle 条件的新函数。", 10, "mvp_core"),
+    ("mvt", "Lagrange 中值定理", "函数增量等于某内点导数乘区间长度。", 10, "mvp_core"),
+    ("taylor-theorem", "Taylor 定理", "有限阶展开与余项。", 11, "mvp_core"),
+    ("inequality", "不等式估计", "对误差项作可证明的界。", 11, "mvp_core"),
+    ("integration-by-parts", "分部积分", "乘积求导的逆运算。", 12, "mvp_core"),
+    ("darboux", "Darboux 判据", "上下和之差可任意小即可积。", 13, "mvp_core"),
+    ("integral-additivity", "积分区间可加性", "把区间拆开或合并。", 13, "mvp_core"),
+    ("ftc", "微积分基本定理", "变上限积分与 Newton–Leibniz 公式。", 14, "mvp_core"),
+]
