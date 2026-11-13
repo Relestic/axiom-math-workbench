@@ -12,7 +12,7 @@
 - 证明在定理下按需展开；完整解答与历史作答保留在对应练习题内。
 - 实测：教材页首屏 1440×849 可见 AI 按钮；图像 Plotly 正常；AI 解释 `x^2` 的差商并成功改为 `abs(x)`；旧 `#proof` 打开教材且证明折叠展开。
 - 后端 **106 passed**，前端 **21/21**；截图 [教材学习首屏](textbook-first-screen.png)、[教材内 AI](textbook-ai.png)、[证明步骤问 AI](textbook-proof-step.png)。
-- 免安装包在**全新解压目录**验证：无 `backend/.env`、无 `data/`；启动后 `/api/health` 200、演示账号登录成功、首页 200。发布包 `Axiom-Windows-Full-20261113T153318Z.zip`（44,672,417 字节，4,335 文件）。
+- 免安装包在**全新解压目录**验证：无 `backend/.env`、无 `data/`；启动后 `/api/health` 200、演示账号登录成功、首页 200。发布包 `Axiom-Windows-Full-20261113T153743Z.zip`（44,672,413 字节，4,335 文件）。
 - 本次未在 390px 手机视口完成逐项截图验收；响应式 CSS 已提供，但需后续真机复核。
 
 ## AI 讨论式练习（2026-11-07）
@@ -51,7 +51,7 @@
 - `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
-- 发布产物：`releases/Axiom-Windows-Full-20261113T153318Z.zip`，44,672,417 字节、4,335 个文件，由 `npm run package:windows` 生成。
+- 发布产物：`releases/Axiom-Windows-Full-20261113T153743Z.zip`，44,672,413 字节、4,335 个文件，由 `npm run package:windows` 生成。
 - 后端 **106 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）

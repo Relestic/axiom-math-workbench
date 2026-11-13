@@ -243,6 +243,7 @@ export function TeachingFigure({
     setHistory([]);
     setError("");
     setShowAI(false);
+    setSelectedStep(null);
     try {
       const chat = JSON.parse(
         localStorage.getItem(`${key}-chat`) || "[]",
