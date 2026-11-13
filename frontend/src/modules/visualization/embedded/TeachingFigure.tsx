@@ -202,6 +202,10 @@ export function TeachingFigure({
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<{
+    number: number;
+    text: string;
+  } | null>(null);
   const controller = useRef<AbortController | null>(null);
   const requestId = useRef(0);
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -267,6 +271,19 @@ export function TeachingFigure({
       /* ignore */
     }
   }, [key, messages]);
+
+  useEffect(() => {
+    const onQuestion = (event: Event) => {
+      const detail = (event as CustomEvent<{ stepNumber: number; text: string }>)
+        .detail;
+      if (!detail) return;
+      setSelectedStep({ number: detail.stepNumber, text: detail.text });
+      setShowAI(true);
+      setInput(`请解释第 ${detail.stepNumber} 步为什么成立，以及它用了哪个条件。`);
+    };
+    window.addEventListener("axiom-ai-question", onQuestion);
+    return () => window.removeEventListener("axiom-ai-question", onQuestion);
+  }, []);
 
   useEffect(() => {
     const box = chatEnd.current?.parentElement;
@@ -379,9 +396,16 @@ export function TeachingFigure({
           title: unit.title,
           definition: unit.definition,
           formula: unit.formula,
+          contentVersion: "teaching-v1",
+          caseId: classic?.id || "explore",
           case: info.title,
           caseClaim: info.claim,
           caseTags: info.tags,
+          caseTargetProposition: classic?.statement || "",
+          selectedProofStep: selectedStep,
+          learnedScope: unit.chapter,
+          allowedReferences: unit.tools,
+          sceneVersion: "browser-v1",
           source: unit.source,
         },
       });
@@ -648,6 +672,17 @@ export function TeachingFigure({
           <p className="teaching-ai-context">
             已带入当前定义、案例和图像；可以连续追问，也可以直接让 AI 改图。
           </p>
+          {selectedStep && (
+            <div className="teaching-ai-step-context">
+              <span>
+                正在解释第 {selectedStep.number} 步：{selectedStep.text.slice(0, 90)}
+                {selectedStep.text.length > 90 ? "…" : ""}
+              </span>
+              <button className="text-button" onClick={() => setSelectedStep(null)}>
+                取消步骤上下文
+              </button>
+            </div>
+          )}
           {!status?.configured && (
             <AICredentialSettings
               status={status}

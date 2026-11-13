@@ -95,7 +95,7 @@
 1. **可视化工作区（已完成）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
 2. **数据管理（已完成主要提取）**：`DataProvider` 的练习、记录、进度写操作已迁入 `modules/practice/usePracticeActions`、`modules/records/useRecordActions`、`modules/progress/useProgressActions`；DataProvider 从 594 行降到 326 行，只保留组合、加载、刷新、错误边界和 context。
 3. **公共接口（已完成基础契约）**：`frontend/src/modules/contracts.ts` 统一 ID/领域类型；[docs/contracts.md](docs/contracts.md) 记录场景、题目、作答、知识点字段及前后端 schema 对照；离线/服务端校验入口一致。
-4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261113T152953Z.zip`（44,671,800 字节，4,335 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
+4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261113T153318Z.zip`（44,672,417 字节，4,335 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
 
 ### Git 备份约定
 

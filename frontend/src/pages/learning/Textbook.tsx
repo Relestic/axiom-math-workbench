@@ -26,6 +26,18 @@ export function Textbook({ onNavigate, notify }: Props) {
   const classic = app.data.classics.find(
     (item) => item.id === unit.id,
   ) as ClassicSet | undefined;
+  const prerequisiteIds: Record<string, string> = {
+    uniform: "continuous",
+    derivative: "continuous",
+    "mean-value": "derivative",
+    taylor: "mean-value",
+    primitive: "derivative",
+    riemann: "continuous",
+    integral: "riemann",
+  };
+  const prerequisite = units.find(
+    (item) => item.id === prerequisiteIds[unit.id],
+  );
   const [showProof, setShowProof] = useState(false);
   const bookmarked = app.data.bookmarks.includes(unit.id);
 
@@ -179,7 +191,25 @@ export function Textbook({ onNavigate, notify }: Props) {
             </summary>
             <ol className="proof-details-steps">
               {unit.proof.map((step, index) => (
-                <li key={index}>{step}</li>
+                <li key={index}>
+                  <span>{step}</span>
+                  <button
+                    className="proof-step-ask"
+                    onClick={() => {
+                      document.getElementById("textbook-ai-entry")?.click();
+                      window.dispatchEvent(
+                        new CustomEvent("axiom-ai-question", {
+                          detail: {
+                            stepNumber: index + 1,
+                            text: step,
+                          },
+                        }),
+                      );
+                    }}
+                  >
+                    问 AI 这一步
+                  </button>
+                </li>
               ))}
             </ol>
             <div className="proof-details-conditions">
@@ -276,6 +306,26 @@ export function Textbook({ onNavigate, notify }: Props) {
               这是项目原创示例讲义，不对应真实教材页码；证明与案例的可靠出处以链接为准。
             </p>
           </section>
+
+          {prerequisite && (
+            <section className="card textbook-side-card textbook-prerequisite">
+              <div className="section-title">
+                <ArrowRight size={16} />
+                <h3>前置知识</h3>
+              </div>
+              <p>如果这里读不顺，可以先回看相关定义；不另开诊断测验。</p>
+              <button
+                className="review-link"
+                onClick={() => select(prerequisite.id)}
+              >
+                <div>
+                  <b>{prerequisite.title}</b>
+                  <small>{prerequisite.chapter}</small>
+                </div>
+                <ArrowRight size={14} />
+              </button>
+            </section>
+          )}
 
           <section className="card textbook-side-card textbook-checklist">
             <div className="section-title">

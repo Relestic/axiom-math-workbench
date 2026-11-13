@@ -7,11 +7,12 @@
 - 主导航收敛为 7 个条目；正反例实验室、证明思路、完整解答与复盘、前置知识诊断不再有独立入口。
 - 旧地址兼容：`#explore`/`#examples`/`#proof` 跳转教材学习并为 `#proof` 自动展开证明；`#review` 跳练习；`#diagnostic` 跳教材学习。
 - 教材学习首屏显示当前知识点、定义、AI 入口；图像、正例/反例/我的探索、函数/参数/范围编辑、撤销和 AI 改图在教材内联。
-- AI 请求携带 `context`（conceptId、章节、定义、案例），后端 `AIPlotRequest.context` 进入提示词；AI 解释与改图共用同一面板。
+- AI 请求携带 `context`（conceptId、章节、定义、案例、contentVersion、selectedProofStep、allowedReferences、sceneVersion），后端 `AIPlotRequest.context` 进入提示词；AI 解释与改图共用同一面板。
+- 证明步骤提供“问 AI 这一步”，打开同一面板并携带所选步骤文本；顶部 AI 按钮和图像入口不产生第二套会话组件。
 - 证明在定理下按需展开；完整解答与历史作答保留在对应练习题内。
 - 实测：教材页首屏 1440×849 可见 AI 按钮；图像 Plotly 正常；AI 解释 `x^2` 的差商并成功改为 `abs(x)`；旧 `#proof` 打开教材且证明折叠展开。
-- 后端 **106 passed**，前端 **21/21**；截图 [教材学习首屏](textbook-first-screen.png)、[教材内 AI](textbook-ai.png)。
-- 免安装包在**全新解压目录**验证：无 `backend/.env`、无 `data/`；启动后 `/api/health` 200、演示账号登录成功、首页 200。发布包 `Axiom-Windows-Full-20261113T152953Z.zip`（44,671,800 字节，4,335 文件）。
+- 后端 **106 passed**，前端 **21/21**；截图 [教材学习首屏](textbook-first-screen.png)、[教材内 AI](textbook-ai.png)、[证明步骤问 AI](textbook-proof-step.png)。
+- 免安装包在**全新解压目录**验证：无 `backend/.env`、无 `data/`；启动后 `/api/health` 200、演示账号登录成功、首页 200。发布包 `Axiom-Windows-Full-20261113T153318Z.zip`（44,672,417 字节，4,335 文件）。
 - 本次未在 390px 手机视口完成逐项截图验收；响应式 CSS 已提供，但需后续真机复核。
 
 ## AI 讨论式练习（2026-11-07）
@@ -50,7 +51,7 @@
 - `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
-- 发布产物：`releases/Axiom-Windows-Full-20261113T152953Z.zip`，44,671,800 字节、4,335 个文件，由 `npm run package:windows` 生成。
+- 发布产物：`releases/Axiom-Windows-Full-20261113T153318Z.zip`，44,672,417 字节、4,335 个文件，由 `npm run package:windows` 生成。
 - 后端 **106 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）
