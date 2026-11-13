@@ -29,7 +29,8 @@ pages/**               只消费 useAppData()，不直接读写服务端数据
 | `src/app/DataProvider.tsx` | 服务端/离线数据、选择、mutation | 新业务写操作放这里 |
 | `src/lib/session.tsx` | 登录、注册、令牌、用户资料 | 不承载学习数据 |
 | `src/lib/api.ts` | HTTP、Bearer、刷新令牌 | 页面不直接拼 URL |
-| `src/pages/learning/` | 教材、正反例、证明、练习、复盘 | 布局改动只动对应文件 |
+| `src/pages/learning/` | 教材学习、练习题库；正反例/证明/完整解答/复盘已并入教材或题内 | 布局改动只动对应文件 |
+| `src/modules/visualization/embedded/` | 教材内嵌图像、正反例、上下文 AI | 复用二维场景引擎与 AI 请求 |
 | `src/pages/maps/` | 星图、热力矩阵 | 同上 |
 | `src/modules/visualization/` | 二维/三维可视化、场景校验、AI 请求 | 人工控件与 AI 修改共用 Scene 入口 |
 | `src/pages/Dashboard.tsx` 等 | 工作台、笔记、诊断、PDF | 从 App 壳中拆出 |

@@ -197,6 +197,7 @@ def plot():
         message=payload.message,
         scene=payload.scene.model_dump(),
         history=payload.history,
+        context=payload.context,
     )
     scene_id = request.args.get("scene_id")
     conversation_id = request.args.get("conversation_id")
@@ -380,6 +381,7 @@ def legacy_plot():
         message=payload.message,
         scene=payload.scene.model_dump(),
         history=payload.history,
+        context=payload.context,
     )
     session.commit()
     return {"message": result["message"], "scene": result["scene"]}

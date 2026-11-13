@@ -34,21 +34,11 @@ import {
   Sparkles,
   LogOut,
 } from "lucide-react";
-const Exploration = lazy(() => import("./pages/FunctionWorkspace"));
 const Textbook = lazy(() =>
   import("./modules/teaching").then((module) => ({ default: module.Textbook })),
 );
-const Examples = lazy(() =>
-  import("./modules/teaching").then((module) => ({ default: module.Examples })),
-);
-const Proof = lazy(() =>
-  import("./modules/teaching").then((module) => ({ default: module.Proof })),
-);
 const Exercises = lazy(() =>
   import("./modules/practice").then((module) => ({ default: module.Exercises })),
-);
-const Review = lazy(() =>
-  import("./modules/practice").then((module) => ({ default: module.Review })),
 );
 const KnowledgeMap = lazy(() =>
   import("./modules/progress").then((module) => ({
@@ -66,11 +56,6 @@ const Dashboard = lazy(() =>
 const Notes = lazy(() =>
   import("./modules/records").then((module) => ({ default: module.Notes })),
 );
-const Diagnostic = lazy(() =>
-  import("./modules/progress").then((module) => ({
-    default: module.Diagnostic,
-  })),
-);
 const LocalTextbook = lazy(() =>
   import("./pages/LocalTextbook").then((module) => ({
     default: module.LocalTextbook,
@@ -79,7 +64,13 @@ const LocalTextbook = lazy(() =>
 const SurfaceWorkspace = lazy(
   () => import("./modules/visualization/three-d/SurfaceWorkspace"),
 );
-import { navigation, pageFromHash, validRoutes } from "./navigation";
+import {
+  navigation,
+  pageFromHash,
+  rememberRouteTarget,
+  resolveRoute,
+  validRoutes,
+} from "./navigation";
 import { useAppData } from "./app/DataProvider";
 import { searchRequest } from "./lib/api";
 import { useSession } from "./lib/session";
@@ -109,23 +100,22 @@ export default function App() {
     timer.current = setTimeout(() => setToast(""), 3500);
   };
   function navigate(id: string) {
-    if (!validRoutes.includes(id)) {
+    const resolved = resolveRoute(id);
+    if (!validRoutes.includes(id) && !validRoutes.includes(resolved)) {
       notify("请从左侧选择学习模块");
       return;
     }
-    if (
-      id === "explore" &&
-      ["textbook", "examples", "proof", "exercises", "knowledge-map"].includes(
-        page,
-      )
-    )
+    rememberRouteTarget(id);
+    if (id === "explore") {
       localStorage.setItem("axiom-explore-request", app.selectedConceptId);
-    location.hash = id;
-    setPage(id);
+    }
+    if (location.hash.slice(1) !== resolved) location.hash = resolved;
+    setPage(resolved);
     setSidebar(false);
     setSearchOpen(false);
     window.scrollTo({ top: 0 });
-    if (id !== "dashboard") localStorage.setItem("axiom-last-page", id);
+    if (resolved !== "dashboard")
+      localStorage.setItem("axiom-last-page", resolved);
   }
   async function saveNote(text: string, conceptId?: string) {
     try {
@@ -407,11 +397,7 @@ export default function App() {
               <Textbook {...common} />
             </>
           )}
-          {page === "explore" && <Exploration {...common} />}
-          {page === "examples" && <Examples {...common} />}
-          {page === "proof" && <Proof {...common} />}
           {page === "exercises" && <Exercises {...common} />}
-          {page === "review" && <Review {...common} />}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />
           )}
@@ -439,7 +425,6 @@ export default function App() {
               }}
             />
           )}
-          {page === "diagnostic" && <Diagnostic onNavigate={navigate} />}
           </Suspense>
         </main>
         <footer className="app-footer">

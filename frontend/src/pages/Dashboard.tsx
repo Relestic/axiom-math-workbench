@@ -37,9 +37,9 @@ export function Dashboard({
   const [compact, setCompact] = useState(false);
   const { data } = useAppData();
   const dashboard = data.dashboard;
-  const last = localStorage.getItem("axiom-last-page") || "explore";
+  const last = localStorage.getItem("axiom-last-page") || "textbook";
   const resume =
-    validRoutes.includes(last) && last !== "dashboard" ? last : "explore";
+    validRoutes.includes(last) && last !== "dashboard" ? last : "textbook";
   const summary = dashboard.summary;
   const count = summary.practice.attemptsTotal;
   const mastery = Math.round(summary.mastery.overall);

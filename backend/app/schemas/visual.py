@@ -168,6 +168,7 @@ class AIPlotRequest(StrictModel):
     message: str = Field(min_length=1, max_length=2000)
     scene: SceneModel
     history: list[dict] = Field(default_factory=list, max_length=16)
+    context: dict | None = None
 
 
 class InterpretRequest(StrictModel):

@@ -41,7 +41,8 @@ display { opacity, wireframe, showAxes, palette }
 - 人工编辑、AI 返回、撤销、刷新恢复都经过同一校验入口；
 - 非法值保留原场景；
 - 前后端字段名和范围一致（camelCase JSON）；
-- `scene.version` 冲突返回 409，不覆盖他人修改。
+- `scene.version` 冲突返回 409，不覆盖他人修改；
+- 教材内 AI 请求额外携带 `context`：`conceptId`、`chapter`、`title`、`definition`、`formula`、`case`、`caseClaim`、`caseTags`、`source`，后端把它放进模型上下文而不是只拼接在用户消息里。
 
 ## 3. 题目与作答
 

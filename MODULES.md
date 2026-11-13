@@ -6,11 +6,11 @@
 
 | 模块 | 负责 | 当前前端入口 | 当前后端 |
 | --- | --- | --- | --- |
-| 教学内容 | 教材、知识点、定义、定理、证明、经典正反例、出处 | `pages/Learning.tsx`、`pages/Exploration.tsx` 中的经典内容 | `content`/`catalog`/`exercises` 的知识内容接口 |
-| 数学可视化 | 二维函数、三维曲面、参数、场景、撤销、AI 对话改图 | `modules/visualization/` | `api/ai.py`、`schemas/visual.py`、`schemas/surface.py` |
-| 练习与复盘 | 出题、提示、完整解答、作答、反馈、复盘 | `pages/learning/Exercises.tsx`、`Review.tsx` | `api/exercises.py`、`modules/exercise_service.py` |
-| 学习进度 | 掌握度、诊断、复习计划、工作台、图谱学习状态 | `pages/Dashboard.tsx`、`Diagnostic.tsx`、`maps/` | `modules/progress_service.py`、`graph_service.py` |
-| 个人记录 | 笔记、收藏、观察记录、导出 | `pages/Notes.tsx`、复盘/观察入口 | `api/notes.py`、`api/bookmarks.py`、`visual` 观察接口 |
+| 教学内容 | 教材、知识点、定义、定理、证明、经典正反例、出处 | `pages/learning/Textbook.tsx` + `modules/visualization/embedded/` | `content`/`catalog`/`exercises` 的知识内容接口 |
+| 数学可视化 | 二维函数、教材内嵌图像、三维曲面、参数、场景、撤销、AI 对话改图 | `modules/visualization/` | `api/ai.py`、`schemas/visual.py`、`schemas/surface.py` |
+| 练习与复盘 | 出题、提示、完整解答、作答、AI 讨论/批改、历史作答 | `pages/learning/Exercises.tsx`（复盘在题内） | `api/exercises.py`、`modules/exercise_service.py`、`exercise_discussion.py` |
+| 学习进度 | 掌握度、复习计划、工作台、图谱学习状态 | `pages/Dashboard.tsx`、`maps/` | `modules/progress_service.py`、`graph_service.py` |
+| 个人记录 | 笔记、收藏、观察记录、导出 | `pages/Notes.tsx`、题内保存入口 | `api/notes.py`、`api/bookmarks.py`、`visual` 观察接口 |
 | 账号与权限 | 登录、用户身份、管理员权限、数据归属 | `pages/Auth.tsx`、`app/DataProvider.tsx` 的会话部分 | `api/auth.py`、`auth.py`、`api/admin.py` |
 
 共享能力：
@@ -29,29 +29,29 @@
 
 ## 1. 教学内容
 
-- **负责范围**：教材、章节、知识点、定义/条件/定理/证明步骤、经典案例与正反例、引用出处。
-- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；前端只读卡片与导航。
+- **负责范围**：教材学习主页面、章节/知识点、定义/条件/定理/证明步骤、教材内嵌的正反例、引用出处。独立的正反例实验室、证明思路页面不再存在，内容以教材内按需展开呈现。
+- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；教材页通过 `TeachingFigure` 使用可视化模块，不复制图像引擎。
 - **数据归属**：教学内容模块/管理员可写；其他模块只读。其他模块只能引用 `concept_id` 或 `proof_step_ref`，不能复制正文作为第二数据源。
-- **验收**：未发布内容对普通学生不可见；引用不存在的证明步骤失败；卡片/证明步骤可追溯到出处；搜索不返回越权内容。
+- **验收**：首屏可见当前知识点、定义起始、AI 入口；证明可在定理下展开；图像和正反例在教材内切换；未发布内容对学生不可见；引用不存在的证明步骤失败；不伪造教材页码。
 
 ## 2. 数学可视化
 
-- **负责范围**：二维函数场景（曲线、参数、范围、分析工具）、三维曲面、视角、显示项、人工编辑、AI 改图、撤销、刷新恢复。
-- **对外接口**：页面入口 `FunctionWorkspace`/`SurfaceWorkspace`；场景统一入口 `applyFunctionScene` / `normalizeSurfaceScene`；AI 请求 `requestPlotChange` / `requestSurfaceChange`；状态查询 `fetchAIStatus`。
-- **数据归属**：浏览器 localStorage 保存当前场景和最近 20 条对话，撤销栈只在当前会话；AI 只返回候选场景，不能直接写 React 状态或服务器场景，必须过校验入口。用户保存的“观察记录”属于个人记录模块。
-- **验收**：人工和 AI 修改共用校验；非法范围/表达式保留原图；撤销与刷新恢复一致；三维拖动与视角更新不重采样；AI 失败保留原场景；连续追问有上限且可取消。
+- **负责范围**：二维函数场景（曲线、参数、范围、分析工具）、教材内嵌图像、三维曲面、视角、显示项、人工编辑、AI 改图、撤销、刷新恢复。
+- **对外接口**：页面入口 `FunctionWorkspace`/`SurfaceWorkspace`/`TeachingFigure`；场景统一入口 `applyFunctionScene` / `normalizeSurfaceScene`；AI 请求 `requestPlotChange`（支持教材 `context`）/ `requestSurfaceChange`；状态查询 `fetchAIStatus`。
+- **数据归属**：浏览器 localStorage 按用户+知识点保存教材场景和最近 20 条对话，撤销栈只在当前会话；AI 只返回候选场景，不能直接写 React 状态或服务器场景，必须过校验入口。用户保存的“观察记录”属于个人记录模块。
+- **验收**：人工和 AI 修改共用校验；非法范围/表达式保留原图；撤销与刷新恢复一致；三维拖动与视角更新不重采样；AI 失败保留原场景；教材上下文（知识点/定义/案例）随请求发送；连续追问有上限且可取消。
 
 ## 3. 练习与复盘
 
 - **负责范围**：模板/变式出题、提示、完整解答、AI 实时讨论、作答提交、AI 最终批改、反馈、错因、自评与复盘。**讨论不等于提交**：讨论不落库、不评分；只有提交答案才创建 Attempt。
 - **对外接口**：`GET /api/v1/exercises`、`/hint`、`/solution`、`POST /api/v1/attempts`、`PATCH /api/v1/attempts/{id}`、`GET /api/v1/attempts`；AI 讨论 `POST /api/v1/ai/exercises/discuss`；AI 提交 `POST /api/v1/ai/exercises/submit`。批改结果字段 `status`、`score`、`feedback.criteria`、`feedback.ai`、`feedback.reference_answer`。
 - **数据归属**：练习模块是 `Exercise` 与 `Attempt` 的唯一写入者；用户只能写自己的 Attempt。进度模块只读 Attempt 计算掌握度；个人记录模块只读 Attempt 生成笔记。
-- **验收**：计算题最终表达式错误返回 0 分与参考结果；无法解析不强行判错；证明题返回结构分和逐项覆盖，且 `needs_review=true`；幂等键重复提交返回同一 Attempt；越权读取返回 404。
+- **验收**：讨论不创建 Attempt、不评分；提交答案才创建一条 `ai_reviewed` Attempt，带 AI 优点/缺口/下一步；AI 不可用时保留答案且不落库；幂等键重复提交返回同一 Attempt；越权读取返回 404；历史作答只在题内查看。
 
 ## 4. 学习进度
 
-- **负责范围**：掌握度、诊断、复习队列/计划、工作台聚合、知识图谱中的学习状态。
-- **对外接口**：`GET /api/v1/dashboard`、`/progress/summary`、`/progress/review-queue`、`/progress/heatmap`、`POST /api/v1/diagnostic`、`GET /api/v1/graph`。
+- **负责范围**：掌握度、复习队列/计划、工作台聚合、知识图谱中的学习状态。诊断数据保留但不再有独立页面或自动触发流程。
+- **对外接口**：`GET /api/v1/dashboard`、`/progress/summary`、`/progress/review-queue`、`/progress/heatmap`、`GET /api/v1/graph`；旧诊断 API 作为数据兼容保留，不接回用户流程。
 - **数据归属**：进度模块可写派生表/诊断结果与复习状态；不能改练习原文、答案或用户笔记。练习提交只发领域事件，进度模块消费事件更新派生数据。
 - **验收**：提交/自评后工作台和热力图更新；越权用户的 Attempt 不进入统计；诊断答案正确性由诊断数据决定；重复提交幂等；图谱状态能解释来源。
 

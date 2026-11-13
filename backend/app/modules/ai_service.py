@@ -15,7 +15,8 @@ from ..serializers import classic_out
 from ..schemas.visual import SceneModel
 from .visual_service import validate_scene
 
-PLOT_SYSTEM = """你是 Axiom 数学图像工作区助手。根据当前 scene 和用户对话修改函数，而不是切换预设函数类型。
+PLOT_SYSTEM = """你是 Axiom 数学图像工作区助手。根据当前 scene、教材上下文和用户对话修改函数，而不是切换预设函数类型。
+context 可能包含当前知识点、定义、案例和出处；回答必须围绕这个上下文，不能编造教材页码。
 只返回 JSON 对象 {"message":"中文说明","scene":完整配置或null}。输出必须是合法 json，不要代码围栏。纯解释或需澄清时 scene 为 null。
 修改时保留未要求改变的函数、参数、分析模式和范围。
 scene 字段：curves(1到4项，每项 id、expression、label、visible、domainMin、domainMax、leftOpen、rightOpen)，activeId，parameters(每项 name、value、min、max)，mode(graph/continuity/derivative/integral/taylor)，xMin、xMax、yMin、yMax、x0、epsilon、delta、h、integralStart、integralEnd、subdivisions(4到200整数)、order(1到5整数)。所有字段都必须返回。定义域端点不限时用null。
@@ -63,6 +64,7 @@ def plot_change(
     message: str,
     scene: dict[str, Any],
     history: list[dict] | None = None,
+    context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized = validate_scene(scene, with_analysis=False)["scene"]
     history_messages = []
@@ -79,7 +81,8 @@ def plot_change(
         {
             "role": "user",
             "content": json.dumps(
-                {"currentScene": normalized, "request": message}, ensure_ascii=False
+                {"currentScene": normalized, "request": message, "context": context},
+                ensure_ascii=False,
             ),
         },
     ]

@@ -129,7 +129,7 @@ export function parseAIResult(value: unknown) {
       message: z.string().min(1).max(3000),
       scene: sceneSchema.nullable(),
     })
-    .strict()
+    .passthrough()
     .parse(value);
   return {
     message: result.message,

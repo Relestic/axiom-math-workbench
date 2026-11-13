@@ -59,6 +59,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
   const [selfChecks, setSelfChecks] = useState<number[]>([]);
   const [discussionOpen, setDiscussionOpen] = useState(false);
   const [discussion, setDiscussion] = useState<DiscussionTurn[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   useEffect(() => {
     try {
       setAnswer(localStorage.getItem(`axiom-draft-${exercise.id}`) || "");
@@ -74,6 +75,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
     setFeedback(null);
     setDiscussionOpen(false);
     setDiscussion([]);
+    setShowHistory(false);
     let assistance = { hint: false, solution: false };
     try {
       assistance =
@@ -151,13 +153,16 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
   return (
     <div className="learning-page exercises-page">
       <Heading
-        step="第 5 步 / 共 6 步"
+        step="练习题库 · 当前知识点"
         title="练习题库 · 从理解到独立证明"
-        description="围绕当前知识点练习。每道题都有提示、思路和完整解答。"
+        description="先和 AI 讨论理清思路，再提交最终答案；完整解答、反馈和历史作答都在本题内。"
       >
-        <button className="btn" onClick={() => onNavigate("review")}>
+        <button
+          className="btn"
+          onClick={() => setShowHistory((value) => !value)}
+        >
           <Clock size={15} />
-          作答记录
+          {showHistory ? "收起作答记录" : "作答记录"}
         </button>
       </Heading>
       <div className="exercise-settings card">
@@ -494,6 +499,41 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
               已检查 {selfChecks.length} / 3 项 · 自查不等同于证明正确
             </small>
           </section>
+          {showHistory && (
+            <section className="card exercise-history">
+              <div className="section-title">
+                <Clock size={17} />
+                <h3>本题历史作答</h3>
+                <span className="badge">{app.data.attempts.filter((item) => item.exerciseId === exercise.id).length}</span>
+              </div>
+              {app.data.attempts.filter((item) => item.exerciseId === exercise.id).length === 0 && (
+                <p className="muted">还没有提交过这道题。</p>
+              )}
+              {app.data.attempts
+                .filter((item) => item.exerciseId === exercise.id)
+                .slice(0, 5)
+                .map((attempt) => (
+                  <div className="exercise-history-item" key={attempt.id}>
+                    <div>
+                      <small>
+                        {new Date(attempt.createdAt).toLocaleString("zh-CN", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </small>
+                      <span>
+                        {typeof attempt.score === "number"
+                          ? `${attempt.score} 分`
+                          : "待复核"}
+                      </span>
+                    </div>
+                    <p>{attempt.answer}</p>
+                  </div>
+                ))}
+            </section>
+          )}
           <section className="card">
             <div className="section-title">
               <BookOpen size={17} />
@@ -511,7 +551,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             </button>
             <button className="review-link" onClick={() => onNavigate("proof")}>
               <div>
-                <b>证明思路</b>
+                <b>本节证明</b>
                 <small>关键构造与引用依据</small>
               </div>
               <ArrowRight size={16} />
@@ -521,7 +561,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
               onClick={() => onNavigate("examples")}
             >
               <div>
-                <b>正反例实验室</b>
+                <b>本节正反例</b>
                 <small>检查命题的边界</small>
               </div>
               <ArrowRight size={16} />

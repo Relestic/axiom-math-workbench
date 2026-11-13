@@ -1,0 +1,272 @@
+.textbook-heading {
+  align-items: flex-end;
+}
+.textbook-heading-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.textbook-study {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+.textbook-main {
+  min-width: 0;
+}
+.textbook-context-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+.textbook-context-row .module-select {
+  margin: 0;
+  flex: 1;
+}
+.textbook-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9692a5;
+  font: 10px var(--font-mono, monospace);
+  white-space: nowrap;
+}
+.textbook-pager .btn.icon {
+  padding: 5px;
+}
+.textbook-definition-card {
+  padding: 22px;
+}
+.textbook-definition-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.textbook-chapter {
+  color: #9995a6;
+  font-size: 10px;
+}
+.textbook-definition-card h2 {
+  margin: 14px 0 10px;
+  color: #292840;
+  font-size: 25px;
+  line-height: 1.35;
+}
+.textbook-definition-card .definition-copy {
+  color: #44465c;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.textbook-relation {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #8b7cf6;
+  border-radius: 0 8px 8px 0;
+  background: #f7f5ff;
+}
+.textbook-relation strong {
+  color: #5d51c8;
+  font-size: 10px;
+}
+.textbook-relation span {
+  color: #49445f;
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+}
+.textbook-token-details {
+  margin: 12px 0;
+}
+.textbook-token-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #7e7892;
+  font-size: 10px;
+  cursor: pointer;
+}
+.textbook-token-details .definition-tokens {
+  margin-top: 10px;
+}
+.proof-details {
+  padding: 0;
+  overflow: hidden;
+}
+.proof-details > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  cursor: pointer;
+  color: #4d4862;
+  font-size: 12px;
+}
+.proof-details > summary::-webkit-details-marker {
+  display: none;
+}
+.proof-details > summary > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.proof-details-steps {
+  margin: 0;
+  padding: 3px 24px 14px 43px;
+  color: #514e64;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.proof-details-steps li {
+  margin: 5px 0;
+  padding-left: 3px;
+}
+.proof-details-conditions {
+  margin: 0 18px 18px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  background: #f8f7f2;
+  color: #777386;
+  font-size: 10px;
+  line-height: 1.7;
+}
+.proof-details-conditions strong {
+  color: #5d586d;
+}
+.proof-details-conditions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+.proof-details-conditions p {
+  margin: 5px 0 0;
+}
+.textbook-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 17px;
+  margin-top: 15px;
+}
+.textbook-actions h3 {
+  margin: 0 0 4px;
+  color: #343249;
+  font-size: 14px;
+}
+.textbook-actions p {
+  margin: 0;
+  color: #8e8a9d;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.textbook-side {
+  display: grid;
+  gap: 14px;
+  position: sticky;
+  top: 16px;
+}
+.textbook-side-card {
+  padding: 16px;
+}
+.textbook-side-card .section-title {
+  margin-bottom: 8px;
+}
+.textbook-side-card .section-title h3 {
+  font-size: 12px;
+}
+.textbook-side-card .symbol-table {
+  font-size: 9px;
+}
+.textbook-side-card .symbol-table th,
+.textbook-side-card .symbol-table td {
+  padding: 6px 5px;
+}
+.textbook-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  color: #5d50c8;
+  font-size: 10px;
+  text-decoration: none;
+}
+.textbook-source:hover {
+  text-decoration: underline;
+}
+.textbook-source-note {
+  margin: 8px 0 0;
+  color: #9c98a8;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.textbook-checklist p {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 7px 0;
+  color: #797588;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.textbook-checklist p svg {
+  flex: none;
+  margin-top: 2px;
+  color: #55b47c;
+}
+@media (max-width: 1100px) {
+  .textbook-study {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .textbook-side {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .textbook-side-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 700px) {
+  .textbook-heading {
+    align-items: flex-start;
+  }
+  .textbook-heading-actions {
+    width: 100%;
+  }
+  .textbook-heading-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .textbook-context-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .textbook-pager {
+    align-self: flex-end;
+  }
+  .textbook-definition-card {
+    padding: 16px;
+  }
+  .textbook-definition-card h2 {
+    font-size: 21px;
+  }
+  .textbook-side {
+    grid-template-columns: 1fr;
+  }
+  .textbook-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .proof-details > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -44,6 +44,7 @@ export async function requestPlotChange(input: {
   scene: Scene;
   history: { role: "user" | "assistant"; content: string }[];
   signal: AbortSignal;
+  context?: Record<string, unknown>;
 }): Promise<PlotAIResult> {
   const data = await apiFetch<unknown>("/api/v1/ai/plot", {
     method: "POST",
@@ -52,6 +53,7 @@ export async function requestPlotChange(input: {
       message: input.message,
       scene: input.scene,
       history: input.history,
+      context: input.context,
     }),
   });
   return parseAIResult(data);

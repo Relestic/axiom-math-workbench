@@ -1,3 +1,31 @@
+.exercise-history .section-title {
+  margin-bottom: 10px;
+}
+.exercise-history-item {
+  padding: 9px 0;
+  border-top: 1px solid #f0eee8;
+}
+.exercise-history-item > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #9894a5;
+  font-size: 9px;
+}
+.exercise-history-item > div span {
+  color: #5c50c8;
+  font-family: var(--font-mono, monospace);
+}
+.exercise-history-item p {
+  margin: 5px 0 0;
+  color: #625f70;
+  font-size: 10px;
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .answer-actions {
   display: flex;
   gap: 8px;
