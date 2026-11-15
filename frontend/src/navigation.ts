@@ -39,9 +39,9 @@ export const legacyRouteTargets: Record<
   string,
   { page: string; target?: "image" | "cases" | "proof" }
 > = {
-  explore: { page: "textbook", target: "image" },
-  examples: { page: "textbook", target: "cases" },
-  proof: { page: "textbook", target: "proof" },
+  explore: { page: "textbook" },
+  examples: { page: "textbook" },
+  proof: { page: "textbook" },
   review: { page: "exercises" },
   diagnostic: { page: "textbook" },
 };
@@ -49,8 +49,13 @@ export const legacyRouteTargets: Record<
 export const visibleRoutes = navigation.flatMap((group) =>
   group.items.map((item) => item[0]),
 );
+
+/** Reachable but not shown in the sidebar. */
+export const hiddenRoutes = ["image"];
+
 export const validRoutes = [
   ...visibleRoutes,
+  ...hiddenRoutes,
   ...Object.keys(legacyRouteTargets),
 ];
 
@@ -59,7 +64,6 @@ const TEXTBOOK_TARGET_KEY = "axiom-textbook-target";
 export function resolveRoute(id: string): string {
   return legacyRouteTargets[id]?.page || id;
 }
-
 export function rememberRouteTarget(id: string): void {
   const target = legacyRouteTargets[id]?.target;
   try {

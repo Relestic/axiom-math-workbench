@@ -29,8 +29,11 @@ pages/**               只消费 useAppData()，不直接读写服务端数据
 | `src/app/DataProvider.tsx` | 服务端/离线数据、选择、mutation | 新业务写操作放这里 |
 | `src/lib/session.tsx` | 登录、注册、令牌、用户资料 | 不承载学习数据 |
 | `src/lib/api.ts` | HTTP、Bearer、刷新令牌 | 页面不直接拼 URL |
-| `src/pages/learning/` | 教材学习、练习题库；正反例/证明/完整解答/复盘已并入教材或题内 | 布局改动只动对应文件 |
-| `src/modules/visualization/embedded/` | 教材内嵌图像、正反例、上下文 AI | 复用二维场景引擎与 AI 请求 |
+| `src/pages/ReaderPage.tsx` | 教材学习主页面：PDF.js 原讲义、页码/缩放/位置、页级图像链接、阅读 AI | 不把 PDF 文本重写成知识卡片 |
+| `src/pages/ImageLesson.tsx` | 隐藏路由 `#image` 的目标图像页与返回讲义 | 必须显示来源页与文件标识 |
+| `src/modules/reader/` | PDF/阅读状态 IndexedDB、页级链接、阅读 AI 契约 | 按用户 + 文件指纹隔离 |
+| `src/pages/learning/` | 练习题库；旧正反例/证明/复盘入口已移除并从旧路由重定向 | 布局改动只动对应文件 |
+| `src/modules/visualization/embedded/` | 目标图像页的正反例切换、编辑、撤销与上下文 AI | 复用二维场景引擎与 AI 请求 |
 | `src/pages/maps/` | 星图、热力矩阵 | 同上 |
 | `src/modules/visualization/` | 二维/三维可视化、场景校验、AI 请求 | 人工控件与 AI 修改共用 Scene 入口 |
 | `src/pages/Dashboard.tsx` 等 | 工作台、笔记、诊断、PDF | 从 App 壳中拆出 |

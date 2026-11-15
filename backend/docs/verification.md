@@ -18,7 +18,7 @@ python -m pytest -q
 ```text
 ........................................................................ [ 80%]
 .................                                                        [100%]
-106 passed in 33.33s
+108 passed in 32.00s
 ```
 
 按文件：
@@ -33,13 +33,22 @@ python -m pytest -q
 | `test_exercises.py` | 7 | 列表筛选、提示/解答、作答记录、幂等、符号检查、越权、变式生成 |
 | `test_ai_credentials.py` | 2 | 用户 Key 加密保存/读取、末四位提示、测试调用使用个人凭据、移除回退、跨用户隔离 |
 | `test_ai_discussion.py` | 2 | AI 讨论不创建 Attempt、提交时 AI 评分并落库、空答案拒绝 |
+| `test_reader_discussion.py` | 2 | 原讲义阅读 AI 只发送当前页与选段、无文字页不假装已读 |
 | `test_grading.py` | 3 | 证明结构分、错误最终答案 0 分与参考结果、从文字中提取最终表达式 |
 | `test_progress_notes.py` | 7 | 仪表盘、热力矩阵、活动、复习队列、诊断、笔记导出、收藏、纠错处理 |
 | `test_visual.py` | 6 | 模板、校验、分析、版本冲突、撤销、观察、所有权、模板建场景 |
 | `test_graph.py` | 5 | 课程视图、扩展节点、解锁过滤、节点依赖、路径 |
 | `test_conversations.py` | 2 | 对话动作、状态版本、撤销、所有权 |
 
-## 2. 练习批改验证
+## 2. 原讲义阅读 AI 验证
+
+- `POST /api/v1/ai/reader/discuss` 接收当前页文字、用户选段、问题与有限历史；只生成解释，不写 Attempt、不改讲义。
+- 有文字页面：请求中保留 `page_number`、`page_text`、`selected_text`；响应 `page_text_available=true`。
+- 无文字页面：上下文显式 `page_text_available=false`，提示模型说明无法读取，不能假装已解析 PDF。
+- 真实模型实测（2026-11-15）：第 2 页提取 346 字，AI 正确解释 ε-δ 定义中的量词顺序及 δ 对 x₀ 的依赖。
+- PDF worker 由 Flask 以 `text/javascript` 提供；否则浏览器动态导入 worker 失败。
+
+## 3. 练习批改验证
 
 - AI 讨论：`POST /api/v1/ai/exercises/discuss` 只调用模型并返回追问，前后 Attempt 数量不变；讨论历史进入下一轮上下文。
 - AI 提交：`POST /api/v1/ai/exercises/submit` 用一个最终评分调用生成 `ai_reviewed` Attempt，`feedback.ai` 包含 verdict/strengths/gaps/next_steps；答案、讨论和提示/解答使用记录写入同一条 Attempt。

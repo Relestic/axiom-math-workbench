@@ -130,6 +130,7 @@ feedback.ai {
 | `records/api.createNoteTyped` | `POST /api/v1/notes` | `NoteCreateRequest` |
 | `progress/api.submitDiagnosticTyped` | `POST /api/v1/diagnostic` | `DiagnosticSubmitRequest` |
 | `identity/api.useSession` | `/api/v1/auth/*` | auth schemas |
+| `reader/api.requestReaderQuestion` | `POST /api/v1/ai/reader/discuss` | `ReaderDiscussionRequest` |
 
 ## 7. 修改流程
 
@@ -138,3 +139,45 @@ feedback.ai {
 3. 运行 `python -m pytest -q`、`npm test`、`npm run build`；
 4. 在验收记录写明字段变更、兼容策略和手工回归结果；
 5. 一次提交只包含一个可验收功能，ZIP 由 `npm run package:windows` 生成，不提交产物。
+
+## 8. 原讲义、图像链接与阅读 AI
+
+### 8.1 原讲义状态（浏览器 IndexedDB）
+
+| 字段 | 作用 |
+| --- | --- |
+| `userId` | 当前账号；离线/演示使用独立键 |
+| `docId` | 由 PDF 内容指纹生成的稳定文档 ID；演示文件使用固定 ID |
+| `fingerprint` | SHA-256，用于同名文件不误用旧链接 |
+| `name`, `size`, `lastModified` | 文件元数据，仅用于显示与排查 |
+| `blob` | 本机 PDF 字节；不上传整本文件 |
+| `pageIndex`, `zoom`, `scrollTop` | 阅读位置，按用户 + docId 保存 |
+
+### 8.2 页级图像链接
+
+```text
+{ linkId, pageIndex, label, description, conceptId, caseId, builtIn? }
+```
+
+- `pageIndex` 从 0 开始，界面显示时 +1。
+- 链接按 `docId` 保存；文件指纹改变后不自动继承旧链接。
+- 演示讲义带固定链接；用户自己的讲义初始为空，可在当前页手工添加。
+- 点击链接先把阅读状态写入 IndexedDB，再进入隐藏路由 `#image`；来源页、文件名、`pageIndex`、`docId` 由 sessionStorage 传递，不在 URL 中放本地绝对路径或全文。
+- 返回按钮和浏览器后退都回到 `#textbook`，由 IndexedDB 恢复文件、页码、缩放与滚动位置。
+- 无来源直接打开 `#image` 时显示“还没有打开讲义来源”，不展示无关图像。
+
+### 8.3 阅读页 AI
+
+`POST /api/v1/ai/reader/discuss` 请求：
+
+```text
+document_name, page_index, page_count,
+page_text (max 20000), selected_text (max 4000),
+question, history (max 10)
+```
+
+响应：`{ message, provider, model, page_text_available }`。
+
+- 只发送当前页文字与用户选段；没有文本时 `page_text_available=false`，提示模型明确说明无法读取，不得假装读过整份 PDF。
+- 不写 Attempt、不修改讲义或场景；失败保留输入和阅读位置。
+- API 变更必须同步前端 `modules/reader/api.ts`、`backend/app/schemas/ai.py` 与测试。

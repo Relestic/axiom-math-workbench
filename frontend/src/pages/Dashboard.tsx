@@ -60,7 +60,7 @@ export function Dashboard({
         <div className="button-row">
           <button className="btn" onClick={onUpload}>
             <Upload size={16} />
-            上传教材
+            打开讲义
           </button>
           <button className="btn primary" onClick={() => onNavigate(resume)}>
             <Play size={15} fill="currentColor" />

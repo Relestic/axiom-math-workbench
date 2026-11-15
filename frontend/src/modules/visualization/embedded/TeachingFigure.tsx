@@ -27,7 +27,6 @@ import "./teaching-figure.css";
 
 type Variant = "positive" | "negative" | "explore";
 type Kind = ClassicSet["positiveKind"];
-
 const KIND_EXPRESSION: Record<Kind, string> = {
   line: "x",
   reciprocal: "1/x",
@@ -182,10 +181,12 @@ export function TeachingFigure({
   unit,
   classic,
   onNavigate,
+  initialVariant,
 }: {
   unit: CurriculumUnit;
   classic?: ClassicSet;
   onNavigate: (page: string) => void;
+  initialVariant?: Variant;
 }) {
   const session = useSession();
   const defaults = useMemo(() => defaultScenes(unit, classic), [unit, classic]);
@@ -237,7 +238,10 @@ export function TeachingFigure({
       /* use defaults */
     }
     setScenes(restored);
-    const nextVariant = fallback.variants[0] || "explore";
+    const nextVariant =
+      initialVariant && fallback.variants.includes(initialVariant)
+        ? initialVariant
+        : fallback.variants[0] || "explore";
     setVariant(nextVariant);
     setDraft(restored[nextVariant].curves[0].expression);
     setHistory([]);
@@ -255,7 +259,7 @@ export function TeachingFigure({
     return () => {
       controller.current?.abort();
     };
-  }, [unit, classic, key]);
+  }, [unit, classic, key, initialVariant]);
 
   useEffect(() => {
     try {

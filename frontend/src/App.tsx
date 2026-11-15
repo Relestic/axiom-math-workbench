@@ -16,7 +16,6 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
-  Upload,
   Play,
   ArrowRight,
   Flame,
@@ -37,6 +36,9 @@ import {
 const Textbook = lazy(() =>
   import("./modules/teaching").then((module) => ({ default: module.Textbook })),
 );
+const ImageLesson = lazy(() =>
+  import("./pages/ImageLesson").then((module) => ({ default: module.ImageLesson })),
+);
 const Exercises = lazy(() =>
   import("./modules/practice").then((module) => ({ default: module.Exercises })),
 );
@@ -55,11 +57,6 @@ const Dashboard = lazy(() =>
 );
 const Notes = lazy(() =>
   import("./modules/records").then((module) => ({ default: module.Notes })),
-);
-const LocalTextbook = lazy(() =>
-  import("./pages/LocalTextbook").then((module) => ({
-    default: module.LocalTextbook,
-  })),
 );
 const SurfaceWorkspace = lazy(
   () => import("./modules/visualization/three-d/SurfaceWorkspace"),
@@ -92,8 +89,10 @@ export default function App() {
     () => session.user?.display_name || localStorage.getItem("axiom-name") || "林越",
   );
   const notes = app.data.notes;  const title =
-    navigation.flatMap((g) => g.items).find((i) => i[0] === page)?.[1] ||
-    "学习工作台";
+    page === "image"
+      ? "图像学习"
+      : navigation.flatMap((g) => g.items).find((i) => i[0] === page)?.[1] ||
+        "学习工作台";
   const notify = (text: string) => {
     setToast(text);
     clearTimeout(timer.current);
@@ -382,21 +381,11 @@ export default function App() {
             <Dashboard
               name={name}
               onNavigate={navigate}
-              onUpload={() => setModal("upload")}
+              onUpload={() => navigate("textbook")}
             />
           )}
-          {page === "textbook" && (
-            <>
-              <div className="page-tools">
-                <span className="badge">示例讲义 · 非已解析教材</span>
-                <button className="btn" onClick={() => setModal("upload")}>
-                  <Upload size={15} />
-                  打开本地教材
-                </button>
-              </div>
-              <Textbook {...common} />
-            </>
-          )}
+          {page === "textbook" && <Textbook {...common} />}
+          {page === "image" && <ImageLesson onNavigate={navigate} />}
           {page === "exercises" && <Exercises {...common} />}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />
@@ -450,10 +439,10 @@ export default function App() {
           }}
         >
           <section
-            className={`modal ${modal === "upload" ? "upload-modal" : ""}`}
+            className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label={modal === "upload" ? "本地教材" : "工作台设置"}
+            aria-label="工作台设置"
           >
             <button
               className="icon-button modal-close"
@@ -567,11 +556,6 @@ export default function App() {
                   </button>
                 )}
               </>
-            )}
-            {modal === "upload" && (
-              <Suspense fallback={<p>正在载入本地教材…</p>}>
-                <LocalTextbook notify={notify} />
-              </Suspense>
             )}
           </section>
         </div>

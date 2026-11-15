@@ -7,7 +7,7 @@
 | 模块 | 负责 | 当前前端入口 | 当前后端 |
 | --- | --- | --- | --- |
 | 教学内容 | 教材、知识点、定义、定理、证明、经典正反例、出处 | `pages/learning/Textbook.tsx` + `modules/visualization/embedded/` | `content`/`catalog`/`exercises` 的知识内容接口 |
-| 数学可视化 | 二维函数、教材内嵌图像、三维曲面、参数、场景、撤销、AI 对话改图 | `modules/visualization/` | `api/ai.py`、`schemas/visual.py`、`schemas/surface.py` |
+| 数学可视化 | 二维函数、讲义链接目标图像页、三维曲面、参数、场景、撤销、AI 对话改图 | `pages/ImageLesson.tsx`、`modules/visualization/` | `api/ai.py`、`schemas/visual.py`、`schemas/surface.py` |
 | 练习与复盘 | 出题、提示、完整解答、作答、AI 讨论/批改、历史作答 | `pages/learning/Exercises.tsx`（复盘在题内） | `api/exercises.py`、`modules/exercise_service.py`、`exercise_discussion.py` |
 | 学习进度 | 掌握度、复习计划、工作台、图谱学习状态 | `pages/Dashboard.tsx`、`maps/` | `modules/progress_service.py`、`graph_service.py` |
 | 个人记录 | 笔记、收藏、观察记录、导出 | `pages/Notes.tsx`、题内保存入口 | `api/notes.py`、`api/bookmarks.py`、`visual` 观察接口 |
@@ -29,17 +29,17 @@
 
 ## 1. 教学内容
 
-- **负责范围**：教材学习主页面、章节/知识点、定义/条件/定理/证明步骤、教材内嵌的正反例、引用出处。独立的正反例实验室、证明思路页面不再存在，内容以教材内按需展开呈现。
-- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；教材页通过 `TeachingFigure` 使用可视化模块，不复制图像引擎。
-- **数据归属**：教学内容模块/管理员可写；其他模块只读。其他模块只能引用 `concept_id` 或 `proof_step_ref`，不能复制正文作为第二数据源。
-- **验收**：首屏可见当前知识点、定义起始、AI 入口；证明可在定理下展开；图像和正反例在教材内切换；未发布内容对学生不可见；引用不存在的证明步骤失败；不伪造教材页码。
+- **负责范围**：教材学习主页面即原讲义 PDF 阅读器；文件选择、PDF.js 原页渲染、页码/缩放/页内滚动位置、文件指纹、页级图像文字链接、阅读页 AI 上下文、原文出处。独立的正反例实验室、证明思路页面不再存在；原讲义证明保留原样，不重排成卡片。
+- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；阅读页通过 `ReaderPage` 组合 PDF 渲染、`ReaderAIPanel` 与 `links.ts`，图像由隐藏路由 `#image` 的 `ImageLesson` 使用可视化模块。
+- **数据归属**：教学内容模块/管理员可写目录与场景映射；PDF 文件与阅读状态保存在当前浏览器 IndexedDB（按用户和文件指纹隔离），不上传整本文件。`docId`、`fingerprint`、`pageIndex`、`linkId` 是阅读模块的键，其他模块只引用，不能按文件名猜测关联。
+- **验收**：选择/载入实际 PDF 后主区域显示原页，显示文件名、总页数和当前页；翻页、缩放与页内滚动位置可恢复；页面文字链接可在目标图像页打开正确场景并返回原页；文件更换/无映射/失效链接/刷新恢复有明确反馈；不把项目测试讲义伪装成用户原文。
 
 ## 2. 数学可视化
 
-- **负责范围**：二维函数场景（曲线、参数、范围、分析工具）、教材内嵌图像、三维曲面、视角、显示项、人工编辑、AI 改图、撤销、刷新恢复。
-- **对外接口**：页面入口 `FunctionWorkspace`/`SurfaceWorkspace`/`TeachingFigure`；场景统一入口 `applyFunctionScene` / `normalizeSurfaceScene`；AI 请求 `requestPlotChange`（支持教材 `context`）/ `requestSurfaceChange`；状态查询 `fetchAIStatus`。
-- **数据归属**：浏览器 localStorage 按用户+知识点保存教材场景和最近 20 条对话，撤销栈只在当前会话；AI 只返回候选场景，不能直接写 React 状态或服务器场景，必须过校验入口。用户保存的“观察记录”属于个人记录模块。
-- **验收**：人工和 AI 修改共用校验；非法范围/表达式保留原图；撤销与刷新恢复一致；三维拖动与视角更新不重采样；AI 失败保留原场景；教材上下文（知识点/定义/案例）随请求发送；连续追问有上限且可取消。
+- **负责范围**：二维函数场景（曲线、参数、范围、分析工具）、由讲义链接进入的目标图像页、三维曲面、视角、显示项、人工编辑、AI 改图、撤销、刷新恢复。
+- **对外接口**：页面入口 `FunctionWorkspace`/`SurfaceWorkspace`/`ImageLesson`/`TeachingFigure`；场景统一入口 `applyFunctionScene` / `normalizeSurfaceScene`；AI 请求 `requestPlotChange`（支持教材 `context`）/ `requestSurfaceChange`；状态查询 `fetchAIStatus`。
+- **数据归属**：图像场景按用户+知识点保存在浏览器；教材链接只携带 `linkId`、`conceptId`、`caseId`、来源页与文件指纹，不直接改写 PDF。AI 只返回候选场景，必须过校验入口；用户保存的“观察记录”属于个人记录模块。
+- **验收**：从链接进入时加载对应场景并显示来源页；人工和 AI 修改共用校验；非法范围/表达式保留原图；撤销与刷新恢复一致；三维拖动与视角更新不重采样；AI 失败保留原场景；教材上下文（知识点/定义/案例/来源页）随请求发送；连续追问有上限且可取消。
 
 ## 3. 练习与复盘
 
@@ -95,7 +95,7 @@
 1. **可视化工作区（已完成）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
 2. **数据管理（已完成主要提取）**：`DataProvider` 的练习、记录、进度写操作已迁入 `modules/practice/usePracticeActions`、`modules/records/useRecordActions`、`modules/progress/useProgressActions`；DataProvider 从 594 行降到 326 行，只保留组合、加载、刷新、错误边界和 context。
 3. **公共接口（已完成基础契约）**：`frontend/src/modules/contracts.ts` 统一 ID/领域类型；[docs/contracts.md](docs/contracts.md) 记录场景、题目、作答、知识点字段及前后端 schema 对照；离线/服务端校验入口一致。
-4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261113T153743Z.zip`（44,672,413 字节，4,335 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
+4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261115T093153Z.zip`（45,439,154 字节，4,345 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
 
 ### Git 备份约定
 

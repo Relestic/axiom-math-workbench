@@ -29,11 +29,13 @@ ROOT = Path(__file__).resolve().parent
 DIST = (ROOT.parent / "frontend" / "dist-online").resolve()
 COMPRESSIBLE = {
     ".js": "application/javascript",
+    ".mjs": "text/javascript",
     ".css": "text/css",
     ".svg": "image/svg+xml",
     ".json": "application/json",
     ".html": "text/html",
 }
+mimetypes.add_type("text/javascript", ".mjs")
 
 # Keep the public demo credentials out of backend/.env so local tests and the
 # normal 启动后端.cmd flow keep using the development defaults.

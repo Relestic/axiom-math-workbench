@@ -5,7 +5,10 @@ import os
 import secrets
 import threading
 import webbrowser
+import mimetypes
 from pathlib import Path
+
+mimetypes.add_type("text/javascript", ".mjs")
 
 from dotenv import load_dotenv
 from flask import abort, request, send_from_directory

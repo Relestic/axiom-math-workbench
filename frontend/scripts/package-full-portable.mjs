@@ -144,9 +144,13 @@ const lock = JSON.parse(
   await readFile(join(frontend, "package-lock.json"), "utf8"),
 );
 for (const [path, info] of Object.entries(lock.packages)) {
-  if (!path || info.dev) continue;
-  const folder = join(frontend, path),
-    metadata = JSON.parse(await readFile(join(folder, "package.json"), "utf8"));
+  if (!path || info.dev || info.optional) continue;
+  const folder = join(frontend, path);
+  if (!existsSync(join(folder, "package.json"))) {
+    if (info.optional) continue;
+    throw new Error(`Missing package metadata: ${path}`);
+  }
+  const metadata = JSON.parse(await readFile(join(folder, "package.json"), "utf8"));
   const files = (await readdir(folder)).filter((n) =>
     /^(licen[sc]e|notice|copying|copyright)(\.|$)/i.test(n),
   );

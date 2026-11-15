@@ -1,19 +1,20 @@
 # 前端验证记录
 
-日期：2026-11-02。环境：Windows、Node.js 24.19.0、Codex 内置浏览器。
+日期：2026-11-15。环境：Windows、Node.js 24.19.0、Chrome headless。
 
-## 教材整合改版（2026-11-13）
+## 原讲义阅读与图像链接（2026-11-15）
 
-- 主导航收敛为 7 个条目；正反例实验室、证明思路、完整解答与复盘、前置知识诊断不再有独立入口。
-- 旧地址兼容：`#explore`/`#examples`/`#proof` 跳转教材学习并为 `#proof` 自动展开证明；`#review` 跳练习；`#diagnostic` 跳教材学习。
-- 教材学习首屏显示当前知识点、定义、AI 入口；图像、正例/反例/我的探索、函数/参数/范围编辑、撤销和 AI 改图在教材内联。
-- AI 请求携带 `context`（conceptId、章节、定义、案例、contentVersion、selectedProofStep、allowedReferences、sceneVersion），后端 `AIPlotRequest.context` 进入提示词；AI 解释与改图共用同一面板。
-- 证明步骤提供“问 AI 这一步”，打开同一面板并携带所选步骤文本；顶部 AI 按钮和图像入口不产生第二套会话组件。
-- 证明在定理下按需展开；完整解答与历史作答保留在对应练习题内。
-- 实测：教材页首屏 1440×849 可见 AI 按钮；图像 Plotly 正常；AI 解释 `x^2` 的差商并成功改为 `abs(x)`；旧 `#proof` 打开教材且证明折叠展开。
-- 后端 **106 passed**，前端 **21/21**；截图 [教材学习首屏](textbook-first-screen.png)、[教材内 AI](textbook-ai.png)、[证明步骤问 AI](textbook-proof-step.png)。
-- 免安装包在**全新解压目录**验证：无 `backend/.env`、无 `data/`；启动后 `/api/health` 200、演示账号登录成功、首页 200。发布包 `Axiom-Windows-Full-20261113T153743Z.zip`（44,672,413 字节，4,335 文件）。
-- 本次未在 390px 手机视口完成逐项截图验收；响应式 CSS 已提供，但需后续真机复核。
+- 教材学习主页面改为 PDF.js 原讲义阅读器：未选择时显示“打开讲义/载入项目测试讲义”；选择后渲染原页，显示文件名、总页数、当前页与缩放。
+- 项目测试讲义 `public/demo/analysis-demo.pdf` 共 7 页，明确标注“测试讲义 · 非用户原文”；第 2 页连续、第 3 页一致连续、第 4 页导数 x²、第 5 页 |x| 反例、第 6 页 Taylor、第 7 页 Riemann 和。
+- 页级文字链接在右侧“本页图像”列表，随当前页更新；链接进入隐藏路由 `#image`，图像页显示来源文件、来源页和“返回讲义 · 第 N 页”。
+- 实测：载入测试讲义后 PDF 第 2 页正常渲染；点击第 5 页链接进入 `|x|` 反例图像；返回后页码/缩放恢复；刷新后文件和页码仍恢复；浏览器后退恢复原页。
+- 上传自己的 PDF（用测试 PDF 模拟）后无自动链接（`links-before: 0`）；可在当前页手工添加目标链接并进入图像页。
+- 阅读页 AI 只发送当前页提取文字与选段；实测第 2 页提取 346 字，AI 回答量词顺序与 δ 依赖关系；无文字页会在界面提示“没有可提取文字”，不假装已读整份 PDF。
+- PDF worker 的 MIME 修复为 `text/javascript`（Flask `online_server.py` 与 `portable_server.py`），否则 worker 动态导入失败。
+- 响应式：1440/1280/390 宽度检查无页面级横向溢出；390px 下页面按容器缩放到可读，图像链接/AI 入口仍可见。截图 [阅读页](reader-textbook.png)、[本页图像链接](reader-links.png)、[图像目标页](reader-image-link.png)、[阅读页 AI](reader-ai.png)、[1280](reader-1280.png)、[390](reader-mobile.png)。
+- 后端新增阅读页 AI 契约测试；**108 passed**，前端 **21/21**；`npm run build:online` 通过。
+- 免安装包在全新解压目录验证：无 `.env`/`data/`；`/api/health` 200、登录成功、首页 200、PDF worker 为 `text/javascript`、测试讲义 `/demo/analysis-demo.pdf` 200。发布包 `Axiom-Windows-Full-20261115T093153Z.zip`（45,439,154 字节，4,345 文件）。
+- 未完成：PDF 目录树尚未读取；链接按页手工配置，不是全文自动锚点；旧 `#explore` 的旧自由场景未绑定到某个讲义知识点；原讲义文本层尚未做词语级锚点，只有页级链接与可选择的提取文字。
 
 ## AI 讨论式练习（2026-11-07）
 
@@ -51,7 +52,7 @@
 - `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
-- 发布产物：`releases/Axiom-Windows-Full-20261113T153743Z.zip`，44,672,413 字节、4,335 个文件，由 `npm run package:windows` 生成。
+- 发布产物：`releases/Axiom-Windows-Full-20261115T093153Z.zip`，45,439,154 字节、4,345 个文件，由 `npm run package:windows` 生成。
 - 后端 **106 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）

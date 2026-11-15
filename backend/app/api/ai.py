@@ -12,11 +12,12 @@ from ..db import get_session
 from ..errors import ApiError, parse_json
 from ..models import Attempt, Conversation, Exercise
 from ..modules import ai_service, surface_service, visual_service
-from ..modules import ai_credentials, exercise_discussion
+from ..modules import ai_credentials, exercise_discussion, reader_discussion
 from ..schemas.ai import (
     AICredentialRequest,
     ExerciseDiscussionRequest,
     ExerciseSubmitAIRequest,
+    ReaderDiscussionRequest,
 )
 from ..schemas.visual import (
     AIPlotRequest,
@@ -164,6 +165,30 @@ def submit_exercise_ai():
     )
     session.commit()
     return result, 201
+
+
+@bp.post("/reader/discuss")
+@require_auth()
+def discuss_reader_page():
+    """Answer questions about the actual current PDF page, never a fake parse."""
+
+    user = current_user()
+    limit("ai", user.id)
+    payload = parse_json(ReaderDiscussionRequest)
+    session = get_session()
+    result = reader_discussion.discuss(
+        session,
+        user,
+        document_name=payload.document_name,
+        page_index=payload.page_index,
+        page_count=payload.page_count,
+        page_text=payload.page_text,
+        selected_text=payload.selected_text,
+        question=payload.question,
+        history=payload.history,
+    )
+    session.commit()
+    return result
 
 
 @bp.post("/surface")

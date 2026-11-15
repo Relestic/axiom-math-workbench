@@ -27,3 +27,13 @@ class ExerciseSubmitAIRequest(StrictModel):
     history: list[dict] = Field(default_factory=list, max_length=16)
     hints_used: int = Field(default=0, ge=0, le=20)
     solution_viewed: bool = False
+
+
+class ReaderDiscussionRequest(StrictModel):
+    document_name: str = Field(min_length=1, max_length=240)
+    page_index: int = Field(ge=0, le=10000)
+    page_count: int = Field(ge=1, le=10000)
+    page_text: str = Field(default="", max_length=20000)
+    selected_text: str = Field(default="", max_length=4000)
+    question: str = Field(min_length=1, max_length=2000)
+    history: list[dict] = Field(default_factory=list, max_length=10)
