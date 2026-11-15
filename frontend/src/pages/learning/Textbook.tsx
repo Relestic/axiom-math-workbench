@@ -1,10 +1,10 @@
 import type { Props } from "./shared";
-import { ReaderPage } from "../ReaderPage";
+import { WordReaderPage } from "../WordReaderPage";
 
 /**
- * The textbook page is now the original-PDF reader.
- * Re-authored knowledge cards were removed from the normal learning flow.
+ * The textbook page is now the Word-original reader.
+ * The PDF reader remains available as a hidden legacy route.
  */
 export function Textbook({ onNavigate, notify }: Props) {
-  return <ReaderPage onNavigate={onNavigate} notify={notify} />;
+  return <WordReaderPage onNavigate={onNavigate} notify={notify} />;
 }

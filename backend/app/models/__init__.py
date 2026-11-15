@@ -39,6 +39,7 @@ from .ops import (  # noqa: F401
     Report,
 )
 from .users import AuthEvent, Invite, RefreshToken, User  # noqa: F401
+from .reader import ReaderExample, ReaderRule  # noqa: F401
 from .visual import (  # noqa: F401
     Conversation,
     ConversationMessage,
@@ -55,6 +56,8 @@ __all__ = [
     "RefreshToken",
     "AuthEvent",
     "UserAICredential",
+    "ReaderRule",
+    "ReaderExample",
     "Textbook",
     "Chapter",
     "Section",

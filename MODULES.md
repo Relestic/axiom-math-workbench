@@ -29,10 +29,10 @@
 
 ## 1. 教学内容
 
-- **负责范围**：教材学习主页面即原讲义 PDF 阅读器；文件选择、PDF.js 原页渲染、页码/缩放/页内滚动位置、文件指纹、页级图像文字链接、阅读页 AI 上下文、原文出处。独立的正反例实验室、证明思路页面不再存在；原讲义证明保留原样，不重排成卡片。
-- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；阅读页通过 `ReaderPage` 组合 PDF 渲染、`ReaderAIPanel` 与 `links.ts`，图像由隐藏路由 `#image` 的 `ImageLesson` 使用可视化模块。
-- **数据归属**：教学内容模块/管理员可写目录与场景映射；PDF 文件与阅读状态保存在当前浏览器 IndexedDB（按用户和文件指纹隔离），不上传整本文件。`docId`、`fingerprint`、`pageIndex`、`linkId` 是阅读模块的键，其他模块只引用，不能按文件名猜测关联。
-- **验收**：选择/载入实际 PDF 后主区域显示原页，显示文件名、总页数和当前页；翻页、缩放与页内滚动位置可恢复；页面文字链接可在目标图像页打开正确场景并返回原页；文件更换/无映射/失效链接/刷新恢复有明确反馈；不把项目测试讲义伪装成用户原文。
+- **负责范围**：教材学习主页面即 Word 原讲义阅读器；`.docx` 解析为章节/段落/文字片段/公式/表格/图片，文件指纹、段落级阅读位置、原文范围标注、自动识别候选、规则与纠正示例、阅读页 AI 上下文。独立的正反例实验室、证明思路页面不再存在；原讲义证明保留原样，PDF 阅读器仅作为旧记录兼容入口。
+- **对外接口**：`GET /api/v1/catalog`、`GET /api/v1/concepts/{id}`、`GET /api/v1/sections/{id}`、`GET /api/v1/proofs/{id}`；`GET/PUT/DELETE /api/v1/reader/rules/{task}`、`POST/DELETE /api/v1/reader/examples`、`POST /api/v1/ai/reader/analyze`；阅读页通过 `WordReaderPage` 组合 `docxAdapter`、`DocxDocument`、`ReaderAIPanel`，自动候选经 `docxAnalysis` 校验后写入原文范围，图像由隐藏路由 `#image` 的 `ImageLesson` 使用可视化模块。
+- **数据归属**：教学内容模块/管理员可写目录与场景映射；DOCX 原文件、解析结果、链接和阅读状态保存在当前浏览器 IndexedDB（按用户和文件指纹隔离），不上传整本文档。`docId`、`fingerprint`、`blockId`、`[start,end)`、`linkId` 是阅读模块的键；旧 PDF 的 `pageIndex` 不得迁移成 Word 段落。
+- **验收**：导入 `.docx` 后显示真实原文，标题/段落/表格/图片/支持公式可见，转换警告可定位；识别词覆盖加粗等跨片段情况，同词多次出现定位正确；点击原文词直接加载目标图像并返回原段落；无 Key 时仍可阅读和操作已有图像，状态如实说明；规则、版本与示例实际进入识别请求；不把项目测试讲义伪装成用户原文。
 
 ## 2. 数学可视化
 
@@ -95,7 +95,7 @@
 1. **可视化工作区（已完成）**：`FunctionWorkspace` 拆为 `components/` + `hooks/useFunctionWorkspace` + `scene/` + `two-d/`；三维页面迁入 `three-d/`；AI 请求集中到 `api.ts`。页面入口保留 `pages/FunctionWorkspace.tsx` 兼容导出。
 2. **数据管理（已完成主要提取）**：`DataProvider` 的练习、记录、进度写操作已迁入 `modules/practice/usePracticeActions`、`modules/records/useRecordActions`、`modules/progress/useProgressActions`；DataProvider 从 594 行降到 326 行，只保留组合、加载、刷新、错误边界和 context。
 3. **公共接口（已完成基础契约）**：`frontend/src/modules/contracts.ts` 统一 ID/领域类型；[docs/contracts.md](docs/contracts.md) 记录场景、题目、作答、知识点字段及前后端 schema 对照；离线/服务端校验入口一致。
-4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261115T093153Z.zip`（45,439,154 字节，4,345 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
+4. **任务与版本（已完成）**：源码已用 Git 管理，每次任务一个可验收提交；发布 ZIP 由 `cd frontend && npm run package:windows` 生成，产物写入 `releases/` 且不入库；本次产物是 `Axiom-Windows-Full-20261115T115218Z.zip`（45,529,039 字节，4,373 个文件）。`node_modules`、数据库、`.env` 和密钥均在忽略列表。
 
 ### Git 备份约定
 

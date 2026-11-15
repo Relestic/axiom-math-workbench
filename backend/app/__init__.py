@@ -150,6 +150,8 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .api.health import bp as health_bp
     from .api.notes import bp as notes_bp
     from .api.progress import bp as progress_bp
+    from .api.reader import ai_bp as reader_ai_bp
+    from .api.reader import bp as reader_bp
     from .api.reports import bp as reports_bp
     from .api.visual import bp as visual_bp
 
@@ -163,6 +165,8 @@ def create_app(overrides: dict | None = None) -> Flask:
         visual_bp,
         exercises_bp,
         progress_bp,
+        reader_bp,
+        reader_ai_bp,
         notes_bp,
         reports_bp,
         ai_bp,

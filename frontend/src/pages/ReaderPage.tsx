@@ -85,8 +85,14 @@ export function ReaderPage({
     (async () => {
       setBooting(true);
       try {
-        const saved = await loadStoredDocument(userId);
+        const saved = await loadStoredDocument(userId, "pdf");
         if (!saved || cancelled) return;
+        if (saved.format === "docx") {
+          setError(
+            "上次打开的是 Word 讲义。旧 PDF 记录仍保存在本机，但这里不会把 Word 段落当成 PDF 页码。请回到教材学习打开 Word，或重新选择 PDF。",
+          );
+          return;
+        }
         const state = await loadReadingState(userId, saved.docId);
         restoreRef.current = state;
         const buffer = await saved.blob.arrayBuffer();
@@ -118,7 +124,7 @@ export function ReaderPage({
     let cancelled = false;
     (async () => {
       try {
-        const saved = await loadUserLinks(stored.docId);
+        const saved = await loadUserLinks(userId, stored.docId);
         if (cancelled) return;
         const merged = stored.isDemo
           ? [...DEMO_LINKS, ...saved.filter((link) => !link.builtIn)]
@@ -413,7 +419,7 @@ export function ReaderPage({
     setLinks(next);
     try {
       const saved = next.filter((item) => !item.builtIn);
-      await saveUserLinks(stored.docId, saved);
+      await saveUserLinks(userId, stored.docId, saved);
       notify("已添加本页图像链接");
       setAddOpen(false);
     } catch {
@@ -427,6 +433,7 @@ export function ReaderPage({
     setLinks(next);
     try {
       await saveUserLinks(
+        userId,
         stored.docId,
         next.filter((item) => !item.builtIn),
       );

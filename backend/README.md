@@ -84,7 +84,7 @@ python -m app.cli seed --demo         # 另建演示学生、8 条示例作答�
 python -m app.cli stats               # 内容与使用统计
 python -m app.cli invite --role student --days 7
 python -m app.cli reset --yes --demo  # 演示环境重置
-python -m pytest -q                   # 108 项测试
+python -m pytest -q                   # 110 项测试
 ```
 
 ## 4. 配置
@@ -153,7 +153,7 @@ backend/
     workers/queue.py     任务表、Worker、处理器、用量统计
     seed/                8 单元内容、图、模板、32 道练习、诊断题
   migrations/            迁移器与版本（0001 baseline、0002 索引）
-  tests/                 108 项 pytest
+  tests/                 110 项 pytest
   docs/verification.md   验证记录与限制
   run.py                 开发服务入口
 ```
@@ -261,7 +261,7 @@ cd backend
 python -m pytest -q
 ```
 
-当前结果：**108 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
+当前结果：**110 passed**。覆盖账号/权限/刷新重放、内容与发布门禁、图谱、场景版本与冲突、受限表达式安全、数值分析、练习/作答/幂等/反馈、进度热力图、诊断、笔记/收藏/纠错、AI mock、任务、上传解析、OpenAPI 与安全用例。详细记录见 [`docs/verification.md`](docs/verification.md)。
 
 ## 12. 与前端的关系
 

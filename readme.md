@@ -4,6 +4,8 @@
 
 > 项目工作名：Axiom 公理。已提供可运行的前端演示；本文仍作为完整产品需求与架构说明，不表示所有能力已经实现。
 >
+> **2026-11-15 Word 讲义版**：主输入改为 `.docx`，原讲义按章节/段落连续显示；自动识别数学词语并在原文字词上生成图像链接，点击进入对应图像，返回原段落。产品内提供“AI 规则与示例”，可保存规则版本、纠正示例并测试识别；PDF 阅读器保留为旧记录兼容入口。
+>
 > **2026-11-15 原讲义阅读改版**：教材学习以用户自己的 PDF 原讲义为主体，保留原文页码、缩放和阅读位置；正反例、连续/导数/Taylor/积分图像通过原文旁的**文字链接**进入独立图像页，再返回原页。用户未选择文件时显示“打开讲义”，项目测试讲义明确标注为演示文件。正反例实验室、证明思路、完整解答与复盘、前置知识诊断仍无独立入口。
 >
 > 文档版本：0.2 · 需求日期：2026-10-29 · 前端实现状态更新：2026-11-02
@@ -12,13 +14,13 @@
 
 ## 当前实现状态（2026-11-07）
 
-已按照 8 张原型图实现 React + TypeScript 前端，并在 2026-11-15 改为原讲义阅读器：PDF.js 渲染原页、页级图像文字链接、独立图像页、返回原页、阅读页 AI 问答；工作台、练习、练习热力图、知识地图、三维曲面和笔记保留。
+已按照 8 张原型图实现 React + TypeScript 前端，并在 2026-11-15 改为 Word 讲义阅读器：DOCX 结构化正文、公式/表格/图片提示、原文字词自动图像链接、独立图像页与返回原段落、规则/示例设置、阅读问答；旧 PDF 阅读器保留兼容。工作台、练习、练习热力图、知识地图、三维曲面和笔记保留。
 
 - **业务模块**：六个业务模块的负责范围、对外接口、数据归属和验收标准见 [MODULES.md](MODULES.md)；可视化工作区已拆为 `frontend/src/modules/visualization/`（组件、二维/三维、场景校验、hooks、API），其余模块按文档顺序逐步迁移。
 - **练习批改**：计算题从作答中提取最终表达式，使用 SymPy 做符号等价检查；证明题按 ε、δ、条件、估计、结论等关键步骤输出 0–100 结构分、逐项覆盖/缺失和参考结果。结构分明确标注“不判断证明是否数学正确”，避免把关键词匹配冒充人工评阅。
 - **稳定本地预览**：双击根目录 `启动本地预览.cmd`，在 <http://127.0.0.1:8080/> 同时运行前端与后端，不依赖隧道、公网或系统代理；`停止本地预览.cmd` 只停止该服务。详见 [LOCAL_PREVIEW.md](LOCAL_PREVIEW.md)。
 
-- **后端（新增）**：`backend/` 提供可运行的单机演示后端，覆盖邀请账号与权限、教材导入与发布、定义/条件/证明/经典案例、知识图谱、图像场景与数学校验、练习与完整解答、作答记录与反馈、练习热力图、诊断、笔记、内容纠错、后台任务与模型用量。108 项 pytest 通过；启动、接口清单与验证边界见 [后端说明](backend/README.md) 与 [验证记录](backend/docs/verification.md)。
+- **后端（新增）**：`backend/` 提供可运行的单机演示后端，覆盖邀请账号与权限、教材导入与发布、定义/条件/证明/经典案例、知识图谱、图像场景与数学校验、练习与完整解答、作答记录与反馈、练习热力图、诊断、笔记、内容纠错、后台任务与模型用量。110 项 pytest 通过；启动、接口清单与验证边界见 [后端说明](backend/README.md) 与 [验证记录](backend/docs/verification.md)。
 - **运行入口**：稳定本地预览双击 `启动本地预览.cmd`（`http://127.0.0.1:8080/`）；完整前后端演示双击 `启动完整演示.cmd`；也可进入 `frontend` 后运行 `npm ci`、`npm run dev`。后端在 `backend` 下运行 `python -m app.cli seed --demo` 与 `python run.py`，API 文档为 <http://127.0.0.1:8000/api/docs>。
 - **文件分享**：`releases/` 中提供 Windows x64 免安装 ZIP，解压后双击包内的 `启动 Axiom.cmd`；随包提供运行环境，AI 需接收者自行配置密钥。该 ZIP 是 2026-11-02 的前端独立包，不含本次后端联调；联调版请使用 `启动完整演示.cmd`，待正式发布前再重新打包。
 - **前端说明**：[功能、运行与实现边界](frontend/README.md)；[数据层与迭代指南](frontend/docs/architecture.md)；[验证记录](frontend/docs/verification.md)。
@@ -48,7 +50,7 @@
 
 核心学习过程：
 
-**加载原讲义 → 阅读原文 → 点击图像文字链接 → 探索/与 AI 讨论 → 返回原页 → 做本节练习。**
+**导入 .docx → 阅读原文 → 自动识别数学词语 → 点击原文字词 → 探索/与 AI 讨论 → 返回原段落 → 做本节练习。**
 
 图像用于形成和检验直觉。最终结论通过定义、定理及完整论证建立；有限采样、动画或符号计算结果不自动构成证明。
 
@@ -518,7 +520,7 @@ MVP 可使用一台云主机运行反向代理、API、Worker、PostgreSQL 和 R
 | `infra/` | 容器与部署配置 |
 | `docs/` | 数据与接口规范、审核规则、验收和用户试用记录 |
 
-**前端演示代码位于 `frontend/`，后端演示代码位于 `backend/`。** 一键启动可双击根目录 [`启动完整演示.cmd`](<启动完整演示.cmd>)；也可前端运行 `npm ci`、`npm run dev`，后端进入 `backend` 后运行 `python -m app.cli init`、`python -m app.cli seed --demo`、`python run.py`。前端通过 `frontend/.env` 的 `VITE_API_BASE` 指向后端，默认 `http://127.0.0.1:8000`。运行 `npm test`（21 项）、`npm run build` 检查前端，运行 `python -m pytest -q` 执行 108 项后端测试。数据层与扩展方式见 [前端架构指南](frontend/docs/architecture.md)，联调边界与验证见 [前端说明](frontend/README.md)、[前端验证](frontend/docs/verification.md) 与 [后端说明](backend/README.md)。
+**前端演示代码位于 `frontend/`，后端演示代码位于 `backend/`。** 一键启动可双击根目录 [`启动完整演示.cmd`](<启动完整演示.cmd>)；也可前端运行 `npm ci`、`npm run dev`，后端进入 `backend` 后运行 `python -m app.cli init`、`python -m app.cli seed --demo`、`python run.py`。前端通过 `frontend/.env` 的 `VITE_API_BASE` 指向后端，默认 `http://127.0.0.1:8000`。运行 `npm test`（21 项）、`npm run build` 检查前端，运行 `python -m pytest -q` 执行 110 项后端测试。数据层与扩展方式见 [前端架构指南](frontend/docs/architecture.md)，联调边界与验证见 [前端说明](frontend/README.md)、[前端验证](frontend/docs/verification.md) 与 [后端说明](backend/README.md)。
 
 后端实际目录与本表规划对应：`backend/app/api/` 对应 API，`backend/app/modules/` 对应业务，`backend/app/adapters/` 对应模型/文件/解析/数学适配，`backend/app/workers/` 对应导入与生成任务，`backend/migrations/` 对应迁移，`backend/app/seed/` 与 `backend/tests/` 分别保存示例内容和测试；根目录的 `content/`、`infra/` 尚未建立。`backend/app/seed/` 中的 8 个示例单元是演示内容，不是 `content/curriculum/` 的正式课程矩阵。
 

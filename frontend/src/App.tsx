@@ -39,6 +39,9 @@ const Textbook = lazy(() =>
 const ImageLesson = lazy(() =>
   import("./pages/ImageLesson").then((module) => ({ default: module.ImageLesson })),
 );
+const PdfReader = lazy(() =>
+  import("./pages/ReaderPage").then((module) => ({ default: module.ReaderPage })),
+);
 const Exercises = lazy(() =>
   import("./modules/practice").then((module) => ({ default: module.Exercises })),
 );
@@ -91,8 +94,10 @@ export default function App() {
   const notes = app.data.notes;  const title =
     page === "image"
       ? "图像学习"
-      : navigation.flatMap((g) => g.items).find((i) => i[0] === page)?.[1] ||
-        "学习工作台";
+      : page === "pdf-reader"
+        ? "旧 PDF 阅读"
+        : navigation.flatMap((g) => g.items).find((i) => i[0] === page)?.[1] ||
+          "学习工作台";
   const notify = (text: string) => {
     setToast(text);
     clearTimeout(timer.current);
@@ -386,6 +391,7 @@ export default function App() {
           )}
           {page === "textbook" && <Textbook {...common} />}
           {page === "image" && <ImageLesson onNavigate={navigate} />}
+          {page === "pdf-reader" && <PdfReader {...common} />}
           {page === "exercises" && <Exercises {...common} />}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />

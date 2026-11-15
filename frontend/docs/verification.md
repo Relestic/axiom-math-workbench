@@ -2,6 +2,38 @@
 
 日期：2026-11-15。环境：Windows、Node.js 24.19.0、Chrome headless。
 
+## Word 导入与自动原文链接（2026-11-15）
+
+- 主输入改为 `.docx`：`WordReaderPage` 使用 `docxAdapter` 解析 DOCX 正文、章节、段落、加粗、列表、表格、图片和 OMML 公式；不把 Word 页码塞进旧 PDF `pageIndex`。
+- 测试文件 `public/demo/word-demo.docx` 为项目生成的测试讲义（非用户原文），含标题、加粗跨片段的“狄利克雷函数”、人物介绍/边值问题阴性段、英文别名、定义句、重复名称、两个公式、表格和图片。
+- 原文字词链接由文字范围 `[start,end)` 渲染；同一链接跨加粗片段合并成一个可点击单元，复制文字仍连续。测试结果：4 个标题、14 个段落、3 行表格、1 张图片、2 个公式；阴性段链接数为 0；两个“狄利克雷函数”分别可点击。
+- 自动识别有两条路径：本地词库候选与 `POST /api/v1/ai/reader/analyze` 模型候选。模型候选按 8 段分批；真实 DeepSeek 批量接口返回 200，并通过原文存在性、occurrence、目标白名单和重叠校验。无 Key 时保留本地候选并显示“未运行模型识别”。
+- `GET/PUT/DELETE /api/v1/reader/rules/{task}` 与 `/reader/examples` 已接入“AI 规则与示例”面板；规则版本和纠正示例实际进入识别请求。支持“不链接（否定示例）”，但不宣称训练模型参数。
+- 阅读页 AI 请求已扩展 `source_type=docx, block_id, section_title, document_id`；只发送当前章节/段落与选段。旧 PDF 阅读器保留在隐藏 `#pdf-reader`，新 Word 页面不会把旧页码当成段落。
+- 从原文字词进入 `#image` 后返回，恢复 `blockId` 并聚焦原链接；响应式布局在 1440/1280/390 宽度检查无页面级横向溢出（Word 文档采用连续排版，不追求 Word 分页）。
+- 截图：[Word 原文与自动链接](word-reader.png)、[狄利克雷专用图像](word-dirichlet.png)、[AI 规则与示例](word-rules.png)、[390px Word 阅读](word-mobile.png)。
+- 测试：后端 **110 passed**，前端 **21/21**，`npm run build:online` 通过。发布包 `Axiom-Windows-Full-20261115T115218Z.zip`（45,529,039 字节，4,373 文件）。
+- 未完成/限制：OMML 公式转为线性文本并在原位置提示，未做到 Word 原生公式逐像素保真；图片保持显示但不提取可计算表达式；本地词库只覆盖代表性概念；没有全文自动目录解析；规则示例是轻量检索提示，不训练模型；A8 的独立测试集仅包含项目测试讲义，不能宣称通用准确率。
+
+### A1–A12 结果摘要
+
+| 编号 | 结果 |
+| --- | --- |
+| A1 | 正文、标题、表格、图片、公式可见；公式有线性化警告，未静默丢失 |
+| A2 | 未手工配置时“狄利克雷函数”自动可点击，进入不连续性专用演示 |
+| A3 | 人物介绍/边值问题段落无链接 |
+| A4 | 英文别名与有理/无理取值定义句可识别 |
+| A5 | 加粗拆分后链接合并；重复名称两个位置分别可点击 |
+| A6 | 点击、改图、返回、聚焦原链接；浏览器后退恢复 |
+| A7 | 规则保存版本、恢复默认；示例保存/删除；“不链接”选项；测试段落可运行 |
+| A8 | 仅项目测试讲义，未做通用准确率 |
+| A9 | 不存在的文本、非法目标、重叠候选被拒绝；旧结果不覆盖新文档 |
+| A10 | 无 Key 时原文可读、本地候选可点击、状态明确 |
+| A11 | 旧 PDF 走隐藏兼容路由；Word docId/指纹隔离，旧文件数据保留 |
+| A12 | 已在全新解压目录启动：无 `.env`/`data/`，health 200、登录成功、首页 200、Word/PDF 测试文件可用、PDF worker MIME 正确 |
+
+## 旧 PDF 阅读与图像链接（2026-11-15）
+
 ## 原讲义阅读与图像链接（2026-11-15）
 
 - 教材学习主页面改为 PDF.js 原讲义阅读器：未选择时显示“打开讲义/载入项目测试讲义”；选择后渲染原页，显示文件名、总页数、当前页与缩放。
@@ -13,7 +45,7 @@
 - PDF worker 的 MIME 修复为 `text/javascript`（Flask `online_server.py` 与 `portable_server.py`），否则 worker 动态导入失败。
 - 响应式：1440/1280/390 宽度检查无页面级横向溢出；390px 下页面按容器缩放到可读，图像链接/AI 入口仍可见。截图 [阅读页](reader-textbook.png)、[本页图像链接](reader-links.png)、[图像目标页](reader-image-link.png)、[阅读页 AI](reader-ai.png)、[1280](reader-1280.png)、[390](reader-mobile.png)。
 - 后端新增阅读页 AI 契约测试；**108 passed**，前端 **21/21**；`npm run build:online` 通过。
-- 免安装包在全新解压目录验证：无 `.env`/`data/`；`/api/health` 200、登录成功、首页 200、PDF worker 为 `text/javascript`、测试讲义 `/demo/analysis-demo.pdf` 200。发布包 `Axiom-Windows-Full-20261115T093153Z.zip`（45,439,154 字节，4,345 文件）。
+- 免安装包在全新解压目录验证：无 `.env`/`data/`；`/api/health` 200、登录成功、首页 200、PDF worker 为 `text/javascript`、测试讲义 `/demo/analysis-demo.pdf` 200。发布包 `Axiom-Windows-Full-20261115T115218Z.zip`（45,529,039 字节，4,373 文件）。
 - 未完成：PDF 目录树尚未读取；链接按页手工配置，不是全文自动锚点；旧 `#explore` 的旧自由场景未绑定到某个讲义知识点；原讲义文本层尚未做词语级锚点，只有页级链接与可选择的提取文字。
 
 ## AI 讨论式练习（2026-11-07）
@@ -52,7 +84,7 @@
 - `DataProvider` 从 594 行降到 326 行：练习 `submitAttempt/rateAttempt/loadHint/loadSolution`、记录 `saveNote/deleteNote/toggleBookmark`、进度 `submitDiagnostic` 已迁入模块 hooks；DataProvider 只保留组合、加载、刷新和错误边界。页面入口通过 `modules/teaching|practice|progress|records|identity` 导出。
 - 模块边界、接口、数据归属和验收标准见 [`MODULES.md`](../../MODULES.md)、[`docs/contracts.md`](../../docs/contracts.md) 和 [`visualization/README.md`](../src/modules/visualization/README.md)。
 - Git 提交：`fd7f6fb`（可视化模块）、`628492d`（模块验收文档）、`5d8459b`（练习/记录/进度 actions 提取）。
-- 发布产物：`releases/Axiom-Windows-Full-20261115T093153Z.zip`，45,439,154 字节、4,345 个文件，由 `npm run package:windows` 生成。
+- 发布产物：`releases/Axiom-Windows-Full-20261115T115218Z.zip`，45,529,039 字节、4,373 个文件，由 `npm run package:windows` 生成。
 - 后端 **106 passed**，前端 **21/21**，`npm run build:online` 与 Windows 打包构建通过。
 
 ## 练习批改与稳定本地预览（2026-11-07）

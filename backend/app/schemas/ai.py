@@ -37,3 +37,7 @@ class ReaderDiscussionRequest(StrictModel):
     selected_text: str = Field(default="", max_length=4000)
     question: str = Field(min_length=1, max_length=2000)
     history: list[dict] = Field(default_factory=list, max_length=10)
+    source_type: Literal["pdf", "docx"] = "pdf"
+    block_id: str = Field(default="", max_length=80)
+    section_title: str = Field(default="", max_length=240)
+    document_id: str = Field(default="", max_length=120)

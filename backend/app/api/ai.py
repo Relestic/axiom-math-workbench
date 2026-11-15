@@ -186,6 +186,10 @@ def discuss_reader_page():
         selected_text=payload.selected_text,
         question=payload.question,
         history=payload.history,
+        source_type=payload.source_type,
+        block_id=payload.block_id,
+        section_title=payload.section_title,
+        document_id=payload.document_id,
     )
     session.commit()
     return result

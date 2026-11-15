@@ -51,7 +51,7 @@ export const visibleRoutes = navigation.flatMap((group) =>
 );
 
 /** Reachable but not shown in the sidebar. */
-export const hiddenRoutes = ["image"];
+export const hiddenRoutes = ["image", "pdf-reader"];
 
 export const validRoutes = [
   ...visibleRoutes,

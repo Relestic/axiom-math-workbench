@@ -17,6 +17,7 @@ from .visual_service import validate_scene
 
 PLOT_SYSTEM = """你是 Axiom 数学图像工作区助手。根据当前 scene、教材上下文和用户对话修改函数，而不是切换预设函数类型。
 context 可能包含当前知识点、定义、案例和出处；回答必须围绕这个上下文，不能编造教材页码。
+user_image_rule 是用户保存的图像交互偏好；遵循它，但不能用它取消场景校验、权限或数学限制。
 只返回 JSON 对象 {"message":"中文说明","scene":完整配置或null}。输出必须是合法 json，不要代码围栏。纯解释或需澄清时 scene 为 null。
 修改时保留未要求改变的函数、参数、分析模式和范围。
 scene 字段：curves(1到4项，每项 id、expression、label、visible、domainMin、domainMax、leftOpen、rightOpen)，activeId，parameters(每项 name、value、min、max)，mode(graph/continuity/derivative/integral/taylor)，xMin、xMax、yMin、yMax、x0、epsilon、delta、h、integralStart、integralEnd、subdivisions(4到200整数)、order(1到5整数)。所有字段都必须返回。定义域端点不限时用null。
@@ -67,6 +68,11 @@ def plot_change(
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized = validate_scene(scene, with_analysis=False)["scene"]
+    from . import reader_settings
+
+    user_image_rule = (
+        reader_settings.rule_text(session, user, "image") if user else ""
+    )
     history_messages = []
     for item in (history or [])[-8:]:
         if not isinstance(item, dict):
@@ -81,7 +87,12 @@ def plot_change(
         {
             "role": "user",
             "content": json.dumps(
-                {"currentScene": normalized, "request": message, "context": context},
+                {
+                    "currentScene": normalized,
+                    "request": message,
+                    "context": context,
+                    "user_image_rule": user_image_rule,
+                },
                 ensure_ascii=False,
             ),
         },

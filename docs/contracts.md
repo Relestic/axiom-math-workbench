@@ -131,6 +131,9 @@ feedback.ai {
 | `progress/api.submitDiagnosticTyped` | `POST /api/v1/diagnostic` | `DiagnosticSubmitRequest` |
 | `identity/api.useSession` | `/api/v1/auth/*` | auth schemas |
 | `reader/api.requestReaderQuestion` | `POST /api/v1/ai/reader/discuss` | `ReaderDiscussionRequest` |
+| `reader/api.analyzeDocument` | `POST /api/v1/ai/reader/analyze` | `ReaderAnalyzeRequest` |
+| `reader/api.fetchReaderSettings` | `GET /api/v1/reader/settings` | reader settings |
+| `reader/api.saveReaderRule` | `PUT /api/v1/reader/rules/{task}` | `ReaderRuleUpdate` |
 
 ## 7. 修改流程
 
@@ -140,44 +143,78 @@ feedback.ai {
 4. 在验收记录写明字段变更、兼容策略和手工回归结果；
 5. 一次提交只包含一个可验收功能，ZIP 由 `npm run package:windows` 生成，不提交产物。
 
-## 8. 原讲义、图像链接与阅读 AI
+## 8. Word 原讲义、自动链接与 AI 规则
 
-### 8.1 原讲义状态（浏览器 IndexedDB）
+### 8.1 文档与阅读状态（浏览器 IndexedDB）
 
 | 字段 | 作用 |
 | --- | --- |
 | `userId` | 当前账号；离线/演示使用独立键 |
-| `docId` | 由 PDF 内容指纹生成的稳定文档 ID；演示文件使用固定 ID |
-| `fingerprint` | SHA-256，用于同名文件不误用旧链接 |
-| `name`, `size`, `lastModified` | 文件元数据，仅用于显示与排查 |
-| `blob` | 本机 PDF 字节；不上传整本文件 |
-| `pageIndex`, `zoom`, `scrollTop` | 阅读位置，按用户 + docId 保存 |
+| `docId` | 由 DOCX 内容指纹生成；演示文件使用固定 ID |
+| `fingerprint` | SHA-256，同名不同版本不误用旧链接 |
+| `format` | `"docx"`；旧记录缺省按 `"pdf"` 辨认 |
+| `blob` | 本机原文件；不上传整本讲义 |
+| `blocks` | 由 `docxAdapter` 解析的章节、段落、表格、公式、图片与警告；按解析版本重建 |
+| `blockId` | 同一文件与解析版本内稳定；不可把 Word 段落塞进旧 `pageIndex` |
+| `start`, `end`, `exactText` | 原文范围，UTF-16 半开区间 `[start,end)` |
+| `fontSize`, `blockId`, `viewportOffset` | 阅读位置；窗口变化后按段落恢复 |
 
-### 8.2 页级图像链接
-
-```text
-{ linkId, pageIndex, label, description, conceptId, caseId, builtIn? }
-```
-
-- `pageIndex` 从 0 开始，界面显示时 +1。
-- 链接按 `docId` 保存；文件指纹改变后不自动继承旧链接。
-- 演示讲义带固定链接；用户自己的讲义初始为空，可在当前页手工添加。
-- 点击链接先把阅读状态写入 IndexedDB，再进入隐藏路由 `#image`；来源页、文件名、`pageIndex`、`docId` 由 sessionStorage 传递，不在 URL 中放本地绝对路径或全文。
-- 返回按钮和浏览器后退都回到 `#textbook`，由 IndexedDB 恢复文件、页码、缩放与滚动位置。
-- 无来源直接打开 `#image` 时显示“还没有打开讲义来源”，不展示无关图像。
-
-### 8.3 阅读页 AI
-
-`POST /api/v1/ai/reader/discuss` 请求：
+### 8.2 原文链接与自动识别
 
 ```text
-document_name, page_index, page_count,
-page_text (max 20000), selected_text (max 4000),
-question, history (max 10)
+ReaderLink {
+  id, blockId, start, end, exactText, pageIndex: 0,
+  label, description, conceptId, visualizationId, caseId, focus,
+  origin: builtin | manual | auto | local | correction,
+  status: candidate | verified | needs_review,
+  rulesVersion?
+}
 ```
 
-响应：`{ message, provider, model, page_text_available }`。
+- `local` 是本地词库候选，`auto` 是模型候选；两者都要经过程序校验。
+- 校验：块存在、`exactText` 真实出现、`occurrence` 消歧、目标在可用清单、范围不重叠、否定/人物介绍语境拒绝。
+- 点击先把 `docId/blockId/start` 写入阅读状态，再进入 `#image`；来源通过 sessionStorage 传递。
+- 返回和浏览器后退回到 `#textbook`，按 `blockId` 滚动并聚焦原链接。
+- 旧 PDF 仍走 `#pdf-reader`，使用 `pageIndex`；新旧状态不得混用。
 
-- 只发送当前页文字与用户选段；没有文本时 `page_text_available=false`，提示模型明确说明无法读取，不得假装读过整份 PDF。
-- 不写 Attempt、不修改讲义或场景；失败保留输入和阅读位置。
-- API 变更必须同步前端 `modules/reader/api.ts`、`backend/app/schemas/ai.py` 与测试。
+### 8.3 AI 规则与示例
+
+| 接口 | 用途 |
+| --- | --- |
+| `GET /api/v1/reader/settings` | 读取识别/图像/问答规则与当前用户示例 |
+| `PUT /api/v1/reader/rules/{task}` | 保存一个新版本并停用旧版本 |
+| `DELETE /api/v1/reader/rules/{task}` | 恢复默认 |
+| `POST /api/v1/reader/examples` | 保存纠正示例，含原文、目标或“不链接”与理由 |
+| `DELETE /api/v1/reader/examples/{id}` | 删除示例 |
+
+规则和示例按用户隔离。保存示例只改变识别参考，不训练外部模型；重新识别不覆盖用户明确否定的链接。
+
+### 8.4 自动识别接口
+
+`POST /api/v1/ai/reader/analyze` 请求有限块批次：
+
+```text
+document_name, doc_id, parser_version,
+blocks[{block_id, section_title, text}],
+visualizations[{id, label, concept_id, case_id, focus}],
+max_candidates
+```
+
+响应：`{ candidates, rejected, rules_version, provider, model, status }`。
+
+- 服务端组装固定输出契约 + 当前用户识别规则 + 最近示例 + 原文块 + 可用目标清单。
+- 模型只返回候选文本/目标；字符范围、歧义、重叠和目标有效性由程序校验。
+- 无 Key 时返回真实错误，前端保留本地词库候选并明确“未运行模型识别”。
+
+### 8.5 阅读问答
+
+`POST /api/v1/ai/reader/discuss` 在旧 PDF 字段外增加：
+
+```text
+source_type: "pdf" | "docx",
+block_id, section_title, document_id
+```
+
+- Word 只发送当前章节/段落文字与用户选段，不发送整本文件。
+- 响应 `page_text_available=false` 时必须说明无法读取该段，不得假装已读整份文档。
+- 教学问答使用用户保存的 `qa` 规则；阅读和图像修改都不能取消程序校验/权限。

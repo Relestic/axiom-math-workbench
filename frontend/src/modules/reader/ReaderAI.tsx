@@ -15,6 +15,13 @@ export function ReaderAIPanel({
   pageIndex,
   pageCount,
   pageText,
+  contextLabel,
+  contextDescription,
+  contextKey,
+  sourceType,
+  blockId,
+  sectionTitle,
+  documentId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -22,6 +29,13 @@ export function ReaderAIPanel({
   pageIndex: number;
   pageCount: number;
   pageText: string;
+  contextLabel?: string;
+  contextDescription?: string;
+  contextKey?: string;
+  sourceType?: "pdf" | "docx";
+  blockId?: string;
+  sectionTitle?: string;
+  documentId?: string;
 }) {
   const [status, setStatus] = useState<AIStatus | null>(null);
   const [messages, setMessages] = useState<
@@ -48,7 +62,7 @@ export function ReaderAIPanel({
     setError("");
     setBusy(false);
     setPasted("");
-  }, [documentName, pageIndex]);
+  }, [documentName, pageIndex, contextKey]);
 
   useEffect(() => {
     const box = end.current?.parentElement;
@@ -81,6 +95,10 @@ export function ReaderAIPanel({
         question,
         history: messages.slice(-8),
         signal: request.signal,
+        sourceType,
+        blockId,
+        sectionTitle,
+        documentId,
       });
       if (!request.signal.aborted && requestId.current === current) {
         setMessages([
@@ -109,7 +127,7 @@ export function ReaderAIPanel({
             <Bot size={13} /> 与 AI 讨论本页
           </span>
           <h3>
-            {documentName} · 第 {pageIndex + 1} / {pageCount} 页
+            {contextLabel || `${documentName} · 第 ${pageIndex + 1} / ${pageCount} 页`}
           </h3>
         </div>
         <button className="icon-button" onClick={onClose} aria-label="关闭 AI 面板">
@@ -117,9 +135,10 @@ export function ReaderAIPanel({
         </button>
       </div>
       <p className="reader-ai-note">
-        {hasText
-          ? `已提取本页 ${pageText.trim().length} 字；请求只发送当前页和你的选段。`
-          : "这一页没有可提取的文字（可能是扫描页）；请粘贴片段，AI 不会假装已读完整 PDF。"}
+        {contextDescription ||
+          (hasText
+            ? `已提取本页 ${pageText.trim().length} 字；请求只发送当前页和你的选段。`
+            : "这一页没有可提取的文字（可能是扫描页）；请粘贴片段，AI 不会假装已读完整 PDF。")}
       </p>
       {!status?.configured && (
         <AICredentialSettings

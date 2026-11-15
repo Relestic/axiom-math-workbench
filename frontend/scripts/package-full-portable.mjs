@@ -158,7 +158,15 @@ for (const [path, info] of Object.entries(lock.packages)) {
     files.push("naturalSort.js", "package.json", "README.md");
   if (metadata.name === "seedrandom" && !files.length)
     files.push("seedrandom.js", "README.md");
-  if (!files.length) throw new Error(`Missing license: ${metadata.name}`);
+  if (!files.length) {
+    // Some small transitive packages only declare a license in package.json.
+    // Include that declaration and the README; these files are not runtime code.
+    files.push("package.json");
+    const readme = (await readdir(folder)).find((name) =>
+      /^readme(\.|$)/i.test(name),
+    );
+    if (readme) files.push(readme);
+  }
   const destination = join(
     output,
     "licenses",

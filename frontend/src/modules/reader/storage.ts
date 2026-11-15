@@ -11,6 +11,16 @@ export type ReaderLink = {
   conceptId: string;
   caseId: ReaderCase;
   builtIn?: boolean;
+  format?: "pdf" | "docx";
+  blockId?: string;
+  start?: number;
+  end?: number;
+  exactText?: string;
+  visualizationId?: string;
+  focus?: string[];
+  origin?: "builtin" | "manual" | "auto" | "local" | "correction";
+  status?: "candidate" | "verified" | "needs_review";
+  rulesVersion?: string;
 };
 
 export type StoredDocument = {
@@ -22,6 +32,7 @@ export type StoredDocument = {
   size: number;
   lastModified: number;
   isDemo: boolean;
+  format?: "pdf" | "docx";
   blob: Blob;
 };
 
@@ -31,6 +42,12 @@ export type ReadingState = {
   pageIndex: number;
   zoom: number;
   scrollTop: number;
+  format?: "pdf" | "docx";
+  blockId?: string;
+  charOffset?: number;
+  viewportOffset?: number;
+  fontSize?: number;
+  focusLinkId?: string;
   updatedAt: number;
 };
 
@@ -75,16 +92,23 @@ function docKey(userId: string, docId: string): string {
 
 export async function loadStoredDocument(
   userId: string,
+  format?: "pdf" | "docx",
 ): Promise<StoredDocument | null> {
-  const last = localStorage.getItem(`${LAST_PREFIX}${userId}`);
-  if (!last) return null;
+  const last = localStorage.getItem(
+    `${LAST_PREFIX}${format ? `${format}:` : ""}${userId}`,
+  );
+  const generic = localStorage.getItem(`${LAST_PREFIX}${userId}`);
+  const key = last || generic;
+  if (!key) return null;
   const db = await openDb();
   try {
     const tx = db.transaction(FILES, "readonly");
     const value = await requestResult(
-      tx.objectStore(FILES).get(last) as IDBRequest<StoredDocument | undefined>,
+      tx.objectStore(FILES).get(key) as IDBRequest<StoredDocument | undefined>,
     );
-    return value || null;
+    if (!value) return null;
+    if (format && (value.format || "pdf") !== format) return null;
+    return value;
   } finally {
     db.close();
   }
@@ -103,6 +127,10 @@ export async function saveStoredDocument(
       tx.onerror = () => reject(tx.error);
     });
     localStorage.setItem(`${LAST_PREFIX}${document.userId}`, key);
+    localStorage.setItem(
+      `${LAST_PREFIX}${document.format || "pdf"}:${document.userId}`,
+      key,
+    );
   } finally {
     db.close();
   }
@@ -143,12 +171,15 @@ export async function saveReadingState(state: ReadingState): Promise<void> {
   }
 }
 
-export async function loadUserLinks(docId: string): Promise<ReaderLink[]> {
+export async function loadUserLinks(
+  userId: string,
+  docId: string,
+): Promise<ReaderLink[]> {
   const db = await openDb();
   try {
     const tx = db.transaction(LINKS, "readonly");
     const value = await requestResult(
-      tx.objectStore(LINKS).get(docId) as IDBRequest<
+      tx.objectStore(LINKS).get(docKey(userId, docId)) as IDBRequest<
         { docId: string; links: ReaderLink[] } | undefined
       >,
     );
@@ -159,13 +190,14 @@ export async function loadUserLinks(docId: string): Promise<ReaderLink[]> {
 }
 
 export async function saveUserLinks(
+  userId: string,
   docId: string,
   links: ReaderLink[],
 ): Promise<void> {
   const db = await openDb();
   try {
     const tx = db.transaction(LINKS, "readwrite");
-    tx.objectStore(LINKS).put({ docId, links });
+    tx.objectStore(LINKS).put({ docId: docKey(userId, docId), links });
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);

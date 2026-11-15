@@ -7,6 +7,10 @@ export type ImageSource = {
   pageCount: number;
   docId: string;
   isDemo: boolean;
+  format?: "pdf" | "docx";
+  blockId?: string;
+  sectionTitle?: string;
+  exactText?: string;
 };
 
 const IMAGE_SOURCE_KEY = "axiom-image-source";
