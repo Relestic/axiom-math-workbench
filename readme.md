@@ -12,6 +12,22 @@
 >
 > **MVP：数学分析中从连续性到定积分的章节。标准正式版：覆盖本科数学分析完整主干，随后扩展到其他数学系核心课程。**
 
+## 下载一键部署包
+
+Windows x64 免安装完整版（含 Python 运行时、前端、后端和演示讲义）：
+
+- [GitHub Releases 最新版](https://github.com/Relestic/axiom-math-workbench/releases/latest)
+- [直接下载 v0.5.0 ZIP](https://github.com/Relestic/axiom-math-workbench/releases/latest/download/Axiom-Windows-Full-v0.5.0.zip)
+- [SHA-256 校验文件](https://github.com/Relestic/axiom-math-workbench/releases/latest/download/SHA256SUMS-v0.5.0.txt)
+
+```text
+Axiom-Windows-Full-v0.5.0.zip
+大小：45,529,039 字节
+SHA-256：420DDB7152BF1CAFF42EE7B91878D99F5C77643841106269321255DB15F31734
+```
+
+解压后双击 `启动 Axiom.cmd`，默认打开 `http://127.0.0.1:5186/`。演示账号：`demo@axiom.local` / `axiom-demo-2026`。分享包不包含开发者密钥、真实用户数据库或私人讲义。
+
 ## 当前实现状态（2026-11-07）
 
 已按照 8 张原型图实现 React + TypeScript 前端，并在 2026-11-15 改为 Word 讲义阅读器：DOCX 结构化正文、公式/表格/图片提示、原文字词自动图像链接、独立图像页与返回原段落、规则/示例设置、阅读问答；旧 PDF 阅读器保留兼容。工作台、练习、练习热力图、知识地图、三维曲面和笔记保留。
