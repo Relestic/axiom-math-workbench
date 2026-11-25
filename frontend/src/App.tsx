@@ -132,7 +132,7 @@ export default function App() {
     }
   }
   useEffect(() => {
-    if (session.user?.display_name) setName(session.user.display_name);
+    setName(session.user?.display_name || localStorage.getItem("axiom-name") || "林越");
   }, [session.user?.display_name]);
   useEffect(() => {
     if (!query.trim() || !session.serverMode) {
@@ -282,7 +282,7 @@ export default function App() {
               <small>
                 {session.serverMode
                   ? `${session.user?.role === "admin" ? "管理员" : "数学系"} · 已连接后端`
-                  : "数学系 · 离线演示"}
+                  : "数学系 · 本地空间"}
               </small>
             </button>
             <button
@@ -416,7 +416,10 @@ export default function App() {
           {page === "notes" && (
             <Notes
               notes={notes}
-              save={saveNote}
+              save={async (text) => {
+                await app.saveNote(text);
+                notify("已保存到我的笔记");
+              }}
               remove={(id) => {
                 void (async () => {
                   try {
@@ -540,7 +543,7 @@ export default function App() {
                 <p className="muted">
                   {session.serverMode
                     ? `已登录：${session.user?.email}（${session.user?.role === "admin" ? "管理员" : "学生"}）`
-                    : "当前为离线演示空间。"}
+                    : "当前为本地学习空间。"}
                 </p>
                 <label className="field-label">
                   显示名称
@@ -553,18 +556,23 @@ export default function App() {
                 </label>
                 <button
                   className="btn primary"
-                  onClick={() => {
+                  onClick={async () => {
                     const next = name.trim() || "学习者";
-                    setName(next);
-                    void session.updateName(next).catch(() => {
+                    try {
+                      await session.updateName(next);
+                      setName(next);
+                      setModal("");
+                      notify("显示名称已保存");
+                    } catch {
                       notify("名称保存失败，请检查后端连接");
-                    });
-                    setModal("");
-                    notify("显示名称已保存");
+                    }
                   }}
                 >
                   保存设置
                 </button>
+                {!session.serverMode && (
+                  <button className="btn" onClick={session.switchToServer}>切换到服务器模式</button>
+                )}
                 {session.serverMode && (
                   <button
                     className="btn"

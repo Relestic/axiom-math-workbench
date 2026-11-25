@@ -116,7 +116,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             ? `已提交：${attempt.feedback.summary}`
             : app.data.source === "server"
               ? "作答已保存到服务端"
-              : "作答已保存到本地。启动本地预览后可获得批改",
+              : "作答已保存到本地，可前往复盘自评",
       );
     } catch (cause) {
       notify(
@@ -185,7 +185,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             <span>
               {app.data.source === "server"
                 ? "提交后自动批改并写入学习记录"
-                : "离线模式只保存草稿"}
+                : "本地保存草稿与作答记录"}
             </span>
           </label>
           <textarea

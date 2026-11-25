@@ -16,6 +16,7 @@ function Boot({ label }: { label: string }) {
 }
 
 function DataError({ message, retry }: { message: string; retry: () => void }) {
+  const { enterOffline } = useSession();
   return (
     <div className="auth-page">
       <section className="auth-brand">
@@ -33,6 +34,7 @@ function DataError({ message, retry }: { message: string; retry: () => void }) {
             <RotateCcw size={17} />
             重新加载
           </button>
+          <button className="btn" onClick={enterOffline}>返回本地空间</button>
           <p className="auth-hint">
             请确认后端仍在运行。若登录已失效，刷新页面后重新登录即可。
           </p>

@@ -198,10 +198,10 @@ export default function AuthScreen() {
           </div>
           <button className="auth-offline" onClick={enterOffline}>
             <WifiOff size={15} />
-            暂不连接后端，查看离线演示
+            返回本地学习空间
           </button>
           <p className="auth-hint">
-            离线模式仍可查看示例内容；登录后作答、笔记和进度写入后端。
+            本地空间把作答、笔记和进度保存在当前浏览器。登录后使用该账号的服务器记录。
             若连接失败，请稍后重试；本地开发请确认 backend 已启动。
           </p>
         </div>

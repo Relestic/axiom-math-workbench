@@ -9,6 +9,7 @@ backend/.env.online
 
 # Docker deployment state
 data/
+!frontend/src/data/
 deploy/.env
 deploy/*.log
 
