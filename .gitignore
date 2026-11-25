@@ -1,0 +1,46 @@
+# Online preview artifacts
+tools/cloudflared.exe
+tools/*.log
+
+# Online-only frontend bundle and disposable data
+frontend/dist-online/
+backend/var-online/
+backend/.env.online
+
+# Docker deployment state
+data/
+deploy/.env
+deploy/*.log
+
+deploy/keys/
+
+.portable-cache/
+releases/
+
+# Dependencies and generated builds
+frontend/node_modules/
+frontend/dist/
+frontend/dist-portable/
+frontend/.tmp/
+frontend/.test-build*/
+frontend/.portable-test-*/
+
+# Local databases, secrets and caches
+backend/var/
+backend/.env
+*.pytest_cache/
+__pycache__/
+*.pyc
+.env
+*.local
+
+# Release/package artifacts
+releases/
+*.tar.gz
+*.zip
+
+# OS noise
+.DS_Store
+Thumbs.db
+.dsh_tmp/
+

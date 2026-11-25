@@ -1,0 +1,17 @@
+# Pinned to the versions available in the offline review environment (Python 3.12).
+Flask==3.0.3
+Werkzeug==3.0.3
+SQLAlchemy==2.0.34
+pydantic==2.8.2
+PyJWT==2.8.0
+httpx==0.27.0
+sympy==1.13.2
+numpy==1.26.4
+python-dotenv==1.0.1
+
+# Optional, only needed for PDF text extraction:
+# pdfplumber>=0.11
+# pypdf>=4.2
+
+# Development / verification:
+# pytest==7.4.4

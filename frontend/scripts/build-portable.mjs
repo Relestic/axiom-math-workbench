@@ -1,0 +1,13 @@
+import {mkdir} from 'node:fs/promises';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const temporary=resolve(frontend,'../.portable-cache/build-temp');
+await mkdir(temporary,{recursive:true});
+process.env.TEMP=temporary;
+process.env.TMP=temporary;
+process.env.VITE_API_BASE='__SAME_ORIGIN__';
+execFileSync(process.execPath,['node_modules/typescript/bin/tsc','-b'],{cwd:frontend,stdio:'inherit',windowsHide:true});
+const {build}=await import('vite');
+await build({root:frontend,build:{outDir:'dist-portable',emptyOutDir:true}});

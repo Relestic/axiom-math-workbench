@@ -1,0 +1,34 @@
+{
+  "name": "axiom-math-workbench",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "build:online": "tsc -b && node scripts/build-online.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "package:windows": "node scripts/build-portable.mjs && node scripts/package-full-portable.mjs",
+    "test": "node node_modules/typescript/bin/tsc src/lib/explorationMath.ts src/lib/plotScene.ts server/ai.ts --target ES2022 --module NodeNext --outDir .test-build --rootDir . --skipLibCheck --esModuleInterop && node node_modules/typescript/bin/tsc src/domain/mappers.ts --target ES2022 --module ES2022 --moduleResolution Bundler --outDir .test-build-mappers --rootDir src --skipLibCheck && node --test tests/*.test.mjs",
+    "format": "prettier --write src tests index.html package.json tsconfig.json vite.config.ts"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "mathjs": "^15.2.0",
+    "plotly.js-basic-dist-min": "^4.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/plotly.js": "^3.0.15",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.0",
+    "vite": "^7.0.0"
+  }
+}
