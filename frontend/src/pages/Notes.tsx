@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MathText } from "../components/Math";
 import {
   ArrowRight,
   BookOpen,
@@ -114,7 +115,7 @@ export function Notes({
                   <Trash2 size={16} />
                 </button>
               </div>
-              <p>{n.text}</p>
+              <p><MathText>{n.text}</MathText></p>
               <small className="muted">{n.date}</small>
             </article>
           ))}

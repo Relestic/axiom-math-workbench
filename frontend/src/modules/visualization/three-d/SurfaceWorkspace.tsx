@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MathPreview, MathText, SymbolBar } from "../../../components/Math";
 import {
   ArrowRight,
   Boxes,
@@ -62,6 +63,7 @@ export default function SurfaceWorkspace() {
   const [undo, setUndo] = useState<SurfaceScene[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(readStoredChat);
   const [input, setInput] = useState("");
+  const chatInput = useRef<HTMLTextAreaElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{
@@ -476,7 +478,7 @@ export default function SurfaceWorkspace() {
                 key={`${message.role}-${index}`}
               >
                 <small>{message.role === "user" ? "你" : "AI 助手"}</small>
-                <p>{message.content}</p>
+                <p><MathText>{message.content}</MathText></p>
               </div>
             ))}
             {busy && (
@@ -493,7 +495,7 @@ export default function SurfaceWorkspace() {
               "换成马鞍面并显示网格",
             ].map((prompt) => (
               <button key={prompt} onClick={() => setInput(prompt)}>
-                {prompt}
+                <span><MathText>{prompt}</MathText></span>
                 <ArrowRight size={12} />
               </button>
             ))}
@@ -506,6 +508,7 @@ export default function SurfaceWorkspace() {
             }}
           >
             <textarea
+              ref={chatInput}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="例如：把高度放大到 1.5 倍，并换成高斯曲面…"
@@ -522,6 +525,8 @@ export default function SurfaceWorkspace() {
                 }
               }}
             />
+            <SymbolBar inputRef={chatInput} value={input} onChange={setInput} />
+            <MathPreview value={input} />
             <div className="surface-composer-foot">
               <span>
                 {status?.configured

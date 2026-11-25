@@ -1,0 +1,11 @@
+.math-block { display: block; overflow-x: auto; padding-block: .2em; }
+.math-block .katex-display { margin: .35em 0; }
+.math-inline, .math-fallback { overflow-wrap: anywhere; }
+.math-inline .katex, .math-block .katex { font-size: 1.06em; }
+.math-symbols { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-block: 5px; }
+.math-symbols button { border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; color: var(--text); background: var(--surface-raised); font: 16px/1.5 KaTeX_Main, serif; }
+.math-symbols button:hover { background: var(--accent-soft); color: var(--primary); }
+.math-preview { display: flex; align-items: baseline; gap: 8px; margin-block: 6px; padding: 7px 9px; background: var(--surface-muted); color: var(--text); border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.math-preview > small { color: var(--muted); flex-shrink: 0; }
+.math-preview > span { min-width: 0; white-space: pre-wrap; overflow-x: auto; }
+

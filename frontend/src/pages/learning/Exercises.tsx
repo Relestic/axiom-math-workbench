@@ -19,8 +19,9 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { MathPreview, MathText, SymbolBar } from "../../components/Math";
 import type { Attempt } from "../../domain/types";
 import "../grading.css";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
@@ -39,6 +40,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
     app.data.exercises.find((item) => item.topicId === unit.id) ||
     app.data.exercises[0]) as (typeof app.data.exercises)[number];
   const [answer, setAnswer] = useState("");
+  const answerInput = useRef<HTMLTextAreaElement>(null);
   const [hint, setHint] = useState(false);
   const [solution, setSolution] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -168,7 +170,9 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             <h3>{unit.title}</h3>
             <span className="badge">模板 {exercise.id}</span>
           </div>
-          <h2 className="exercise-question">{exercise.title}</h2>
+          <h2 className="exercise-question">
+            <MathText>{exercise.title}</MathText>
+          </h2>
           <div className="allowed-tools">
             <span>可使用</span>
             {unit.tools.map((x) => (
@@ -189,6 +193,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             </span>
           </label>
           <textarea
+            ref={answerInput}
             id="exercise-answer"
             value={answer}
             onChange={(e) => updateAnswer(e.target.value)}
@@ -199,6 +204,12 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
             }
             rows={9}
           />
+          <SymbolBar
+            inputRef={answerInput}
+            value={answer}
+            onChange={updateAnswer}
+          />
+          <MathPreview value={answer} />
           <div className="answer-footer">
             <span className="muted">
               {answer.length} 字 · {saved ? "已提交保存" : "草稿自动保存"}
@@ -307,10 +318,12 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                           : "已保存，待人工复核"}
                   </span>
                   <p>
-                    {feedback.summary ||
-                      (feedback.correct === true
-                        ? "最终答案与参考结果等价。"
-                        : "已记录本次作答。")}
+                    <MathText>
+                      {feedback.summary ||
+                        (feedback.correct === true
+                          ? "最终答案与参考结果等价。"
+                          : "已记录本次作答。")}
+                    </MathText>
                   </p>
                 </div>
               </div>
@@ -329,7 +342,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                           <X size={13} />
                         )}
                       </span>
-                      <span>{criterion.label}</span>
+                      <span><MathText>{criterion.label}</MathText></span>
                       <em>{criterion.weight} 分</em>
                     </li>
                   ))}
@@ -339,7 +352,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
               {feedback.reference_answer && (
                 <div className="grading-reference">
                   参考最终结果：
-                  <code>{feedback.reference_answer}</code>
+                  <code><MathText>{feedback.reference_answer}</MathText></code>
                   {feedback.correct === false &&
                     "（只比较最终表达式，不否定中间方法）"}
                 </div>
@@ -354,7 +367,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                 )
                 .map((item, index) => (
                   <div className="grading-observation" key={index}>
-                    · {item.message}
+                    · <MathText>{item.message ?? ""}</MathText>
                   </div>
                 ))}
 
@@ -370,7 +383,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
           {hint && (
             <div className="learning-callout exercise-hint">
               <Lightbulb size={18} />
-              <span>{hintText || exercise.hint}</span>
+              <span><MathText>{hintText || exercise.hint}</MathText></span>
             </div>
           )}
           {solution && (
@@ -384,7 +397,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
               </div>
               <ol>
                 {(serverSolution || exercise.solution).map((s, i) => (
-                  <li key={i}>{s}</li>
+                  <li key={i}><MathText>{s}</MathText></li>
                 ))}
               </ol>
               <div className="solution-note">
@@ -413,7 +426,7 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
                     )
                   }
                 />
-                <span>{c}</span>
+                <span><MathText>{c}</MathText></span>
               </label>
             ))}
             <div className="check-progress">

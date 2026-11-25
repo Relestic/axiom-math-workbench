@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MathText } from "../../components/Math";
 import { useAppData } from "../../app/DataProvider";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
@@ -92,7 +93,7 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
             </span>
           </div>
           <div className="proof-formula">
-            {unit.id === "uniform"
+            <MathText>{unit.id === "uniform"
               ? [
                   "f 在 [a,b] 上连续 ⇒ f 一致连续",
                   "∃ ε₀>0，∀ n，∃ xₙ,yₙ：|xₙ−yₙ|<1/n，|f(xₙ)−f(yₙ)|≥ε₀",
@@ -101,15 +102,15 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
                   "|f(xₙₖ)−f(yₙₖ)| → 0，与 ≥ε₀ 矛盾",
                   "因此 f 在 [a,b] 上一致连续",
                 ][step]
-              : unit.formula}
+              : unit.formula}</MathText>
           </div>
-          <p className="proof-paragraph">{unit.proof[step]}</p>
+          <p className="proof-paragraph"><MathText>{unit.proof[step]}</MathText></p>
           <div className="proof-why">
             <Lightbulb size={20} />
             <div>
               <h4>为什么这样想？</h4>
               <p>
-                {unit.id === "uniform"
+                <MathText>{unit.id === "uniform"
                   ? [
                       "想证明所有点对都能统一控制。反证法把这个全局要求转为一个可以构造的失败序列。",
                       "把任意小的距离具体选为 1/n。必须保留同一个 ε₀，它不随 n 改变。",
@@ -118,7 +119,7 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
                       "现在可以在同一点使用连续性。这个局部性质与前面的固定误差冲突。",
                       "证明中每个假设都有位置。对照反例检查，能帮助理解哪些条件是充分条件。",
                     ][step]
-                  : unit.hint}
+                  : unit.hint}</MathText>
               </p>
             </div>
           </div>
@@ -184,7 +185,7 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
         </div>
         <ol>
           {unit.proof.map((p, i) => (
-            <li key={i}>{p}</li>
+            <li key={i}><MathText>{p}</MathText></li>
           ))}
         </ol>
         <a

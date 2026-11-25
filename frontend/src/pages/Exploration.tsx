@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MathPreview, MathText, SymbolBar } from "../components/Math";
 import {
   ArrowRight,
   BookmarkPlus,
@@ -754,6 +755,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
     ]),
   );
   const [input, setInput] = useState("");
+  const chatInput = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState("");
   const [observations, setObservations] = useState<Observation[]>(() =>
     read("axiom-observations", []),
@@ -1409,7 +1411,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
           <div className="ex-card-heading">
             <div>
               <h3>
-                {c.topic === "continuity"
+                <MathText>{c.topic === "continuity"
                   ? c.dimension === 3
                     ? "z = x² + y² 在单位圆盘上 · ε 夹层与 δ 圆盘"
                     : "ε 水平带与 δ 垂直邻域的交截"
@@ -1417,17 +1419,17 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
                     ? "差商与导数 · 让 h 逐渐趋近于零"
                     : c.topic === "integral"
                       ? "Riemann 和 · 不同标记点的比较"
-                      : "Taylor 多项式与目标函数的误差"}
+                      : "Taylor 多项式与目标函数的误差"}</MathText>
                 <span className="ex-small-badge">{c.dimension}D</span>
               </h3>
               <p>
-                {c.topic === "continuity"
+                <MathText>{c.topic === "continuity"
                   ? `当前 ε = ${fmt(c.epsilon)}，δ = ${fmt(c.delta)}，x₀ = ${fmt(c.x0)}${c.dimension === 3 ? "，y₀ = −0.350" : ""}`
                   : c.topic === "derivative"
                     ? `当前 h = ${fmt(c.h)}，基准点 x₀ = ${fmt(c.x0)}`
                     : c.topic === "integral"
                       ? `区间 [0,1]，分割数 n = ${c.n}`
-                      : `当前阶数 n = ${c.n}，观测点 x₀ = ${fmt(c.x0)}`}
+                      : `当前阶数 n = ${c.n}，观测点 x₀ = ${fmt(c.x0)}`}</MathText>
               </p>
             </div>
             <div className="ex-chart-actions">
@@ -1580,7 +1582,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
                       {m.role === "user" ? "林" : <Sparkles size={15} />}
                     </span>
                     <div>
-                      <p>{m.content}</p>
+                      <p><MathText>{m.content}</MathText></p>
                       {m.role === "assistant" && i > 0 && (
                         <button
                           className="ex-text-btn"
@@ -1608,6 +1610,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
             >
               <Pencil size={15} />
               <input
+                ref={chatInput}
                 aria-label="图像指令"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -1621,6 +1624,8 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
                 <Send size={17} />
               </button>
             </form>
+            <SymbolBar inputRef={chatInput} value={input} onChange={setInput} />
+            <MathPreview value={input} />
           </div>
           <aside className="ex-prompts">
             <h4>常用改图指令</h4>
@@ -1642,7 +1647,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
                     <Sparkles size={14} />
                   )}
                 </span>
-                {prompt}
+                <span><MathText>{prompt}</MathText></span>
               </button>
             ))}
             <p>指令只修改演示配置，不会改写教材定义。每次改动都可以撤销。</p>
@@ -1670,8 +1675,10 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
                 </span>
                 {name}
               </h4>
-              <p>{desc}</p>
-              <span className={`ex-formula tone-${i % 3}`}>{formula}</span>
+              <p><MathText>{desc}</MathText></p>
+              <span className={`ex-formula tone-${i % 3}`}>
+                <MathText>{formula}</MathText>
+              </span>
             </button>
           ))}
         </div>
@@ -1721,7 +1728,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
             {observations.length ? (
               observations.slice(0, 4).map((o) => (
                 <article key={o.id}>
-                  <p>{o.text}</p>
+                  <p><MathText>{o.text}</MathText></p>
                   <small>{o.time} · 已保存到我的笔记</small>
                 </article>
               ))

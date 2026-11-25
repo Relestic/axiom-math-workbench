@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { MathText } from "../../components/Math";
 import { useAppData } from "../../app/DataProvider";
 import type { ClassicKind } from "../../domain/types";
 import { Heading, useUnit, type Props } from "./shared";
@@ -212,21 +213,23 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
             命题为假
           </span>
         </div>
-        <div className="false-statement">{c.statement}</div>
+        <div className="false-statement">
+          <MathText>{c.statement}</MathText>
+        </div>
         <div className="statement-flow">
           <div>
             <small>已给条件</small>
-            <b>{c.given}</b>
+            <b><MathText>{c.given}</MathText></b>
           </div>
           <ArrowRight size={18} />
           <div>
             <small>待讨论结论</small>
-            <b>{c.conclusion}</b>
+            <b><MathText>{c.conclusion}</MathText></b>
           </div>
           <ArrowRight size={18} />
           <div className="missing">
             <small>条件与边界</small>
-            <b>{c.repair}</b>
+            <b><MathText>{c.repair}</MathText></b>
           </div>
         </div>
       </section>
@@ -245,7 +248,7 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
               <div>
                 <h3>
                   {positive ? "正例" : "反例"} ·{" "}
-                  {positive ? c.positive : c.negative}
+                  <MathText>{positive ? c.positive : c.negative}</MathText>
                 </h3>
                 <small className="muted">
                   {positive ? "验证性质与条件" : "精确反驳当前命题"}
@@ -270,13 +273,15 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
                   key={t}
                 >
                   {positive || i === 0 ? <Check size={11} /> : <X size={11} />}{" "}
-                  {t}
+                  <MathText>{t}</MathText>
                 </span>
               ))}
             </div>
             <div className="example-explanation">
               <b>{positive ? "为什么成立" : "它精确反驳什么"}</b>
-              <p>{positive ? c.positiveCopy : c.negativeCopy}</p>
+              <p>
+                <MathText>{positive ? c.positiveCopy : c.negativeCopy}</MathText>
+              </p>
             </div>
             <button
               className="paper-link"
@@ -301,10 +306,10 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
             <thead>
               <tr>
                 <th>性质 / 例子</th>
-                <th>x 在 [0,1]</th>
-                <th>1/x 在 (0,1)</th>
-                <th>√x 在 [0,1]</th>
-                <th>sin(1/x) 在 (0,1)</th>
+                <th><MathText>x 在 [0,1]</MathText></th>
+                <th><MathText>1/x 在 (0,1)</MathText></th>
+                <th><MathText>√x 在 [0,1]</MathText></th>
+                <th><MathText>sin(1/x) 在 (0,1)</MathText></th>
               </tr>
             </thead>
             <tbody>
@@ -339,8 +344,10 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
         <div className="learning-callout">
           <Sparkles size={15} />
           <span>
-            {evidence ||
-              "闭且有界是 Heine–Cantor 定理的充分条件，并不是一致连续的必要条件。例如 f(x)=x 在整个 ℝ 上也一致连续。"}
+            <MathText>
+              {evidence ||
+                "闭且有界是 Heine–Cantor 定理的充分条件，并不是一致连续的必要条件。例如 f(x)=x 在整个 ℝ 上也一致连续。"}
+            </MathText>
           </span>
         </div>
       </section>

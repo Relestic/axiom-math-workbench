@@ -1,3 +1,4 @@
+import { MathText } from "../../components/Math";
 import {
   ArrowRight,
   Bookmark,
@@ -169,8 +170,10 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
                   })}
                 </small>
               </div>
-              <h3>{a.title}</h3>
-              <p className="answer-preview">{a.answer}</p>
+              <h3><MathText>{a.title}</MathText></h3>
+              <p className="answer-preview">
+                <MathText>{a.answer}</MathText>
+              </p>
               <div className="attempt-actions">
                 <button
                   className="btn"
@@ -217,7 +220,7 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
                   <h4>参考解答</h4>
                   <ol>
                     {solutionFor(a).map((step, index) => (
-                      <li key={index}>{step}</li>
+                      <li key={index}><MathText>{step}</MathText></li>
                     ))}
                   </ol>
                   <button

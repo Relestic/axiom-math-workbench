@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       {
+        name: "katex-offline-woff2",
+        enforce: "pre",
+        transform(css, id) {
+          if (!id.replaceAll("\\\\", "/").endsWith("/katex/dist/katex.css")) return;
+          return css.replace(/(src:\s*url\([^)]*\.woff2\)\s*format\("woff2"\))[^;]*;/g, "$1;");
+        },
+      },
+      {
         name: "axiom-ai",
         configureServer(server) {
           server.middlewares.use(handler);

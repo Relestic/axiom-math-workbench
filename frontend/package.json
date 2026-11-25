@@ -13,6 +13,7 @@
     "format": "prettier --write src tests index.html package.json tsconfig.json vite.config.ts"
   },
   "dependencies": {
+    "katex": "0.16.47",
     "lucide-react": "^0.468.0",
     "mathjs": "^15.2.0",
     "plotly.js-basic-dist-min": "^4.2.0",

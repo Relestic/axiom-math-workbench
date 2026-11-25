@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { useAppData } from "../../app/DataProvider";
+import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
 
 export type Props = {
@@ -86,8 +87,8 @@ export function DefinitionTokens({ unit }: { unit: CurriculumUnit }) {
               "definition-token " + (i === pieces.length - 1 ? "last" : "")
             }
           >
-            <strong>{title}</strong>
-            <small>{desc}</small>
+            <strong><MathText>{title}</MathText></strong>
+            <small><MathText>{desc}</MathText></small>
           </div>
           {i < pieces.length - 1 && <ArrowRight size={15} />}
         </div>

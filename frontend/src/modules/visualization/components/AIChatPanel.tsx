@@ -1,7 +1,10 @@
 import { FunctionSquare, LoaderCircle, Send, Sparkles } from "lucide-react";
+import { useRef } from "react";
+import { MathPreview, MathText, SymbolBar } from "../../../components/Math";
 import type { FunctionWorkspaceState } from "../hooks/useFunctionWorkspace";
 
 export function AIChatPanel({ state }: { state: FunctionWorkspaceState }) {
+  const chatInput = useRef<HTMLTextAreaElement>(null);
   return (
     <section className="card fw-chat">
       <div className="fw-chat-heading">
@@ -27,7 +30,7 @@ export function AIChatPanel({ state }: { state: FunctionWorkspaceState }) {
             key={text}
             onClick={() => state.setInput(text)}
           >
-            {text}
+            <MathText>{text}</MathText>
           </button>
         ))}
       </div>
@@ -45,7 +48,7 @@ export function AIChatPanel({ state }: { state: FunctionWorkspaceState }) {
         {state.messages.map((message, index) => (
           <div key={index} className={`fw-message ${message.role}`}>
             <small>{message.role === "user" ? "你" : "AI 助手"}</small>
-            <p>{message.content}</p>
+            <p><MathText>{message.content}</MathText></p>
           </div>
         ))}
         {state.busy && (
@@ -64,6 +67,7 @@ export function AIChatPanel({ state }: { state: FunctionWorkspaceState }) {
         }}
       >
         <textarea
+          ref={chatInput}
           aria-label="函数修改要求"
           placeholder="例如：换成 sin(x²)，并显示 x=1 处的切线…"
           value={state.input}
@@ -81,7 +85,13 @@ export function AIChatPanel({ state }: { state: FunctionWorkspaceState }) {
             }
           }}
         />
-        <div>
+        <SymbolBar
+          inputRef={chatInput}
+          value={state.input}
+          onChange={state.setInput}
+        />
+        <MathPreview value={state.input} />
+        <div className="fw-composer-foot">
           <span>
             {state.status?.configured
               ? "Enter 发送 · Shift+Enter 换行"

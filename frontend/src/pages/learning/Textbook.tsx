@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
 import { DefinitionTokens, Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
@@ -124,12 +125,16 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
             </div>
             <div className="paper-highlight amber">
               <b>定义 · {unit.title}</b>
-              <p>{unit.definition}</p>
+              <p>
+                <MathText>{unit.definition}</MathText>
+              </p>
             </div>
             <p>
-              {unit.id === "uniform"
-                ? "与逐点连续性对照可见：逐点连续的 δ 可以依赖所选位置。一致连续要求用同一个 δ 同时控制整个定义域内的所有点对。量词的位置表达了这个差别。"
-                : unit.example}
+              <MathText>
+                {unit.id === "uniform"
+                  ? "与逐点连续性对照可见：逐点连续的 δ 可以依赖所选位置。一致连续要求用同一个 δ 同时控制整个定义域内的所有点对。量词的位置表达了这个差别。"
+                  : unit.example}
+              </MathText>
             </p>
             <div className="paper-highlight purple">
               <b>
@@ -138,14 +143,18 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
                   : "关键数学关系"}
               </b>
               <p>
-                {unit.id === "uniform"
-                  ? "若实函数 f 在闭且有界区间 [a,b] 上连续，则 f 在该区间上一致连续。"
-                  : unit.formula}
+                <MathText>
+                  {unit.id === "uniform"
+                    ? "若实函数 f 在闭且有界区间 [a,b] 上连续，则 f 在该区间上一致连续。"
+                    : unit.formula}
+                </MathText>
               </p>
             </div>
             <h4>证明思路</h4>
             {unit.proof.slice(0, 3).map((p, i) => (
-              <p key={i}>{p}</p>
+              <p key={i}>
+                <MathText>{p}</MathText>
+              </p>
             ))}
             <button className="paper-link" onClick={() => onNavigate("proof")}>
               查看完整证明及条件使用位置 <ArrowRight size={14} />
@@ -186,7 +195,9 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
                 </button>
               </div>
             </div>
-            <p className="definition-copy">{unit.definition}</p>
+            <p className="definition-copy">
+              <MathText>{unit.definition}</MathText>
+            </p>
             <h4 className="subhead">
               <Sparkles size={15} />
               定义与条件的结构拆解
@@ -195,9 +206,11 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
             <div className="learning-callout">
               <Sparkles size={16} />
               <span>
-                {unit.id === "uniform"
-                  ? "注意：∃ δ 在 ∀ x₁,x₂ 之前。δ 可以依赖 ε，但不能随点对改变。"
-                  : unit.hint}
+                <MathText>
+                  {unit.id === "uniform"
+                    ? "注意：∃ δ 在 ∀ x₁,x₂ 之前。δ 可以依赖 ε，但不能随点对改变。"
+                    : unit.hint}
+                </MathText>
               </span>
             </div>
           </section>
@@ -232,7 +245,7 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
                   ).map((row) => (
                     <tr key={row[0]}>
                       {row.map((x, i) => (
-                        <td key={i}>{x}</td>
+                        <td key={i}><MathText>{x}</MathText></td>
                       ))}
                     </tr>
                   ))}
@@ -252,7 +265,7 @@ export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
                     <Check size={13} />
                   </span>
                   <div>
-                    <b>{x}</b>
+                    <b><MathText>{x}</MathText></b>
                     <small>
                       {i === 0
                         ? "先确定论证对象和范围"
