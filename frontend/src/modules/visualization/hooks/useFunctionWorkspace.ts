@@ -5,12 +5,8 @@ import {
   loadFunctionScene,
   type Scene,
 } from "../scene/functionScene";
-import {
-  fetchAIStatus,
-  requestPlotChange,
-  testAIConnection,
-  type AIStatus,
-} from "../api";
+import { requestPlotChange, testAIConnection } from "../api";
+import { useAIConnection } from "../../ai/connection";
 import { analyze } from "../../../pages/FunctionPlot";
 
 export type FunctionWorkspaceProps = {
@@ -54,18 +50,12 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
   const [error, setError] = useState("");
   const [settings, setSettings] = useState(false);
   const [classic, setClassic] = useState(false);
-  const [status, setStatus] = useState<AIStatus | null>(null);
+  const { effective: status, refresh: refreshStatus } = useAIConnection();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState("");
   const controller = useRef<AbortController | null>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
   const math = useMemo(() => analyze(scene), [scene]);
-
-  const refreshStatus = () => {
-    fetchAIStatus()
-      .then(setStatus)
-      .catch(() => setStatus({ configured: false }));
-  };
 
   const testConnection = async () => {
     setTesting(true);
@@ -86,7 +76,6 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
   };
 
   useEffect(() => {
-    refreshStatus();
     localStorage.removeItem("axiom-explore-request");
     return () => controller.current?.abort();
   }, []);
@@ -147,7 +136,7 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
     if (!status?.configured) {
       setSettings(true);
       setError(
-        "尚未连接模型。填写 .env 后重启服务，即可通过自然语言修改函数。",
+        "请先连接模型，再通过自然语言修改函数。",
       );
       return;
     }

@@ -13,6 +13,10 @@ from werkzeug.serving import make_server
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
+if not (WEB / "index.html").is_file():
+    WEB = ROOT / "frontend" / "dist-portable"
+if not (WEB / "index.html").is_file():
+    raise RuntimeError("Build the frontend with node scripts/build-portable.mjs before starting Axiom.")
 DATA = ROOT / "data"
 load_dotenv(ROOT / "backend" / ".env", override=False)
 DATA.mkdir(exist_ok=True)
@@ -28,6 +32,7 @@ port = int(os.environ.get("AXIOM_PORT", "5186"))
 if not 1024 <= port <= 65535:
     raise RuntimeError("AXIOM_PORT must be between 1024 and 65535")
 app = create_app({
+    "local_mode": True,
     "data_dir": DATA,
     "database_url": "sqlite:///" + str(DATA / "axiom.db"),
     "secret_key": secret_path.read_text(encoding="utf8"),

@@ -9,16 +9,19 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Callable
 
 import httpx
-from flask import current_app
+from flask import current_app, g
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..api.local_only import require_local
+from ..config import Config
 from ..errors import ApiError
+from .local_key import Credentials, LocalKeyStore
 from ..models import ModelCall
 
 CODE_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
@@ -43,8 +46,73 @@ class LLMResult:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
-def _config():
-    return current_app.config["AXIOM"]
+def _config() -> Config:
+    return g.get("local_ai_config") or current_app.config["AXIOM"]
+
+
+def local_key_store() -> LocalKeyStore:
+    return current_app.extensions["axiom_local_key"]
+
+
+def _local_config(credentials: Credentials) -> Config:
+    return replace(
+        current_app.config["AXIOM"],
+        ai_provider="deepseek",
+        ai_base_url="https://api.deepseek.com",
+        ai_model=credentials.model,
+        ai_api_key=credentials.api_key,
+    )
+
+
+def _require_credentials() -> Credentials:
+    require_local()
+    credentials = local_key_store().read()
+    if credentials is None:
+        raise ApiError("service_unavailable", "请先在工作台设置个人 DeepSeek API Key")
+    return credentials
+
+
+def use_local_ai() -> Config:
+    """Use the protected personal settings for subsequent calls in this request."""
+    credentials = _require_credentials()
+    g.local_ai_credentials = credentials
+    g.local_ai_config = _local_config(credentials)
+    return g.local_ai_config
+
+
+def _mark_local_result(credentials: Credentials, *, ok: bool) -> None:
+    try:
+        local_key_store().mark_result(credentials, ok=ok)
+    except ApiError:
+        # The connection result still applies to the request if storage changed.
+        pass
+
+
+def test_local_connection() -> None:
+    credentials = _require_credentials()
+    config = _local_config(credentials)
+    try:
+        _post_chat(
+            [{"role": "user", "content": "Reply with OK."}],
+            purpose="connection_test",
+            json_mode=False,
+            timeout=min(15, config.ai_timeout_seconds),
+            max_tokens=32,
+            config=config,
+            attempts=1,
+            personal=True,
+        )
+    except LLMError as exc:
+        _mark_local_result(credentials, ok=False)
+        code, status = {
+            "auth": ("invalid_key", 401),
+            "billing": ("insufficient_balance", 402),
+            "timeout": ("timeout", 504),
+            "network": ("network", 502),
+            "rate_limit": ("rate_limited", 429),
+        }.get(exc.kind, ("upstream_error", 502))
+        raise ApiError(code, exc.message, status=status) from None
+    _mark_local_result(credentials, ok=True)
 
 
 def _clean_content(content: str) -> str:
@@ -173,8 +241,11 @@ def _post_chat(
     json_mode: bool,
     timeout: int,
     max_tokens: int,
+    config: Config | None = None,
+    attempts: int = 2,
+    personal: bool = False,
 ) -> LLMResult:
-    config = _config()
+    config = config or _config()
     if config.ai_provider == "mock":
         return _MockProvider().complete(messages, purpose=purpose, json_mode=json_mode)
     if not config.ai_configured:
@@ -193,8 +264,8 @@ def _post_chat(
     if json_mode and config.ai_json_effective:
         payload["response_format"] = {"type": "json_object"}
     started = time.perf_counter()
-    last_error: Exception | None = None
-    for attempt in range(2):
+    connection_options = {"trust_env": False} if personal else {}
+    for attempt in range(attempts):
         try:
             response = httpx.post(
                 config.ai_endpoint,
@@ -204,19 +275,18 @@ def _post_chat(
                 },
                 json=payload,
                 timeout=timeout,
+                **connection_options,
             )
-        except httpx.TimeoutException as exc:
-            last_error = exc
-            if attempt == 0:
+        except httpx.TimeoutException:
+            if attempt + 1 < attempts:
                 time.sleep(0.3)
                 continue
-            raise LLMError("模型请求超时", kind="timeout", retryable=True) from exc
-        except httpx.HTTPError as exc:
-            last_error = exc
-            if attempt == 0:
+            raise LLMError("模型请求超时", kind="timeout", retryable=True) from None
+        except (httpx.HTTPError, ValueError):
+            if attempt + 1 < attempts:
                 time.sleep(0.3)
                 continue
-            raise LLMError("无法连接模型服务", kind="network", retryable=True) from exc
+            raise LLMError("无法连接模型服务", kind="network", retryable=True) from None
         if response.status_code in {401, 403}:
             raise LLMError("模型服务鉴权失败，请检查服务端 API Key", kind="auth")
         if response.status_code == 402:
@@ -225,57 +295,56 @@ def _post_chat(
                 kind="billing",
             )
         if response.status_code == 429:
-            if attempt == 0:
+            if attempt + 1 < attempts:
                 time.sleep(0.6)
                 continue
             raise LLMError("模型服务限流或额度不足", kind="rate_limit", retryable=True)
         if response.status_code >= 500:
-            if attempt == 0:
+            if attempt + 1 < attempts:
                 time.sleep(0.4)
                 continue
             raise LLMError(f"模型服务返回 HTTP {response.status_code}", kind="upstream", retryable=True)
-        if response.status_code >= 400:
-            detail = ""
-            try:
-                body = response.json()
-                detail = str((body.get("error") or {}).get("message") or "")
-            except Exception:
-                detail = ""
-            suffix = f"：{detail[:180]}" if detail else ""
-            raise LLMError(
-                f"模型服务返回 HTTP {response.status_code}{suffix}",
-                kind="upstream",
-            )
+        if not 200 <= response.status_code < 300:
+            raise LLMError(f"模型服务返回 HTTP {response.status_code}", kind="upstream")
         if len(response.content) > 400_000:
             raise LLMError("模型返回内容过大", kind="invalid")
         try:
             data = response.json()
-        except ValueError as exc:
-            raise LLMError("模型服务未返回有效 JSON", kind="invalid") from exc
-        message = (data.get("choices") or [{}])[0].get("message") or {}
-        content = message.get("content")
+            message = data["choices"][0]["message"]
+            content = message.get("content")
+            if personal and purpose == "connection_test" and message.get("reasoning_content"):
+                # A bounded probe can spend its entire token budget on reasoning.
+                content = "OK"
+            usage = data.get("usage") or {}
+            input_tokens = int(usage.get("prompt_tokens") or 0)
+            output_tokens = int(usage.get("completion_tokens") or 0)
+        except (ValueError, KeyError, IndexError, TypeError, AttributeError, OverflowError):
+            raise LLMError("模型服务未返回有效 JSON", kind="invalid") from None
         if not isinstance(content, str) or not content.strip():
             # DeepSeek JSON mode can replace non-JSON output with spaces. Retry
             # once rather than failing immediately, then report a useful error.
-            if attempt == 0:
+            if attempt + 1 < attempts:
                 time.sleep(0.3)
                 continue
             raise LLMError(
                 "模型未返回可用内容（JSON 模式可能被截断），请重试或关闭 AI_JSON_MODE",
                 kind="invalid",
             )
-        usage = data.get("usage") or {}
+        escaped_key = json.dumps(config.ai_api_key)[1:-1]
+        content = content.replace(escaped_key, "[已隐藏]").replace(config.ai_api_key, "[已隐藏]")
+        model = config.ai_model if personal else str(data.get("model") or config.ai_model)
+        model = model.replace(config.ai_api_key, "[已隐藏]")
         elapsed = int((time.perf_counter() - started) * 1000)
         return LLMResult(
             text=_clean_content(content),
             provider=config.ai_provider,
-            model=str(data.get("model") or config.ai_model),
-            input_tokens=int(usage.get("prompt_tokens") or 0),
-            output_tokens=int(usage.get("completion_tokens") or 0),
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             latency_ms=elapsed,
             raw={},
         )
-    raise LLMError(f"模型请求失败：{last_error}", kind="upstream", retryable=True)
+    raise LLMError("模型请求失败", kind="upstream", retryable=True)
 
 
 def _purpose_from_messages(messages: list[dict]) -> str:
@@ -345,6 +414,7 @@ def chat(
             raise ApiError("rate_limited", "公开演示的 AI 额度已用完，请明天再试")
     timeout = timeout or config.ai_timeout_seconds
     started = time.perf_counter()
+    local_credentials = g.get("local_ai_credentials")
     record = ModelCall(
         user_id=user_id,
         job_id=job_id,
@@ -361,7 +431,10 @@ def chat(
             json_mode=json_mode,
             timeout=timeout,
             max_tokens=max_tokens,
+            personal=local_credentials is not None,
         )
+        if local_credentials is not None:
+            _mark_local_result(local_credentials, ok=True)
         record.provider = result.provider
         record.model = result.model
         record.input_tokens = result.input_tokens
@@ -373,7 +446,7 @@ def chat(
                 parsed = validator(result.text)
             except Exception as exc:
                 record.status = "invalid"
-                record.error = f"schema validation failed: {exc}"[:1000]
+                record.error = "schema validation failed"
                 session.add(record)
                 session.commit()
                 raise ApiError(
@@ -387,6 +460,8 @@ def chat(
     except ApiError:
         raise
     except LLMError as exc:
+        if local_credentials is not None:
+            _mark_local_result(local_credentials, ok=False)
         record.status = "error"
         record.error = exc.message
         record.latency_ms = int((time.perf_counter() - started) * 1000)
@@ -403,9 +478,9 @@ def chat(
         if exc.kind == "billing":
             raise ApiError("service_unavailable", exc.message)
         raise ApiError("upstream_error", exc.message)
-    except Exception as exc:  # validation / parsing errors
+    except Exception:  # validation / parsing errors
         record.status = "error"
-        record.error = str(exc)[:1000]
+        record.error = "unexpected model error"
         record.latency_ms = int((time.perf_counter() - started) * 1000)
         session.add(record)
         session.commit()

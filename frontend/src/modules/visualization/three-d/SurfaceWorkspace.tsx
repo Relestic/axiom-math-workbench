@@ -13,7 +13,8 @@ import {
   Undo2,
   Wand2,
 } from "lucide-react";
-import { apiUrl } from "../../../lib/api";
+import { useSession } from "../../../lib/session";
+import { useAIConnection } from "../../ai/connection";
 import { requestSurfaceChange } from "../api";
 import { normalizeSurfaceScene } from "./engine";
 import { SurfacePlot3D } from "./SurfacePlot3D";
@@ -57,7 +58,11 @@ function persist(scene: SurfaceScene, messages: ChatMessage[]) {
   }
 }
 
-export default function SurfaceWorkspace() {
+export default function SurfaceWorkspace({
+  onOpenSettings,
+}: {
+  onOpenSettings: () => void;
+}) {
   const [scene, setScene] = useState<SurfaceScene>(readStoredScene);
   const [draft, setDraft] = useState(() => readStoredScene().expression);
   const [undo, setUndo] = useState<SurfaceScene[]>([]);
@@ -66,22 +71,11 @@ export default function SurfaceWorkspace() {
   const chatInput = useRef<HTMLTextAreaElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState<{
-    configured: boolean;
-    provider_label?: string;
-    model?: string;
-  } | null>(null);
+  const { serverMode } = useSession();
+  const { effective: status, status: localKey, available } = useAIConnection();
+  const local = !!available && (!!localKey?.configured || !serverMode);
+  const canSend = serverMode || (local && !!status?.configured);
   const chatEnd = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch(apiUrl("/api/ai/status"))
-      .then((response) => {
-        if (!response.ok) throw new Error();
-        return response.json();
-      })
-      .then(setStatus)
-      .catch(() => setStatus({ configured: false }));
-  }, []);
 
   useEffect(() => {
     const container = chatEnd.current?.parentElement;
@@ -165,6 +159,10 @@ export default function SurfaceWorkspace() {
   const send = async () => {
     const text = input.trim();
     if (!text || busy) return;
+    if (!canSend) {
+      onOpenSettings();
+      return;
+    }
     setBusy(true);
     setError("");
     const userMessage: ChatMessage = { role: "user", content: text };
@@ -172,11 +170,14 @@ export default function SurfaceWorkspace() {
     setMessages(nextMessages);
     setInput("");
     try {
-      const result = await requestSurfaceChange({
-        message: text,
-        scene,
-        history: messages.slice(-8),
-      });
+      const result = await requestSurfaceChange(
+        {
+          message: text,
+          scene,
+          history: messages.slice(-8),
+        },
+        local,
+      );
       const assistant: ChatMessage = {
         role: "assistant",
         content: result.message,
@@ -187,6 +188,7 @@ export default function SurfaceWorkspace() {
         commit(next, { message: "已应用 AI 修改" });
       }
     } catch (cause) {
+      setInput(text);
       setError(
         cause instanceof Error ? cause.message : "AI 暂时无法修改三维场景",
       );
@@ -211,9 +213,7 @@ export default function SurfaceWorkspace() {
             <Boxes size={13} /> 三维可视化 · 人机协作
           </span>
           <h1>看见曲面，也看见关系。</h1>
-          <p>
-            拖动旋转、滚轮缩放，或直接告诉 AI 你想看的曲面、范围和视角。
-          </p>
+          <p>拖动旋转、滚轮缩放，或直接告诉 AI 你想看的曲面、范围和视角。</p>
         </div>
         <div className="button-row">
           <button
@@ -242,7 +242,10 @@ export default function SurfaceWorkspace() {
             <span className="badge dark">
               <SlidersHorizontal size={13} /> 人工控制
             </span>
-            <small>{scene.view.azimuth.toFixed(0)}° / {scene.view.elevation.toFixed(0)}°</small>
+            <small>
+              {scene.view.azimuth.toFixed(0)}° /{" "}
+              {scene.view.elevation.toFixed(0)}°
+            </small>
           </div>
           <label className="surface-label" htmlFor="surface-expression">
             曲面 z = f(x, y)
@@ -261,7 +264,10 @@ export default function SurfaceWorkspace() {
               }
             }}
           />
-          <button className="btn primary surface-apply" onClick={applyExpression}>
+          <button
+            className="btn primary surface-apply"
+            onClick={applyExpression}
+          >
             <Wand2 size={15} /> 应用曲面
           </button>
 
@@ -269,7 +275,9 @@ export default function SurfaceWorkspace() {
             {surfacePresets.map((preset) => (
               <button
                 key={preset.id}
-                className={scene.expression === preset.expression ? "selected" : ""}
+                className={
+                  scene.expression === preset.expression ? "selected" : ""
+                }
                 onClick={() => applyPreset(preset.expression)}
               >
                 {preset.label}
@@ -325,7 +333,9 @@ export default function SurfaceWorkspace() {
           </div>
 
           <label className="surface-slider">
-            <span>网格密度 <b>{scene.resolution}</b></span>
+            <span>
+              网格密度 <b>{scene.resolution}</b>
+            </span>
             <input
               type="range"
               min={10}
@@ -338,7 +348,9 @@ export default function SurfaceWorkspace() {
             />
           </label>
           <label className="surface-slider">
-            <span>高度缩放 <b>{scene.view.heightScale.toFixed(1)}×</b></span>
+            <span>
+              高度缩放 <b>{scene.view.heightScale.toFixed(1)}×</b>
+            </span>
             <input
               type="range"
               min={0.2}
@@ -351,7 +363,9 @@ export default function SurfaceWorkspace() {
             />
           </label>
           <label className="surface-slider">
-            <span>不透明度 <b>{Math.round(scene.display.opacity * 100)}%</b></span>
+            <span>
+              不透明度 <b>{Math.round(scene.display.opacity * 100)}%</b>
+            </span>
             <input
               type="range"
               min={0.2}
@@ -462,6 +476,9 @@ export default function SurfaceWorkspace() {
                 : "AI 未连接"}
             </span>
           </div>
+          <button className="btn" type="button" onClick={onOpenSettings}>
+            AI 接入设置
+          </button>
           <div className="surface-chat-messages" aria-live="polite">
             {!messages.length && (
               <div className="surface-chat-empty">
@@ -478,7 +495,9 @@ export default function SurfaceWorkspace() {
                 key={`${message.role}-${index}`}
               >
                 <small>{message.role === "user" ? "你" : "AI 助手"}</small>
-                <p><MathText>{message.content}</MathText></p>
+                <p>
+                  <MathText>{message.content}</MathText>
+                </p>
               </div>
             ))}
             {busy && (
@@ -495,7 +514,9 @@ export default function SurfaceWorkspace() {
               "换成马鞍面并显示网格",
             ].map((prompt) => (
               <button key={prompt} onClick={() => setInput(prompt)}>
-                <span><MathText>{prompt}</MathText></span>
+                <span>
+                  <MathText>{prompt}</MathText>
+                </span>
                 <ArrowRight size={12} />
               </button>
             ))}

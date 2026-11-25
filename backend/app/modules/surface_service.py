@@ -45,7 +45,7 @@ def _parse_surface_result(text: str) -> dict[str, Any]:
 
 def plot_surface_change(
     session: Session,
-    user: User,
+    user: User | None,
     *,
     message: str,
     scene: dict[str, Any],
@@ -73,7 +73,7 @@ def plot_surface_change(
         session,
         messages,
         purpose="surface_plot",
-        user_id=user.id,
+        user_id=user.id if user else None,
         json_mode=True,
         max_tokens=1800,
         validator=_parse_surface_result,

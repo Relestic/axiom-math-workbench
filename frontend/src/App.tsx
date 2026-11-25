@@ -60,10 +60,17 @@ import { navigation, pageFromHash, validRoutes } from "./navigation";
 import { useAppData } from "./app/DataProvider";
 import { searchRequest } from "./lib/api";
 import { useSession } from "./lib/session";
+import { aiStatusLabel, DeepSeekSettings } from "./modules/ai/DeepSeekSettings";
+import { useAIConnection } from "./modules/ai/connection";
+
+const LearningArchiveSettings = lazy(() => import("./modules/records/LearningArchiveSettings")
+  .then((module) => ({ default: module.LearningArchiveSettings })));
 
 export default function App() {
   const session = useSession();
   const app = useAppData();
+  const ai = useAIConnection();
+  const aiState = ai.failed ? "error" : ai.status?.state || (ai.effective?.configured ? "ready" : "unset");
   const [page, setPage] = useState(pageFromHash);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -220,6 +227,11 @@ export default function App() {
           </div>
           <div className="topbar-right">
             <ThemeSwitch />
+            <button className={`btn ai-status-badge ai-status-${aiState}`} onClick={() => setModal("ai")}
+              aria-label={`个人 DeepSeek 接入设置，AI ${aiStatusLabel(aiState)}`}>
+              <Sparkles size={14} aria-hidden="true" />
+              <span>AI {aiStatusLabel(aiState)}</span>
+            </button>
             <label className="search-wrap">
               <Search size={16} />
               <input
@@ -321,7 +333,7 @@ export default function App() {
           {page === "knowledge-map" && (
             <KnowledgeMap onNavigate={navigate} notify={notify} />
           )}
-          {page === "surface" && <SurfaceWorkspace />}
+          {page === "surface" && <SurfaceWorkspace onOpenSettings={() => setModal("ai")} />}
           {page === "notes" && (
             <Notes
               notes={notes}
@@ -374,7 +386,7 @@ export default function App() {
             className={`modal ${modal === "upload" ? "upload-modal" : ""}`}
             role="dialog"
             aria-modal="true"
-            aria-label={modal === "upload" ? "本地教材" : "工作台设置"}
+            aria-label={modal === "ai" ? "个人 DeepSeek 接入设置" : modal === "upload" ? "本地教材" : "工作台设置"}
           >
             <button
               className="icon-button modal-close"
@@ -384,6 +396,12 @@ export default function App() {
             >
               <X size={20} />
             </button>
+            {modal === "ai" && (
+              <>
+                <h2>个人 DeepSeek 接入设置</h2>
+                <DeepSeekSettings />
+              </>
+            )}
             {modal === "help" && (
               <>
                 <span className="tile-icon">
@@ -397,7 +415,7 @@ export default function App() {
                   {session.serverMode
                     ? "当前已登录后端：内容、练习、作答、笔记、诊断和学习进度都来自服务端。"
                     : "当前离线演示：数据保存在浏览器；连接后端后作答与笔记会写入服务端。"}
-                  图像 AI 由后端统一配置，未配置模型时会明确提示。
+                  可从顶部 AI 徽章打开个人 DeepSeek 接入设置。
                 </div>
                 <p>
                   图像页可输入 sin(a*x^2)，或配置模型后发送“换成分段函数”。
@@ -492,6 +510,9 @@ export default function App() {
                     退出登录
                   </button>
                 )}
+                <Suspense fallback={<p>正在载入存档设置…</p>}>
+                  <LearningArchiveSettings />
+                </Suspense>
               </>
             )}
             {modal === "upload" && (

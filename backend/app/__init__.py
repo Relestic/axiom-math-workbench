@@ -77,6 +77,9 @@ def create_app(overrides: dict | None = None) -> Flask:
                 result = seed_all(session, config)
             app.logger.info("seeded content: %s", result["content"]["counts"])
 
+    from .adapters.local_key import LocalKeyStore
+
+    app.extensions["axiom_local_key"] = LocalKeyStore(config.data_dir)
     app.extensions["axiom_limiters"] = {
         "global": SlidingWindowLimiter(900, 60),
         "login": SlidingWindowLimiter(10, 300),
@@ -141,6 +144,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .api.admin import bp as admin_bp
     from .api.ai import bp as ai_bp
     from .api.ai import legacy_bp
+    from .api.archive import bp as archive_bp
     from .api.auth import bp as auth_bp
     from .api.bootstrap import bp as bootstrap_bp
     from .api.catalog import bp as catalog_bp
@@ -166,6 +170,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         notes_bp,
         reports_bp,
         ai_bp,
+        archive_bp,
         legacy_bp,
         admin_bp,
     ):

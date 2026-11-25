@@ -87,3 +87,34 @@
     padding: 16px;
   }
 }
+
+.ai-status-badge {
+  white-space: nowrap;
+}
+
+.ai-status-ready svg {
+  color: var(--success, #218862);
+}
+
+.ai-status-error svg {
+  color: var(--danger, #b33c55);
+}
+
+.local-settings-form {
+  display: grid;
+  gap: 10px;
+}
+
+.local-settings-form .field-label {
+  margin: 0;
+}
+
+.learning-archive-settings {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.learning-archive-settings h3 {
+  margin: 0;
+}

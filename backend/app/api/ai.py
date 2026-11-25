@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, current_app, request
 from sqlalchemy import select
 
-from ..adapters.llm import chat, daily_call_count, provider_status
+from ..adapters.llm import (
+    chat, daily_call_count, local_key_store, provider_status, test_local_connection, use_local_ai,
+)
+from ..adapters.local_key import MODELS, valid_key
 from ..auth import current_user, require_auth
 from ..config import Config
 from ..db import get_session
@@ -21,6 +26,7 @@ from ..schemas.visual import (
 from ..schemas.surface import SurfaceAIRequest
 from ..serializers import attempt_out, job_out
 from ..workers.queue import enqueue, usage_summary
+from .local_only import require_local
 from .utils import limit
 
 bp = Blueprint("ai", __name__, url_prefix="/api/v1/ai")
@@ -29,6 +35,72 @@ legacy_bp = Blueprint("legacy_ai", __name__, url_prefix="/api/ai")
 
 def _config() -> Config:
     return current_app.config["AXIOM"]
+
+
+@bp.get("/key/status")
+def key_status():
+    require_local()
+    return local_key_store().status()
+
+
+@bp.put("/key")
+def save_key():
+    require_local()
+    if not request.is_json:
+        raise ApiError("unsupported_media_type", "请求必须使用 Content-Type: application/json")
+    raw = request.stream.read(4097)
+    if len(raw) > 4096:
+        raise ApiError("payload_too_large", "密钥配置请求过大")
+    try:
+        payload = json.loads(raw)
+    except (ValueError, RecursionError):
+        raise ApiError("invalid_json", "请求体不是有效的 JSON") from None
+    if not isinstance(payload, dict):
+        raise ApiError("invalid_json", "请求体必须是 JSON 对象")
+    model = payload.get("model")
+    api_key = payload.get("api_key")
+    if (
+        set(payload) - {"api_key", "model"}
+        or model not in MODELS
+        or ("api_key" in payload and not valid_key(api_key))
+    ):
+        raise ApiError("unprocessable", "请选择支持的 DeepSeek 模型并检查 API Key 格式")
+    store = local_key_store()
+    store.save(api_key, model)
+    return store.status()
+
+
+@bp.delete("/key")
+def clear_key():
+    require_local()
+    store = local_key_store()
+    store.clear()
+    return store.status()
+
+
+@bp.post("/key/test")
+def check_key():
+    require_local()
+    limit("ai")
+    test_local_connection()
+    return {"ok": True}
+
+
+@bp.post("/local-surface")
+def local_surface_plot():
+    use_local_ai()
+    limit("legacy_ai")
+    payload = parse_json(SurfaceAIRequest)
+    session = get_session()
+    result = surface_service.plot_surface_change(
+        session,
+        None,
+        message=payload.message,
+        scene=payload.scene.model_dump(),
+        history=payload.history,
+    )
+    session.commit()
+    return result
 
 
 @bp.get("/status")
@@ -269,6 +341,18 @@ def legacy_status():
     config = _config()
     if not config.legacy_ai_enabled:
         raise ApiError("not_found", "本地 AI 接口已关闭")
+    if config.local_mode and not config.is_production:
+        require_local()
+        status = local_key_store().status()
+        return {
+            **status,
+            "provider": "DeepSeek",
+            "provider_label": "DeepSeek",
+            "endpoint_host": "api.deepseek.com",
+            "mode": "deepseek" if status["configured"] else "none",
+            "reasoner": status["model"] == "deepseek-reasoner",
+            "json_mode": status["model"] != "deepseek-reasoner",
+        }
     data = provider_status()
     return {
         "configured": data["active"],
@@ -287,7 +371,9 @@ def legacy_plot():
     config = _config()
     if not config.legacy_ai_enabled:
         raise ApiError("not_found", "本地 AI 接口已关闭")
-    if not _origin_allowed():
+    if config.local_mode and not config.is_production:
+        use_local_ai()
+    elif not _origin_allowed():
         raise ApiError("forbidden", "仅接受当前站点的请求")
     limit("legacy_ai")
     payload = parse_json(AIPlotRequest)

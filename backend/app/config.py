@@ -44,6 +44,7 @@ def _csv(name: str, default: str) -> list[str]:
 class Config:
     env: str = "development"
     testing: bool = False
+    local_mode: bool = False
     secret_key: str = "axiom-development-secret-change-me"
     jwt_algorithm: str = "HS256"
     access_ttl_seconds: int = 30 * 60
@@ -75,7 +76,7 @@ class Config:
     timezone: str = "Asia/Shanghai"
     ai_base_url: str = ""
     ai_model: str = ""
-    ai_api_key: str = ""
+    ai_api_key: str = field(default="", repr=False)
     ai_provider: str = "none"  # none | openai | deepseek | mock
     ai_json_mode: bool = True
     ai_timeout_seconds: int = 60

@@ -2,15 +2,6 @@ import { apiFetch, apiUrl } from "../../lib/api";
 import { parseAIResult, type Scene } from "../../lib/plotScene";
 import type { SurfaceScene } from "./three-d/types";
 
-export type AIStatus = {
-  configured: boolean;
-  model?: string;
-  provider?: string;
-  provider_label?: string;
-  reasoner?: boolean;
-  json_mode?: boolean;
-};
-
 export type PlotAIResult = ReturnType<typeof parseAIResult>;
 
 export type SurfaceAIResult = {
@@ -29,12 +20,6 @@ async function readError(response: Response): Promise<string> {
   } catch {
     return `模型请求失败（HTTP ${response.status}）`;
   }
-}
-
-export async function fetchAIStatus(): Promise<AIStatus> {
-  const response = await fetch(apiUrl("/api/ai/status"));
-  if (!response.ok) throw new Error("无法读取模型状态");
-  return response.json();
 }
 
 export async function testAIConnection(): Promise<{
@@ -65,13 +50,20 @@ export async function requestPlotChange(input: {
   return parseAIResult(await response.json());
 }
 
-export async function requestSurfaceChange(input: {
-  message: string;
-  scene: SurfaceScene;
-  history: { role: "user" | "assistant"; content: string }[];
-}): Promise<SurfaceAIResult> {
-  return apiFetch<SurfaceAIResult>("/api/v1/ai/surface", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+export async function requestSurfaceChange(
+  input: {
+    message: string;
+    scene: SurfaceScene;
+    history: { role: "user" | "assistant"; content: string }[];
+  },
+  local: boolean,
+): Promise<SurfaceAIResult> {
+  return apiFetch<SurfaceAIResult>(
+    local ? "/api/v1/ai/local-surface" : "/api/v1/ai/surface",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    { auth: !local },
+  );
 }
