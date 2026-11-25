@@ -1,0 +1,89 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--inverse-raised);
+  color: var(--on-solid);
+  border: 1px solid var(--inverse-border);
+  padding: 14px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px #11172522;
+  z-index: 110;
+  font-size: 13px;
+  max-width: 80vw;
+}
+.toast svg {
+  color: var(--green);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+}
+.modal {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  width: 540px;
+  max-width: 100%;
+  border-radius: 19px;
+  padding: 32px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 100px #0003;
+}
+.modal > h2 {
+  margin-top: 12px;
+}
+.modal > p {
+  font-size: 13px;
+}
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+}
+.modal > .tile-icon {
+  width: 43px;
+  height: 43px;
+  margin-bottom: 8px;
+}
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.notification-item strong {
+  font-size: 14px;
+}
+.notification-item p {
+  font-size: 12px;
+  margin: 7px 0 0;
+}
+
+@media (max-width: 760px) {
+  .toast {
+    left: 50%;
+    font-size: 12px;
+    width: max-content;
+    max-width: 90vw;
+  }
+  .modal {
+    padding: 25px 20px;
+  }
+  .modal-backdrop {
+    padding: 16px;
+  }
+}

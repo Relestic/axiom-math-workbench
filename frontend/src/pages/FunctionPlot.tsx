@@ -9,7 +9,7 @@ import {
   midpointSum,
   symbolicDerivative,
 } from "../lib/functionEngine";
-const palette = ["#6551f4", "#0a9b8d", "#ed7096", "#ce8a23"];
+import { usePlotTheme } from "../styles/usePlotTheme";
 export function analyze(scene: Scene) {
   const params = Object.fromEntries(
     scene.parameters.map((p) => [p.name, p.value]),
@@ -72,7 +72,14 @@ export default function FunctionPlot({
   const onPointRef = useRef(onPoint);
   onPointRef.current = onPoint;
   const [error, setError] = useState("");
+  const theme = usePlotTheme();
   const plot = useMemo(() => {
+    const styles = getComputedStyle(document.documentElement);
+    const color = (token: string) => styles.getPropertyValue(token).trim();
+    const purple = color("--plot-purple");
+    const teal = color("--plot-teal");
+    const amber = color("--plot-amber");
+    const palette = [purple, teal, color("--plot-rose"), amber];
     const a = analyze(scene);
     const traces: Data[] = [];
     const shapes: Partial<Plotly.Shape>[] = [];
@@ -111,9 +118,9 @@ export default function FunctionPlot({
         y: [a.y0],
         name: "基准点",
         marker: {
-          color: "#6551f4",
+          color: purple,
           size: 11,
-          line: { color: "white", width: 2 },
+          line: { color: color("--surface"), width: 2 },
         },
       });
     if (scene.mode === "derivative") {
@@ -129,7 +136,7 @@ export default function FunctionPlot({
             a.y0 + secant * (scene.xMax - scene.x0),
           ],
           name: "割线",
-          line: { color: "#e3a133", width: 2 },
+          line: { color: amber, width: 2 },
         });
         traces.push({
           type: "scatter",
@@ -137,7 +144,7 @@ export default function FunctionPlot({
           x: [scene.x0 + scene.h],
           y: [end],
           name: "移动点",
-          marker: { color: "#e3a133", size: 9 },
+          marker: { color: amber, size: 9 },
         });
       }
       if (a.slope !== null)
@@ -150,7 +157,7 @@ export default function FunctionPlot({
             a.y0 + a.slope * (scene.xMax - scene.x0),
           ],
           name: "切线（数值估计）",
-          line: { color: "#0a9b8d", dash: "dash", width: 2 },
+          line: { color: teal, dash: "dash", width: 2 },
         });
     }
     if (scene.mode === "continuity" && Number.isFinite(a.y0)) {
@@ -161,8 +168,8 @@ export default function FunctionPlot({
         x1: 1,
         y0: a.y0 - scene.epsilon,
         y1: a.y0 + scene.epsilon,
-        fillcolor: "rgba(101,81,244,.09)",
-        line: { color: "#bab1f7", dash: "dot" },
+        fillcolor: color("--plot-purple-band"),
+        line: { color: purple, dash: "dot" },
         layer: "below",
       });
       shapes.push({
@@ -172,8 +179,8 @@ export default function FunctionPlot({
         y1: 1,
         x0: scene.x0 - scene.delta,
         x1: scene.x0 + scene.delta,
-        fillcolor: "rgba(229,170,55,.09)",
-        line: { color: "#e2b660", dash: "dot" },
+        fillcolor: color("--plot-amber-band"),
+        line: { color: amber, dash: "dot" },
         layer: "below",
       });
     }
@@ -193,8 +200,8 @@ export default function FunctionPlot({
         width: dx,
         name: "中点矩形",
         marker: {
-          color: "rgba(101,81,244,.15)",
-          line: { color: "#a79ae9", width: 1 },
+          color: color("--plot-purple-area"),
+          line: { color: purple, width: 1 },
         },
         hoverinfo: "skip",
       });
@@ -210,39 +217,44 @@ export default function FunctionPlot({
           scene.yMax - scene.yMin,
         ),
         name: `${scene.order} 阶 Taylor 多项式`,
-        line: { color: "#0a9b8d", dash: "dash", width: 2 },
+        line: { color: teal, dash: "dash", width: 2 },
       });
     }
     const layout: Partial<Layout> = {
       autosize: true,
       margin: { l: 55, r: 24, t: 24, b: 70 },
-      paper_bgcolor: "#fff",
-      plot_bgcolor: "#fcfcfa",
+      paper_bgcolor: color("--surface"),
+      plot_bgcolor: color("--plot-bg"),
       font: {
         family: "Segoe UI, Microsoft YaHei, sans-serif",
         size: 12,
-        color: "#7c8495",
+        color: color("--muted"),
       },
       xaxis: {
         range: [scene.xMin, scene.xMax],
-        zerolinecolor: "#c5c6ce",
-        gridcolor: "#eeedf3",
+        zerolinecolor: color("--plot-axis"),
+        gridcolor: color("--plot-grid"),
       },
       yaxis: {
         range: [scene.yMin, scene.yMax],
         title: { text: "y" },
-        zerolinecolor: "#c5c6ce",
-        gridcolor: "#eeedf3",
+        zerolinecolor: color("--plot-axis"),
+        gridcolor: color("--plot-grid"),
       },
       legend: { orientation: "h", y: -0.2, x: 0, font: { size: 11 } },
       shapes,
       hovermode: "closest",
+      hoverlabel: {
+        bgcolor: color("--surface-raised"),
+        bordercolor: color("--border-strong"),
+        font: { color: color("--text") },
+      },
       dragmode: "pan",
       uirevision: `${scene.xMin},${scene.xMax},${scene.yMin},${scene.yMax}`,
       showlegend: true,
     };
     return { traces, layout };
-  }, [scene]);
+  }, [scene, theme]);
   useEffect(() => {
     let cancelled = false;
     const target = element.current!;

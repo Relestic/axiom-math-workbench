@@ -68,7 +68,11 @@ export function SurfacePlot3D({
   const yMid = (scene.yMin + scene.yMax) / 2;
   const base = Math.min(W, H) * 0.36 * scene.view.zoom;
 
-  const project = (x: number, y: number, z: number): [number, number, number] => {
+  const project = (
+    x: number,
+    y: number,
+    z: number,
+  ): [number, number, number] => {
     const nx = (x - xMid) / halfX;
     const ny = (y - yMid) / halfY;
     const nz = ((z - zMid) / halfZ) * scene.view.heightScale;
@@ -99,7 +103,8 @@ export function SurfacePlot3D({
       const z01 = grid.values[j + 1][i];
       if (
         ![z00, z10, z11, z01].every((value) => Number.isFinite(value)) ||
-        Math.max(z00, z10, z11, z01) - Math.min(z00, z10, z11, z01) > halfZ * 2.5
+        Math.max(z00, z10, z11, z01) - Math.min(z00, z10, z11, z01) >
+          halfZ * 2.5
       ) {
         continue;
       }
@@ -111,12 +116,13 @@ export function SurfacePlot3D({
       const t = (avgZ - grid.zMin) / (grid.zMax - grid.zMin || 1);
       const depth = (p00[2] + p10[2] + p11[2] + p01[2]) / 4;
       quads.push({
-        points: path([
-          [p00[0], p00[1]],
-          [p10[0], p10[1]],
-          [p11[0], p11[1]],
-          [p01[0], p01[1]],
-        ]) + " Z",
+        points:
+          path([
+            [p00[0], p00[1]],
+            [p10[0], p10[1]],
+            [p11[0], p11[1]],
+            [p01[0], p01[1]],
+          ]) + " Z",
         fill: interpolateColor(t, scene.display.palette, scene.display.opacity),
         depth,
         stroke: `hsla(${palettes[scene.display.palette].hue}, 34%, 78%, ${scene.display.wireframe ? 0.34 : 0})`,
@@ -160,10 +166,7 @@ export function SurfacePlot3D({
     const dy = event.clientY - drag.current.y;
     onViewChange({
       azimuth: (drag.current.azimuth + dx * 0.45 + 360) % 360,
-      elevation: Math.max(
-        5,
-        Math.min(85, drag.current.elevation + dy * -0.28),
-      ),
+      elevation: Math.max(5, Math.min(85, drag.current.elevation + dy * -0.28)),
     });
   };
   const endDrag = () => {
@@ -194,19 +197,31 @@ export function SurfacePlot3D({
       >
         <defs>
           <radialGradient id="surface-glow" cx="50%" cy="48%" r="60%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#f5f3ff" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--surface)" stopOpacity="0.9" />
+            <stop
+              offset="100%"
+              stopColor="var(--accent-soft)"
+              stopOpacity="0"
+            />
           </radialGradient>
           <linearGradient id="surface-floor" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#312e81" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.04" />
+            <stop
+              offset="0%"
+              stopColor="var(--plot-purple)"
+              stopOpacity="0.1"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--plot-purple)"
+              stopOpacity="0.04"
+            />
           </linearGradient>
         </defs>
         <rect width={W} height={H} fill="url(#surface-glow)" />
         <path
           d={path(floor.map((p) => [p[0], p[1]])) + " Z"}
           fill="url(#surface-floor)"
-          stroke="#ddd9f0"
+          stroke="var(--plot-grid)"
           strokeWidth={1.2}
         />
         {scene.display.showAxes && (
@@ -216,29 +231,44 @@ export function SurfacePlot3D({
                 [origin[0], origin[1]],
                 [xTip[0], xTip[1]],
               ])}
-              stroke="#f59e0b"
+              stroke="var(--plot-amber)"
             />
             <path
               d={path([
                 [origin[0], origin[1]],
                 [yTip[0], yTip[1]],
               ])}
-              stroke="#0d9488"
+              stroke="var(--plot-teal)"
             />
             <path
               d={path([
                 [origin[0], origin[1]],
                 [zTip[0], zTip[1]],
               ])}
-              stroke="#6366f1"
+              stroke="var(--plot-purple)"
             />
-            <text x={xTip[0] + 8} y={xTip[1] + 4} fill="#b45309" fontSize="13">
+            <text
+              x={xTip[0] + 8}
+              y={xTip[1] + 4}
+              fill="var(--plot-amber)"
+              fontSize="13"
+            >
               x
             </text>
-            <text x={yTip[0] + 8} y={yTip[1] + 4} fill="#0f766e" fontSize="13">
+            <text
+              x={yTip[0] + 8}
+              y={yTip[1] + 4}
+              fill="var(--plot-teal)"
+              fontSize="13"
+            >
               y
             </text>
-            <text x={zTip[0] + 8} y={zTip[1] - 6} fill="#4f46e5" fontSize="13">
+            <text
+              x={zTip[0] + 8}
+              y={zTip[1] - 6}
+              fill="var(--plot-purple)"
+              fontSize="13"
+            >
               z
             </text>
           </g>
@@ -255,11 +285,16 @@ export function SurfacePlot3D({
         ))}
         {scene.display.showAxes && (
           <g>
-            <circle cx={origin[0]} cy={origin[1]} r={3} fill="#4338ca" />
+            <circle
+              cx={origin[0]}
+              cy={origin[1]}
+              r={3}
+              fill="var(--plot-purple)"
+            />
             <text
               x={22}
               y={H - 22}
-              fill="#8b8ba7"
+              fill="var(--muted)"
               fontSize="12"
               fontFamily="var(--font-mono, monospace)"
             >
@@ -276,14 +311,14 @@ export function SurfacePlot3D({
               width={380}
               height={80}
               rx={14}
-              fill="#fff"
-              stroke="#f0d5dd"
+              fill="var(--surface)"
+              stroke="var(--rose-border)"
             />
             <text
               x={W / 2}
               y={H / 2}
               textAnchor="middle"
-              fill="#b4234d"
+              fill="var(--rose)"
               fontSize="14"
             >
               当前范围内没有可绘制的实数值

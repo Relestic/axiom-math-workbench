@@ -23,16 +23,16 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #b8a277;
+  background: var(--surface-control);
 }
 .fw-status .fw-online i {
-  background: #17a283;
+  background: var(--teal-solid);
 }
 .fw-offline {
-  color: #8b8173;
+  color: var(--muted);
 }
 .fw-online {
-  color: #087d69;
+  color: var(--teal);
 }
 .fw-status button {
   display: flex;
@@ -48,21 +48,21 @@
 }
 .fw-modebar > button {
   padding: 11px 18px;
-  border: 1px solid #e7e4de;
+  border: 1px solid var(--border-strong);
   border-radius: 9px;
-  background: white;
-  color: #798296;
+  background: var(--surface);
+  color: var(--muted);
   font-size: 12px;
 }
 .fw-modebar > button.active {
-  color: white;
-  background: #6551f4;
-  border-color: #6551f4;
+  color: var(--on-solid);
+  background: var(--primary-solid);
+  border-color: var(--primary-solid);
   box-shadow: 0 4px 12px #6551f41c;
 }
 .fw-modebar > span {
   margin-left: auto;
-  color: #9ca2b0;
+  color: var(--muted);
   font-size: 10px;
 }
 .fw-grid {
@@ -88,24 +88,24 @@
 }
 .fw-section-title > span {
   font-size: 10px;
-  color: #9a9fad;
+  color: var(--muted);
 }
 .fw-muted {
   font-size: 11px;
-  color: #9198a5;
+  color: var(--muted);
   margin: 12px 0 19px;
   line-height: 1.8;
 }
 .fw-curve-editor {
-  border: 1px solid #e8e5ec;
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 .fw-curve-editor.active {
-  border-color: #c4baff;
-  background: #fcfbff;
+  border-color: var(--accent-border);
+  background: var(--surface);
 }
 .fw-curve-label {
   display: flex;
@@ -121,22 +121,22 @@
 }
 .fw-curve-label input {
   margin: 0;
-  accent-color: #6551f4;
+  accent-color: var(--focus);
 }
 .fw-curve-label .icon-button {
   width: 23px;
   height: 23px;
-  color: #aba6b8;
+  color: var(--muted);
 }
 .fw-formula {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid #e9e5f5;
+  border-bottom: 1px solid var(--border);
   background: transparent;
   padding: 9px 0;
   font-family: Consolas, monospace;
   font-size: 16px;
-  color: #5844db;
+  color: var(--primary);
   border-radius: 0;
 }
 .fw-curve-editor details {
@@ -145,7 +145,7 @@
 .function-workspace summary {
   font-size: 10px;
   cursor: pointer;
-  color: #8c94a5;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -163,7 +163,7 @@
 .fw-fields label,
 .fw-parameter-limits label {
   font-size: 10px;
-  color: #8a92a2;
+  color: var(--muted);
 }
 .fw-fields input,
 .fw-parameter-limits input {
@@ -171,18 +171,18 @@
   min-width: 0;
   display: block;
   padding: 8px;
-  border: 1px solid #e7e4ed;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  background: var(--surface);
   font-size: 12px;
   margin-top: 5px;
-  color: #39415a;
+  color: var(--text-secondary);
 }
 .fw-check {
   display: flex;
   align-items: center;
   font-size: 10px;
-  color: #9499a7;
+  color: var(--muted);
   gap: 5px;
   margin-top: 7px;
 }
@@ -206,16 +206,16 @@
 }
 .fw-help {
   padding: 8px 0 14px;
-  border-bottom: 1px solid #eeebf1;
+  border-bottom: 1px solid var(--border);
 }
 .fw-help p {
   font-size: 11px;
-  color: #8990a1;
+  color: var(--muted);
   line-height: 1.9;
 }
 .function-workspace code {
   font-family: Consolas, monospace;
-  color: #6551d2;
+  color: var(--primary);
   overflow-wrap: anywhere;
 }
 .fw-parameters {
@@ -227,7 +227,7 @@
 }
 .fw-parameters h4 small {
   display: block;
-  color: #aaaeba;
+  color: var(--muted);
   font-size: 10px;
   font-weight: 400;
   margin-top: 10px;
@@ -251,13 +251,13 @@
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: #7f8799;
+  color: var(--muted);
   gap: 5px;
   margin-bottom: 10px;
 }
 .fw-slider b {
-  background: #efecff;
-  color: #6551f4;
+  background: var(--surface-raised);
+  color: var(--primary);
   padding: 3px 5px;
   border-radius: 4px;
   font-size: 10px;
@@ -266,14 +266,14 @@
 .fw-slider input {
   width: 100%;
   height: 4px;
-  accent-color: #6551f4;
+  accent-color: var(--focus);
   cursor: pointer;
 }
 .fw-slider small {
   display: flex;
   justify-content: space-between;
   font-size: 9px;
-  color: #a8adba;
+  color: var(--muted);
   margin-top: 6px;
 }
 .fw-main {
@@ -310,12 +310,18 @@
   margin-top: 10px;
   min-height: 420px;
 }
+.fw-plot-canvas .modebar-btn path {
+  fill: var(--muted);
+}
+.fw-plot-canvas .modebar-btn:is(:hover, .active) path {
+  fill: var(--primary);
+}
 .fw-plot-canvas {
   width: 100%;
   height: 440px;
 }
 .fw-chart-caption {
-  color: #9aa1af;
+  color: var(--muted);
   font-size: 10px;
   line-height: 1.8;
   padding: 0 5px;
@@ -323,7 +329,7 @@
 }
 .fw-analysis {
   margin-top: 20px;
-  border-top: 1px solid #eeebf1;
+  border-top: 1px solid var(--border);
   padding-top: 19px;
 }
 .fw-tool-controls {
@@ -338,7 +344,7 @@
   align-items: stretch;
 }
 .fw-metric {
-  background: #f7f6fa;
+  background: var(--surface-raised);
   border-radius: 9px;
   padding: 12px 15px;
   min-width: 130px;
@@ -347,24 +353,24 @@
 .fw-metric small {
   display: block;
   font-size: 10px;
-  color: #939bab;
+  color: var(--muted);
   margin-bottom: 7px;
 }
 .fw-metric strong {
   font-size: 15px;
-  color: #5d4acf;
+  color: var(--primary);
   font-weight: 600;
 }
 .fw-results > p {
   flex-basis: 100%;
-  color: #8d95a4;
+  color: var(--muted);
   font-size: 11px;
   margin: 3px 0 0;
   overflow-wrap: anywhere;
 }
 .fw-chat {
   padding: 22px !important;
-  border-color: #ded9f1;
+  border-color: var(--accent-border);
 }
 .fw-chat-heading {
   display: flex;
@@ -377,7 +383,7 @@
 }
 .fw-chat-heading p {
   font-size: 10px;
-  color: #9299a9;
+  color: var(--muted);
   margin: 0;
 }
 .fw-chat-heading > .badge {
@@ -392,19 +398,19 @@
   margin: 20px 0;
 }
 .fw-suggestions button {
-  background: #fbfafc;
-  border: 1px solid #e8e5f0;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 11px;
-  color: #7e7797;
+  color: var(--muted);
   text-align: left;
   font-size: 10px;
   line-height: 1.6;
 }
 .fw-suggestions button:hover {
-  background: #f0ecff;
-  border-color: #b4a7ff;
-  color: #6551f4;
+  background: var(--surface-raised);
+  border-color: var(--accent-border);
+  color: var(--primary);
 }
 .fw-messages {
   max-height: 330px;
@@ -418,11 +424,11 @@
   align-items: center;
   justify-content: center;
   padding: 22px 10px 32px;
-  color: #c3bce1;
+  color: var(--muted);
 }
 .fw-empty-chat p {
   font-size: 12px;
-  color: #9b95ae;
+  color: var(--muted);
   margin: 0;
   line-height: 2;
 }
@@ -430,18 +436,18 @@
   max-width: 92%;
   padding: 12px 15px;
   border-radius: 10px;
-  background: #f6f5fa;
+  background: var(--surface-raised);
   margin: 12px 0;
-  color: #565d70;
+  color: var(--text-secondary);
 }
 .fw-message.user {
   margin-left: auto;
-  background: #eeebff;
-  color: #5a46cc;
+  background: var(--surface-raised);
+  color: var(--primary);
 }
 .fw-message small {
   font-size: 9px;
-  color: #9a92b2;
+  color: var(--muted);
 }
 .fw-message p {
   font-size: 12px;
@@ -454,21 +460,21 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #8c80c5;
+  color: var(--muted);
   padding: 15px;
 }
 .fw-thinking svg {
   animation: fw-spin 1s linear infinite;
 }
 .fw-composer {
-  border: 1px solid #ddd7ed;
+  border: 1px solid var(--accent-border);
   border-radius: 10px;
   padding: 12px;
   margin-top: 12px;
-  background: #fefeff;
+  background: var(--surface);
 }
 .fw-composer:focus-within {
-  border-color: #a394f6;
+  border-color: var(--accent-border);
   box-shadow: 0 0 0 3px #f5f2ff;
 }
 .fw-composer textarea {
@@ -481,10 +487,10 @@
   background: transparent;
   font-size: 12px;
   line-height: 1.9;
-  color: #424c66;
+  color: var(--text-secondary);
 }
 .fw-composer textarea::placeholder {
-  color: #b0aabd;
+  color: var(--muted);
 }
 .fw-composer > div {
   display: flex;
@@ -495,7 +501,7 @@
 }
 .fw-composer > div > span {
   font-size: 9px;
-  color: #a5a0af;
+  color: var(--muted);
 }
 .fw-composer .btn {
   font-size: 11px;
@@ -515,7 +521,7 @@
 }
 .fw-next p {
   font-size: 11px;
-  color: #969bab;
+  color: var(--muted);
   margin: 0;
 }
 .fw-next .btn {
@@ -526,9 +532,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid #eed3c4;
-  background: #fff8f3;
-  color: #9d623e;
+  border: 1px solid var(--amber-border);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
   border-radius: 9px;
   padding: 12px 16px;
   font-size: 12px;
@@ -542,7 +548,7 @@
 }
 .fw-settings {
   margin-bottom: 22px;
-  border-color: #d9d2f4;
+  border-color: var(--accent-border);
 }
 .fw-settings > div {
   display: flex;
@@ -554,14 +560,14 @@
 }
 .fw-settings p {
   font-size: 12px;
-  color: #858b9c;
+  color: var(--muted);
   line-height: 1.9;
 }
 .fw-settings pre {
-  background: #171c2b;
+  background: var(--surface-control);
   border-radius: 9px;
   padding: 18px;
-  color: #c9bfff;
+  color: var(--primary);
   overflow: auto;
   font:
     12px/1.9 Consolas,

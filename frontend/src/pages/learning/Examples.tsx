@@ -50,7 +50,7 @@ export function MiniChart({
       role="img"
       aria-label={`${kind} 函数示意图`}
     >
-      <rect width="440" height="238" fill="#fcfcfb" />
+      <rect width="440" height="238" fill="var(--plot-bg)" />
       <path
         d={
           kind === "absolute" || kind === "square"
@@ -58,17 +58,17 @@ export function MiniChart({
             : "M40 20V205H416"
         }
         fill="none"
-        stroke="#d5d3cc"
+        stroke="var(--plot-axis)"
       />
       <text
         x={kind === "absolute" || kind === "square" ? 208 : 28}
         y="219"
-        fill="#99978f"
+        fill="var(--muted)"
         fontSize="11"
       >
         0
       </text>
-      <text x="403" y="221" fill="#99978f" fontSize="11">
+      <text x="403" y="221" fill="var(--muted)" fontSize="11">
         x
       </text>
       {kind === "dirichlet" ? (
@@ -88,13 +88,23 @@ export function MiniChart({
       )}
       {kind === "line" && (
         <>
-          <rect x="135" y="130" width="105" height="36" fill="#ebebff" />
+          <rect
+            x="135"
+            y="130"
+            width="105"
+            height="36"
+            fill="var(--accent-soft)"
+          />
           <path
             d="M135 130H240 M135 166H240"
-            stroke="#b3b2ff"
+            stroke="var(--plot-purple)"
             strokeDasharray="4 3"
           />
-          <path d="M175 205V147.25" stroke="#e8ac54" strokeDasharray="4 3" />
+          <path
+            d="M175 205V147.25"
+            stroke="var(--plot-amber)"
+            strokeDasharray="4 3"
+          />
           <circle cx="175" cy="147.25" r="4" fill={color} />
           <text x="290" y="84" fill={color} fontSize="12">
             y = x
@@ -108,7 +118,7 @@ export function MiniChart({
             y="25"
             width="28"
             height="176"
-            fill="#fce7ed"
+            fill="var(--rose-soft)"
             opacity=".8"
           />
           <circle cx="78" cy="92" r="3" fill={color} />
@@ -124,7 +134,13 @@ export function MiniChart({
       )}
       {kind === "step" && (
         <>
-          <circle cx="220" cy="205" r="4" fill="white" stroke={color} />
+          <circle
+            cx="220"
+            cy="205"
+            r="4"
+            fill="var(--plot-bg)"
+            stroke={color}
+          />
           <circle cx="220" cy="70" r="4" fill={color} />
         </>
       )}
@@ -241,7 +257,7 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
             </div>
             <MiniChart
               kind={positive ? c.positiveKind : c.negativeKind}
-              color={positive ? "#078544" : "#d40846"}
+              color={positive ? "var(--green)" : "var(--rose)"}
             />
             <h4 className="subhead">
               <ListChecks size={14} />

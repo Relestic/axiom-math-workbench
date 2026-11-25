@@ -1,15 +1,8 @@
+import { WorkbenchShell, ThemeSwitch } from "./app/layout/WorkbenchShell";
+import { NavRail } from "./app/layout/NavRail";
+import { MainSplit } from "./app/layout/MainSplit";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
-  LayoutGrid,
-  Gauge,
-  BookOpen,
-  ChartNoAxesCombined,
-  CircleDot,
-  Route,
-  ClipboardList,
-  SquareCheck,
-  Network,
-  Stethoscope,
   StickyNote,
   Search,
   CircleHelp,
@@ -17,20 +10,10 @@ import {
   ChevronDown,
   ChevronRight,
   Upload,
-  Play,
   ArrowRight,
-  Flame,
-  Clock3,
-  TrendingUp,
-  Eye,
   X,
   Menu,
-  Settings,
-  Plus,
   Check,
-  Download,
-  Trash2,
-  FileText,
   Sparkles,
   LogOut,
 } from "lucide-react";
@@ -82,6 +65,7 @@ export default function App() {
   const session = useSession();
   const app = useAppData();
   const [page, setPage] = useState(pageFromHash);
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -216,85 +200,10 @@ export default function App() {
     ? remoteResults
     : localSearchResults;
   return (
-    <div className="app-shell">
-      {sidebar && (
-        <div className="mobile-backdrop" onClick={() => setSidebar(false)} />
-      )}
-      <aside className={`sidebar ${sidebar ? "is-open" : ""}`}>
-        <button className="brand" onClick={() => navigate("dashboard")}>
-          <span className="brand-symbol">
-            <LayoutGrid size={22} />
-          </span>
-          <span>
-            <strong>Axiom 公理</strong>
-            <small>数学系 AI 学习工作台</small>
-          </span>
-        </button>
-        <nav aria-label="主导航">
-          {navigation.map((group) => (
-            <div className="nav-group" key={group.label}>
-              <div className="nav-caption">{group.label}</div>
-              {group.items.map(([id, label, Icon]) => (
-                <button
-                  key={id}
-                  className={`nav-item ${page === id ? "active" : ""}`}
-                  onClick={() => navigate(id)}
-                  aria-current={page === id ? "page" : undefined}
-                >
-                  <Icon size={17} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <button
-            className="course-widget"
-            onClick={() => navigate("practice-map")}
-          >
-            <span className="muted">
-              当前课程 <span>···</span>
-            </span>
-            <strong>数学分析</strong>
-            <small>连续性 → 定积分 · MVP</small>
-            <div className="progress-track">
-              <i
-                style={{
-                  width: `${Math.max(4, app.data.dashboard.summary.mastery.overall)}%`,
-                }}
-              />
-            </div>
-            <small>
-              {session.serverMode ? "服务端掌握度" : "示例学习进度"} ·{" "}
-              {app.data.dashboard.summary.mastery.overall}%
-            </small>
-          </button>
-          <div className="profile">
-            <button className="avatar" onClick={() => setModal("profile")}>
-              {name.slice(0, 1)}
-            </button>
-            <button
-              className="profile-name"
-              onClick={() => setModal("profile")}
-            >
-              <strong>{name}</strong>
-              <small>
-                {session.serverMode
-                  ? `${session.user?.role === "admin" ? "管理员" : "数学系"} · 已连接后端`
-                  : "数学系 · 本地空间"}
-              </small>
-            </button>
-            <button
-              className="icon-button dark-icon"
-              aria-label="个人设置"
-              onClick={() => setModal("profile")}
-            >
-              <Settings size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
+    <WorkbenchShell collapsed={railCollapsed} rail={<NavRail page={page} sidebar={sidebar} collapsed={railCollapsed}
+      name={name} mastery={app.data.dashboard.summary.mastery.overall} serverMode={session.serverMode}
+      role={session.user?.role} onToggle={() => setRailCollapsed(!railCollapsed)}
+      closeMobile={() => setSidebar(false)} navigate={navigate} openProfile={() => setModal("profile")} />}>
       <div className="main-shell">
         <header className="topbar">
           <button
@@ -310,6 +219,7 @@ export default function App() {
             <strong>{title}</strong>
           </div>
           <div className="topbar-right">
+            <ThemeSwitch />
             <label className="search-wrap">
               <Search size={16} />
               <input
@@ -380,7 +290,7 @@ export default function App() {
             </button>
           </div>
         </header>
-        <main className="page-content" key={page}>
+        <main className="page-content">
           <Suspense fallback={<div className="page-loading">正在载入页面…</div>}>
           {page === "dashboard" && (
             <Dashboard
@@ -389,8 +299,8 @@ export default function App() {
               onUpload={() => setModal("upload")}
             />
           )}
-          {page === "textbook" && (
-            <>
+          {(page === "textbook" || page === "explore") && (
+            <MainSplit page={page} navigate={navigate} graph={<Exploration {...common} />} lecture={<>
               <div className="page-tools">
                 <span className="badge">示例讲义 · 非已解析教材</span>
                 <button className="btn" onClick={() => setModal("upload")}>
@@ -399,9 +309,8 @@ export default function App() {
                 </button>
               </div>
               <Textbook {...common} />
-            </>
+            </>} />
           )}
-          {page === "explore" && <Exploration {...common} />}
           {page === "examples" && <Examples {...common} />}
           {page === "proof" && <Proof {...common} />}
           {page === "exercises" && <Exercises {...common} />}
@@ -593,6 +502,6 @@ export default function App() {
           </section>
         </div>
       )}
-    </div>
+    </WorkbenchShell>
   );
 }

@@ -1,0 +1,132 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-synthesis: none;
+  color: var(--text);
+  background: var(--bg);
+
+  --bg: #f7f6f3;
+  --surface: #fff;
+  --surface-raised: #fcfbf8;
+  --surface-muted: #f1efeb;
+  --surface-control: #ebe8e3;
+  --text: #151b2b;
+  --text-secondary: #414d64;
+  --muted: #667286;
+  --border: #e8e5df;
+  --border-strong: #d7d4ce;
+  --primary: #5145f5;
+  --primary-solid: #5145f5;
+  --primary-hover: #4335da;
+  --accent-soft: #efedff;
+  --accent-border: #d7d1ff;
+  --focus: #8b7dff;
+  --teal: #0f817c;
+  --teal-solid: #0f817c;
+  --teal-soft: #e6f5f3;
+  --teal-border: #bce2dc;
+  --green: #168744;
+  --green-solid: #19804a;
+  --green-soft: #e7f6ed;
+  --green-border: #c3e9d0;
+  --amber: #a95908;
+  --amber-solid: #ad6416;
+  --amber-soft: #fff2df;
+  --amber-border: #edd6b4;
+  --rose: #c12856;
+  --rose-solid: #bd305d;
+  --rose-soft: #ffe9ef;
+  --rose-border: #f2c5d3;
+  --on-solid: #fff;
+
+  --inverse: #111725;
+  --inverse-raised: #20283a;
+  --inverse-border: #354056;
+  --inverse-text: #edf0f5;
+  --inverse-muted: #a0a8b9;
+  --backdrop: #11172580;
+
+  --plot-bg: #fcfcfa;
+  --plot-grid: #eeedf3;
+  --plot-axis: #c5c6ce;
+  --plot-purple: #6551f4;
+  --plot-teal: #0a9b8d;
+  --plot-rose: #d64f80;
+  --plot-amber: #b36b15;
+  --plot-purple-band: rgba(101, 81, 244, 0.09);
+  --plot-purple-area: rgba(101, 81, 244, 0.15);
+  --plot-amber-band: rgba(229, 170, 55, 0.09);
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 17px;
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 14px;
+  --font-lg: 15px;
+  --font-xl: 21px;
+  --font-title: 27px;
+
+  --purple: var(--primary);
+  --ink: var(--text);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #10141d;
+  --surface: #191f2d;
+  --surface-raised: #1e2635;
+  --surface-muted: #242e40;
+  --surface-control: #2c374b;
+  --text: #ecf0f7;
+  --text-secondary: #c2ccdf;
+  --muted: #a0aec6;
+  --border: #303b50;
+  --border-strong: #485670;
+  --primary: #b2a8ff;
+  --primary-solid: #6254de;
+  --primary-hover: #5446cf;
+  --accent-soft: #2f2950;
+  --accent-border: #574a87;
+  --focus: #b2a8ff;
+  --teal: #66d4c8;
+  --teal-solid: #107870;
+  --teal-soft: #163632;
+  --teal-border: #2d615d;
+  --green: #83d8a3;
+  --green-solid: #237644;
+  --green-soft: #1b362c;
+  --green-border: #345e48;
+  --amber: #eec27e;
+  --amber-solid: #9c5610;
+  --amber-soft: #3b2c1f;
+  --amber-border: #66503a;
+  --rose: #ffa1bb;
+  --rose-solid: #af335b;
+  --rose-soft: #422736;
+  --rose-border: #713c52;
+
+  --inverse: #0c1019;
+  --inverse-raised: #1b2232;
+  --inverse-border: #323e56;
+  --inverse-text: #edf0f7;
+  --inverse-muted: #a9b6cb;
+  --backdrop: #060910a6;
+
+  --plot-bg: #161c29;
+  --plot-grid: #2c374a;
+  --plot-axis: #63718a;
+  --plot-purple: #a194ff;
+  --plot-teal: #63d4c4;
+  --plot-rose: #ff8cb3;
+  --plot-amber: #f3bd6a;
+  --plot-purple-band: rgba(161, 148, 255, 0.12);
+  --plot-purple-area: rgba(161, 148, 255, 0.24);
+  --plot-amber-band: rgba(243, 189, 106, 0.14);
+}

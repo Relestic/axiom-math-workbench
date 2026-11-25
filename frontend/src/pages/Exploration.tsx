@@ -293,10 +293,10 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
           refY="3"
           orient="auto"
         >
-          <path d="M0 0L6 3L0 6" fill="#c7c5bd" />
+          <path d="M0 0L6 3L0 6" fill="var(--plot-axis)" />
         </marker>
       </defs>
-      <rect width={w} height={h} fill="#fbfbf9" />
+      <rect width={w} height={h} fill="var(--plot-bg)" />
       {c.grid &&
         Array.from({ length: 11 }, (_, i) => (
           <g key={i}>
@@ -305,14 +305,14 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
               y1={top}
               x2={l + (i * (r - l)) / 10}
               y2={bottom}
-              stroke="#eeede8"
+              stroke="var(--plot-grid)"
             />
             <line
               x1={l}
               y1={top + (i * (bottom - top)) / 10}
               x2={r}
               y2={top + (i * (bottom - top)) / 10}
-              stroke="#eeede8"
+              stroke="var(--plot-grid)"
             />
           </g>
         ))}
@@ -329,7 +329,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     y={sy(y0 + c.epsilon)}
                     width={r - l}
                     height={sy(y0 - c.epsilon) - sy(y0 + c.epsilon)}
-                    fill="#5750ff"
+                    fill="var(--plot-purple)"
                     fillOpacity=".08"
                   />
                   <line
@@ -337,7 +337,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     x2={r}
                     y1={sy(y0 + c.epsilon)}
                     y2={sy(y0 + c.epsilon)}
-                    stroke="#a9a4ff"
+                    stroke="var(--plot-purple)"
                     strokeDasharray="5 5"
                   />
                   <line
@@ -345,7 +345,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     x2={r}
                     y1={sy(y0 - c.epsilon)}
                     y2={sy(y0 - c.epsilon)}
-                    stroke="#a9a4ff"
+                    stroke="var(--plot-purple)"
                     strokeDasharray="5 5"
                   />
                 </>
@@ -357,7 +357,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     y={top}
                     width={sx(hi) - sx(lo)}
                     height={bottom - top}
-                    fill="#f6a623"
+                    fill="var(--plot-amber)"
                     fillOpacity=".10"
                   />
                   <line
@@ -365,7 +365,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     x2={sx(lo)}
                     y1={top}
                     y2={bottom}
-                    stroke="#df9e36"
+                    stroke="var(--plot-amber)"
                     strokeDasharray="5 5"
                   />
                   <line
@@ -373,7 +373,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                     x2={sx(hi)}
                     y1={top}
                     y2={bottom}
-                    stroke="#df9e36"
+                    stroke="var(--plot-amber)"
                     strokeDasharray="5 5"
                   />
                 </>
@@ -398,21 +398,26 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                   y={sy(sample * sample)}
                   width={(r - l) / c.n}
                   height={bottom - sy(sample * sample)}
-                  fill="#5c50f1"
+                  fill="var(--plot-purple)"
                   fillOpacity=".14"
-                  stroke="#736aff"
+                  stroke="var(--plot-purple)"
                   strokeWidth=".8"
                 />
               );
             })}
-          <path d={path} fill="none" stroke="#5c49ff" strokeWidth="2.6" />
+          <path
+            d={path}
+            fill="none"
+            stroke="var(--plot-purple)"
+            strokeWidth="2.6"
+          />
           {taylor && (
             <path
               d={points
                 .map(([x], i) => `${i ? "L" : "M"}${sx(x)},${sy(poly(x, c.n))}`)
                 .join(" ")}
               fill="none"
-              stroke="#00a393"
+              stroke="var(--plot-teal)"
               strokeWidth="2.3"
               strokeDasharray="7 4"
             />
@@ -424,14 +429,14 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                 y1={sy(y0 + slope * (xmin - c.x0))}
                 x2={sx(xmax)}
                 y2={sy(y0 + slope * (xmax - c.x0))}
-                stroke="#e6a13a"
+                stroke="var(--plot-amber)"
                 strokeWidth="2"
               />
               <circle
                 cx={sx(c.x0 + h1)}
                 cy={sy(fn(c.x0 + h1))}
                 r="5.5"
-                fill="#e6a13a"
+                fill="var(--plot-amber)"
                 stroke="white"
                 strokeWidth="2"
               />
@@ -441,7 +446,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                   y1={sy(y0 + tangent * (xmin - c.x0))}
                   x2={sx(xmax)}
                   y2={sy(y0 + tangent * (xmax - c.x0))}
-                  stroke="#00a393"
+                  stroke="var(--plot-teal)"
                   strokeWidth="1.8"
                   strokeDasharray="6 4"
                 />
@@ -452,7 +457,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                   y1={sy(c.h)}
                   x2={sx(0)}
                   y2={sy(0)}
-                  stroke="#eb477f"
+                  stroke="var(--plot-rose)"
                   strokeWidth="4"
                 />
               )}
@@ -463,7 +468,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
               cx={sx(c.x0)}
               cy={sy(y0)}
               r="5.5"
-              fill="#5c49ff"
+              fill="var(--plot-purple)"
               stroke="white"
               strokeWidth="2"
             />
@@ -477,7 +482,11 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
                 cy={sy(fn(x))}
                 r="9"
                 fill="none"
-                stroke={localError(c) < c.epsilon ? "#d59b40" : "#e94273"}
+                stroke={
+                  localError(c) < c.epsilon
+                    ? "var(--plot-amber)"
+                    : "var(--plot-rose)"
+                }
                 strokeWidth="1.5"
                 strokeDasharray="3 2"
               />
@@ -489,7 +498,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
         y1={sy(0)}
         x2={r + 15}
         y2={sy(0)}
-        stroke="#c7c5bd"
+        stroke="var(--plot-axis)"
         strokeWidth="1.4"
         markerEnd="url(#ex-arrow)"
       />
@@ -498,11 +507,11 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
         y1={bottom}
         x2={sx(0)}
         y2={top - 10}
-        stroke="#c7c5bd"
+        stroke="var(--plot-axis)"
         strokeWidth="1.4"
         markerEnd="url(#ex-arrow)"
       />
-      <g fill="#aaa89d" fontSize="11">
+      <g fill="var(--muted)" fontSize="11">
         <text x={r + 22} y={sy(0) + 5}>
           x
         </text>
@@ -521,7 +530,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
           <text
             x={l + 12}
             y={clamp(sy(y0 + c.epsilon) + 19, top + 20, bottom - 10)}
-            fill="#6554ff"
+            fill="var(--plot-purple)"
             fontSize="11"
           >
             ε = {fmt(c.epsilon)} 水平带
@@ -529,7 +538,7 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
           <text
             x={clamp(sx(lo) + 8, l + 5, r - 130)}
             y={top + 18}
-            fill="#c87917"
+            fill="var(--plot-amber)"
             fontSize="11"
           >
             δ = {fmt(c.delta)} 邻域
@@ -538,14 +547,14 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
             x={sx(c.x0)}
             y={bottom + 34}
             textAnchor="middle"
-            fill="#58627a"
+            fill="var(--text-secondary)"
             fontSize="11"
           >
             x₀ = {fmt(c.x0)}
           </text>
         </>
       )}
-      <text x={r - 135} y={top + 40} fill="#5c49ff" fontSize="13">
+      <text x={r - 135} y={top + 40} fill="var(--plot-purple)" fontSize="13">
         {taylor
           ? "f(x) = eˣ"
           : integral
@@ -553,12 +562,12 @@ function CurvePlot({ c, setX }: { c: Config; setX: (x: number) => void }) {
             : `f(x) = ${names[c.fn]}`}
       </text>
       {taylor && (
-        <text x={r - 135} y={top + 63} fill="#008b7d" fontSize="12">
+        <text x={r - 135} y={top + 63} fill="var(--plot-teal)" fontSize="12">
           P{c.n}(x)　Taylor 多项式
         </text>
       )}
       {derivative && (
-        <text x={l + 15} y={top + 25} fill="#b97b21" fontSize="12">
+        <text x={l + 15} y={top + 25} fill="var(--plot-amber)" fontSize="12">
           橙色：割线　绿色：切线
         </text>
       )}
@@ -600,7 +609,7 @@ function SurfacePlot({ c }: { c: Config }) {
       role="img"
       aria-label="向上开口的抛物面 z 等于 x 平方加 y 平方，展示 epsilon 水平夹层和 delta 圆盘"
     >
-      <rect width="790" height="390" fill="#fbfbf9" />
+      <rect width="790" height="390" fill="var(--plot-bg)" />
       <path
         d={
           line([
@@ -610,13 +619,13 @@ function SurfacePlot({ c }: { c: Config }) {
             [-1.15, 1.15, 0],
           ]) + "Z"
         }
-        fill="#f7f6f2"
-        stroke="#dddcd6"
+        fill="var(--surface-muted)"
+        stroke="var(--border-strong)"
       />
       {Array.from({ length: 9 }, (_, i) => {
         const v = -1 + i / 4;
         return (
-          <g key={i} stroke="#e8e7e1" strokeWidth=".7">
+          <g key={i} stroke="var(--plot-grid)" strokeWidth=".7">
             <path
               d={line([
                 [-1, v, 0],
@@ -634,9 +643,9 @@ function SurfacePlot({ c }: { c: Config }) {
       })}
       {c.band && (
         <g
-          fill="#5c49ff"
+          fill="var(--plot-purple)"
           fillOpacity=".06"
-          stroke="#9f97ff"
+          stroke="var(--plot-purple)"
           strokeDasharray="5 4"
         >
           <path d={circle(0, 0, lowSlab, 1.03)} />
@@ -650,7 +659,7 @@ function SurfacePlot({ c }: { c: Config }) {
             key={i}
             d={circle(0, 0, r * r, r)}
             fill="none"
-            stroke="#a49cff"
+            stroke="var(--plot-purple)"
             strokeWidth="1.1"
           />
         );
@@ -667,7 +676,7 @@ function SurfacePlot({ c }: { c: Config }) {
               }),
             )}
             fill="none"
-            stroke="#bdb7ff"
+            stroke="var(--plot-purple)"
             strokeWidth=".9"
           />
         );
@@ -675,9 +684,9 @@ function SurfacePlot({ c }: { c: Config }) {
       {c.neighborhood && (
         <path
           d={circle(c.x0, -0.35, 0, c.delta)}
-          fill="#ffb748"
+          fill="var(--plot-amber)"
           fillOpacity=".22"
-          stroke="#e9a02f"
+          stroke="var(--plot-amber)"
           strokeWidth="1.7"
         />
       )}
@@ -686,35 +695,35 @@ function SurfacePlot({ c }: { c: Config }) {
           [c.x0, -0.35, 0],
           [c.x0, -0.35, value],
         ])}
-        stroke="#7d71ef"
+        stroke="var(--plot-purple)"
         strokeDasharray="4 4"
       />
-      <circle cx={p0[0]} cy={p0[1]} r="3.5" fill="#d88a20" />
+      <circle cx={p0[0]} cy={p0[1]} r="3.5" fill="var(--plot-amber)" />
       <circle
         cx={up[0]}
         cy={up[1]}
         r="5"
-        fill="#5c49ff"
+        fill="var(--plot-purple)"
         stroke="white"
         strokeWidth="1.5"
       />
       <g fontSize="12">
-        <text x={up[0] + 12} y={up[1] - 8} fill="#5c49ff">
+        <text x={up[0] + 12} y={up[1] - 8} fill="var(--plot-purple)">
           f(P₀)
         </text>
-        <text x={p0[0] + 10} y={p0[1] + 20} fill="#bf7b20">
+        <text x={p0[0] + 10} y={p0[1] + 20} fill="var(--plot-amber)">
           P₀ · δ 圆盘
         </text>
-        <text x="590" y="44" fill="#5c49ff">
+        <text x="590" y="44" fill="var(--plot-purple)">
           z = x² + y²
         </text>
-        <text x="38" y="35" fill="#8991a2">
+        <text x="38" y="35" fill="var(--muted)">
           单位圆盘上的曲面 · 拓展演示
         </text>
-        <text x="38" y="57" fill="#a0a5af">
+        <text x="38" y="57" fill="var(--muted)">
           横向：δ 邻域　竖向：ε 夹层
         </text>
-        <text x="38" y="366" fill="#9298a5">
+        <text x="38" y="366" fill="var(--muted)">
           有限网格用于展示；条件由解析公式核对
         </text>
       </g>
@@ -723,9 +732,9 @@ function SurfacePlot({ c }: { c: Config }) {
           [0, 0, 0],
           [0, 0, 1.25],
         ])}
-        stroke="#aaa69d"
+        stroke="var(--plot-axis)"
       />
-      <text x={p(0, 0, 1.25)[0] + 7} y={p(0, 0, 1.25)[1]} fill="#888">
+      <text x={p(0, 0, 1.25)[0] + 7} y={p(0, 0, 1.25)[1]} fill="var(--muted)">
         z
       </text>
     </svg>

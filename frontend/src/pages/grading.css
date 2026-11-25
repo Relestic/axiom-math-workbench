@@ -3,18 +3,18 @@
   align-items: center;
   gap: 6px;
   margin-top: 9px;
-  color: #8b91a2;
+  color: var(--muted);
   font-size: 10px;
 }
 .grading-guide svg {
-  color: #6d5de7;
+  color: var(--primary);
   flex: none;
 }
 .grading-result {
   margin-top: 22px;
-  border: 1px solid #ded9f7;
+  border: 1px solid var(--accent-border);
   border-radius: 14px;
-  background: linear-gradient(180deg, #fbfaff 0%, #fff 100%);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface) 100%);
   padding: 18px;
 }
 .grading-result-head {
@@ -31,16 +31,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #efedff;
-  color: #4f43c9;
+  background: var(--surface-raised);
+  color: var(--primary);
 }
 .grading-score.correct {
-  background: #e8f7ee;
-  color: #137a3d;
+  background: var(--surface-muted);
+  color: var(--green);
 }
 .grading-score.wrong {
-  background: #ffebf0;
-  color: #c21d4c;
+  background: var(--rose-soft);
+  color: var(--rose);
 }
 .grading-score strong {
   font: 700 25px/1 var(--font-mono, monospace);
@@ -55,7 +55,7 @@
 }
 .grading-result-copy p {
   margin: 8px 0 0;
-  color: #4e5368;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.75;
 }
@@ -63,21 +63,21 @@
   list-style: none;
   margin: 14px 0 0;
   padding: 12px 0 0;
-  border-top: 1px solid #f0edf8;
+  border-top: 1px solid var(--border);
 }
 .grading-criteria li {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding: 5px 0;
-  color: #5d6379;
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.55;
 }
 .grading-criteria li em {
   margin-left: auto;
   flex: none;
-  color: #a1a2b4;
+  color: var(--muted);
   font: 9px var(--font-mono, monospace);
   font-style: normal;
 }
@@ -92,39 +92,39 @@
   margin-top: 1px;
 }
 .grading-criteria li.met .criterion-icon {
-  background: #e5f7ec;
-  color: #168744;
+  background: var(--green-soft);
+  color: var(--green);
 }
 .grading-criteria li.missing .criterion-icon {
-  background: #ffe9ef;
-  color: #d31451;
+  background: var(--rose-soft);
+  color: var(--rose);
 }
 .grading-reference {
   margin-top: 12px;
   padding: 9px 11px;
   border-radius: 8px;
-  background: #f7f5ee;
-  color: #7c7b74;
+  background: var(--surface-muted);
+  color: var(--muted);
   font-size: 10px;
   line-height: 1.7;
 }
 .grading-reference code {
   margin-left: 5px;
-  color: #4d43be;
+  color: var(--primary);
   font: 11px var(--font-mono, monospace);
   overflow-wrap: anywhere;
 }
 .grading-observation {
   margin-top: 8px;
-  color: #777b8e;
+  color: var(--muted);
   font-size: 10px;
   line-height: 1.65;
 }
 .grading-caveat {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px dashed #e9e5f3;
-  color: #9995aa;
+  border-top: 1px dashed var(--border);
+  color: var(--muted);
   font-size: 9.5px;
   line-height: 1.7;
 }

@@ -1,0 +1,351 @@
+.dashboard-maps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.card-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.card-heading h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 14px;
+}
+.new-label {
+  background: var(--amber-soft);
+  font-size: 9px;
+  font-weight: 650;
+  color: var(--amber);
+  border-radius: 20px;
+  padding: 4px 8px;
+}
+.map-preview-card > .small {
+  font-size: 11px;
+  margin: 8px 0 12px;
+}
+.constellation-preview {
+  border: 0;
+  background: var(--surface-raised);
+  border-radius: 11px;
+  padding: 10px;
+  width: 100%;
+  display: block;
+  overflow: hidden;
+  height: 157px;
+}
+.constellation-preview > svg,
+.constellation-preview > div {
+  height: 100%;
+  width: 100%;
+  border-radius: 7px;
+}
+.preview-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin: 18px 0 32px;
+}
+.preview-stats > div {
+  padding-left: 13px;
+  border-left: 1px solid var(--border);
+}
+.preview-stats > div:first-child {
+  padding-left: 0;
+  border: 0;
+}
+.preview-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 5px;
+}
+.preview-stats strong {
+  font-size: 17px;
+}
+.rose-text {
+  color: var(--rose) !important;
+}
+.green-text {
+  color: var(--green) !important;
+}
+.orange-text {
+  color: var(--amber) !important;
+}
+.teal-text {
+  color: var(--teal) !important;
+}
+.card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card-bottom small {
+  font-size: 10px;
+}
+.compact .constellation-preview {
+  height: 90px;
+}
+.compact .preview-stats {
+  margin-bottom: 16px;
+}
+.today-card {
+  margin-top: 24px;
+  box-shadow: 0 8px 26px #141b2b06;
+}
+.today-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 20px;
+}
+.today-heading > div:nth-child(2) {
+  flex: 1;
+}
+.today-heading h2 {
+  font-size: 21px;
+  margin: 0 0 3px;
+}
+.today-heading p {
+  font-size: 12px;
+  margin: 0;
+}
+.daily-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.daily-metrics > div {
+  background: var(--surface-raised);
+  border-radius: 12px;
+  padding: 17px;
+}
+.daily-metrics > div > span {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+}
+.daily-metrics strong {
+  font-size: 26px;
+  display: block;
+  margin: 3px 0;
+  color: var(--text);
+}
+.daily-metrics strong small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 12px;
+}
+.daily-metrics > div > small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.daily-progress {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 11px;
+  margin: 20px 0;
+  color: var(--text-secondary);
+}
+.daily-progress .progress-track {
+  flex: 1;
+}
+.daily-progress strong {
+  color: var(--purple);
+  font-size: 11px;
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.quick-actions > button {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 10px;
+  padding: 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+.quick-actions > button:hover {
+  border-color: var(--accent-border);
+  background: var(--surface);
+}
+.quick-actions strong {
+  font-size: 12px;
+  display: block;
+  margin-bottom: 4px;
+}
+.quick-actions small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.quick-actions > button > svg {
+  margin-left: auto;
+  color: var(--muted);
+}
+.today-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  gap: 14px;
+}
+.today-foot > small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.today-foot .text-button {
+  font-size: 11px;
+}
+.constellation-preview .constellation-mini {
+  min-height: 0;
+  height: 100%;
+}
+.constellation-preview .constellation-mini svg {
+  height: 100%;
+}
+
+@media (min-width: 1600px) {
+  .constellation-preview {
+    height: 175px;
+  }
+  .today-card {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 1250px) {
+  .card-bottom {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .card-bottom small {
+    max-width: 50%;
+    line-height: 1.8;
+  }
+  .today-heading .button-row .btn:last-child {
+    display: none;
+  }
+  .quick-actions {
+    gap: 8px;
+  }
+  .quick-actions strong {
+    font-size: 11px;
+  }
+  .quick-actions small {
+    font-size: 9px;
+  }
+  .quick-actions .tile-icon {
+    width: 25px;
+  }
+  .quick-actions button {
+    padding: 11px 8px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 1020px) {
+  .dashboard-maps {
+    gap: 15px;
+  }
+  .map-preview-card {
+    padding: 17px;
+  }
+  .card-heading h3 {
+    font-size: 12px;
+  }
+  .card-bottom {
+    flex-wrap: wrap;
+  }
+  .card-bottom small {
+    max-width: none;
+  }
+  .preview-stats {
+    margin-bottom: 20px;
+  }
+  .daily-metrics strong {
+    font-size: 22px;
+  }
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+  .quick-actions small {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-maps {
+    grid-template-columns: 1fr;
+  }
+  .map-preview-card {
+    padding: 20px;
+  }
+  .card-heading h3 {
+    font-size: 14px;
+  }
+  .constellation-preview {
+    height: 142px;
+  }
+  .card-bottom {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .card-bottom small {
+    max-width: 55%;
+  }
+  .preview-stats {
+    margin-bottom: 25px;
+  }
+  .today-heading {
+    flex-wrap: wrap;
+  }
+  .today-heading h2 {
+    font-size: 19px;
+  }
+  .today-heading .button-row {
+    width: 100%;
+  }
+  .daily-metrics {
+    gap: 8px;
+  }
+  .daily-metrics > div {
+    padding: 12px 9px;
+  }
+  .daily-metrics strong {
+    font-size: 21px;
+  }
+  .daily-metrics strong small {
+    display: block;
+    margin: 4px 0;
+    font-size: 10px;
+  }
+  .daily-metrics > div > small {
+    font-size: 9px;
+    line-height: 1.6;
+  }
+  .daily-metrics > div > span {
+    font-size: 10px;
+  }
+  .daily-metrics > div:last-child strong {
+    font-size: 16px;
+    margin: 10px 0;
+  }
+  .daily-progress {
+    gap: 10px;
+    font-size: 10px;
+  }
+  .today-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dashboard .card-bottom .btn {
+    font-size: 11px;
+  }
+}
