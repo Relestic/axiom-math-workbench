@@ -25,3 +25,9 @@ Chrome 在 1440 像素下同时显示两个面板，缩至 900 像素后，切�
 点击顶栏 AI 徽章添加个人 Key、选择模型、测试或清除。Windows 使用当前用户的 DPAPI 保护凭据，POSIX 使用仅属主可读写的文件。便携入口绑定本机回环地址。界面不会读取已保存的明文。设置中的完整 ZIP 包含 SQLite 一致性备份、浏览器学习数据及已上传的 PDF 附件。纯前端运行时可使用浏览器 JSON 存档。恢复前会检查格式、版本和场景，并提示覆盖范围。
 
 后端套件通过 126 项，覆盖密钥保存、重启读取、清除、访问范围和存档往返。使用模拟上游验证无效密钥、402、超时和网络失败分类。临时 SQLite 验证记录恢复，损坏文件拒绝，PDF 附件回迁。未调用真实付费模型。
+
+## M5 · Hiyori 舞台
+
+先在开发服务器的 `/spikes/hiyori.html` 验证 React 19、Vite 7、PixiJS 6.5.10 与 pixi-live2d-display 0.4.0。Chrome WebGL 采样得到 ParamEyeLOpen 和 ParamBreath 均在 0–1 之间变化；点击后 TapBody 返回成功。[独立验证截图](frontend/docs/hiyori-spike.png)。
+
+通过独立验证后接入右栏。生产构建包含本地 Cubism Core、模型、原始 2048 贴图、动作及许可证。Chrome 在工作台与证明页之间切换时保留同一 canvas，Application 创建一次。收起和展开后的实际 ticker.maxFPS 分别为 10 和 30。无 Key、无语音服务时模型仍可互动。

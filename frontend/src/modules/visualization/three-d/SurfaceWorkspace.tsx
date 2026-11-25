@@ -213,7 +213,9 @@ export default function SurfaceWorkspace({
             <Boxes size={13} /> 三维可视化 · 人机协作
           </span>
           <h1>看见曲面，也看见关系。</h1>
-          <p>拖动旋转、滚轮缩放，或直接告诉 AI 你想看的曲面、范围和视角。</p>
+          <p>
+            拖动旋转、滚轮缩放，或直接告诉 AI 你想看的曲面、范围和视角。
+          </p>
         </div>
         <div className="button-row">
           <button
@@ -242,10 +244,7 @@ export default function SurfaceWorkspace({
             <span className="badge dark">
               <SlidersHorizontal size={13} /> 人工控制
             </span>
-            <small>
-              {scene.view.azimuth.toFixed(0)}° /{" "}
-              {scene.view.elevation.toFixed(0)}°
-            </small>
+            <small>{scene.view.azimuth.toFixed(0)}° / {scene.view.elevation.toFixed(0)}°</small>
           </div>
           <label className="surface-label" htmlFor="surface-expression">
             曲面 z = f(x, y)
@@ -264,10 +263,7 @@ export default function SurfaceWorkspace({
               }
             }}
           />
-          <button
-            className="btn primary surface-apply"
-            onClick={applyExpression}
-          >
+          <button className="btn primary surface-apply" onClick={applyExpression}>
             <Wand2 size={15} /> 应用曲面
           </button>
 
@@ -275,9 +271,7 @@ export default function SurfaceWorkspace({
             {surfacePresets.map((preset) => (
               <button
                 key={preset.id}
-                className={
-                  scene.expression === preset.expression ? "selected" : ""
-                }
+                className={scene.expression === preset.expression ? "selected" : ""}
                 onClick={() => applyPreset(preset.expression)}
               >
                 {preset.label}
@@ -333,9 +327,7 @@ export default function SurfaceWorkspace({
           </div>
 
           <label className="surface-slider">
-            <span>
-              网格密度 <b>{scene.resolution}</b>
-            </span>
+            <span>网格密度 <b>{scene.resolution}</b></span>
             <input
               type="range"
               min={10}
@@ -348,9 +340,7 @@ export default function SurfaceWorkspace({
             />
           </label>
           <label className="surface-slider">
-            <span>
-              高度缩放 <b>{scene.view.heightScale.toFixed(1)}×</b>
-            </span>
+            <span>高度缩放 <b>{scene.view.heightScale.toFixed(1)}×</b></span>
             <input
               type="range"
               min={0.2}
@@ -363,9 +353,7 @@ export default function SurfaceWorkspace({
             />
           </label>
           <label className="surface-slider">
-            <span>
-              不透明度 <b>{Math.round(scene.display.opacity * 100)}%</b>
-            </span>
+            <span>不透明度 <b>{Math.round(scene.display.opacity * 100)}%</b></span>
             <input
               type="range"
               min={0.2}
@@ -495,9 +483,7 @@ export default function SurfaceWorkspace({
                 key={`${message.role}-${index}`}
               >
                 <small>{message.role === "user" ? "你" : "AI 助手"}</small>
-                <p>
-                  <MathText>{message.content}</MathText>
-                </p>
+                <p><MathText>{message.content}</MathText></p>
               </div>
             ))}
             {busy && (
@@ -514,9 +500,7 @@ export default function SurfaceWorkspace({
               "换成马鞍面并显示网格",
             ].map((prompt) => (
               <button key={prompt} onClick={() => setInput(prompt)}>
-                <span>
-                  <MathText>{prompt}</MathText>
-                </span>
+                <span><MathText>{prompt}</MathText></span>
                 <ArrowRight size={12} />
               </button>
             ))}

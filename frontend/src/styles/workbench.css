@@ -75,3 +75,7 @@
   .workbench-shell .search-wrap { width: min(21vw,145px); }
 }
 
+
+.companion-stage { position: relative; overflow: hidden; }
+.companion-stage canvas { display: block; cursor: pointer; }
+.companion-stage > p { padding: 15px; color: var(--muted); }
