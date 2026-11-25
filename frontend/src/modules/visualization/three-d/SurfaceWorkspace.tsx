@@ -17,6 +17,12 @@ import { useSession } from "../../../lib/session";
 import { useAIConnection } from "../../ai/connection";
 import { requestSurfaceChange } from "../api";
 import { normalizeSurfaceScene } from "./engine";
+import {
+  surfaceParameterCandidate,
+  surfaceParameterHints,
+} from "./companionScene";
+import { useWorkspaceEndpoint } from "../../../app/useWorkspaceEndpoint";
+import { sceneParameterBatch } from "../scene/parameterBatch";
 import { SurfacePlot3D } from "./SurfacePlot3D";
 import {
   defaultSurfaceScene,
@@ -103,6 +109,25 @@ export default function SurfaceWorkspace({
     persist(normalized, messages);
     if (options.message) setError("");
   };
+
+  const dirty = draft !== scene.expression;
+  useWorkspaceEndpoint("surface", JSON.stringify([scene, draft, busy]), {
+    query: () => ({
+      surface_scene: {
+        expression: scene.expression,
+        view: scene.view,
+        display: scene.display,
+        controls: dirty || busy ? {} : surfaceParameterHints(scene),
+      },
+    }),
+    command: (actions) => {
+      if (dirty || busy) return false;
+      const next = sceneParameterBatch(scene, actions, surfaceParameterCandidate);
+      if (!next) return false;
+      commit(next);
+      return true;
+    },
+  });
 
   const updateView = (patch: Partial<SurfaceScene["view"]>) => {
     setScene((current) => {

@@ -125,7 +125,7 @@ for (const [path, info] of Object.entries(lock.packages)) {
   const folder = join(frontend, path),
     metadata = JSON.parse(await readFile(join(folder, "package.json"), "utf8"));
   const files = (await readdir(folder)).filter((n) =>
-    /^(licen[sc]e|notice|copying|copyright)(\.|$)/i.test(n),
+    /^(licen[sc]e|notice|copying|copyright)([._-]|$)/i.test(n),
   );
   if (metadata.name === "javascript-natural-sort" && !files.length)
     files.push("naturalSort.js", "package.json", "README.md");

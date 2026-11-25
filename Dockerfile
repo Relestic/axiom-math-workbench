@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine AS web
-WORKDIR /app
+WORKDIR /app/frontend
 ARG NPM_REGISTRY=https://registry.npmjs.org
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm config set registry "$NPM_REGISTRY" && npm config set replace-registry-host always && npm ci
 COPY frontend/ ./
+COPY backend/app/modules/spoken_math.json /app/backend/app/modules/spoken_math.json
 RUN npm run build:online
 
 FROM python:3.12-slim
@@ -20,7 +21,7 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir --index-url "$PIP_INDEX_URL" -r /app/backend/requirements.txt
 COPY backend/ /app/backend/
 COPY deploy/ /app/deploy/
-COPY --from=web /app/dist-online/ /app/frontend/dist-online/
+COPY --from=web /app/frontend/dist-online/ /app/frontend/dist-online/
 RUN chmod +x /app/deploy/start.sh
 WORKDIR /app/backend
 EXPOSE 8080

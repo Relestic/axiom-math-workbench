@@ -207,7 +207,7 @@ export default function App() {
     ? remoteResults
     : localSearchResults;
   return (
-    <WorkbenchShell collapsed={railCollapsed} rail={<NavRail page={page} sidebar={sidebar} collapsed={railCollapsed}
+    <WorkbenchShell page={page} collapsed={railCollapsed} rail={<NavRail page={page} sidebar={sidebar} collapsed={railCollapsed}
       name={name} mastery={app.data.dashboard.summary.mastery.overall} serverMode={session.serverMode}
       role={session.user?.role} onToggle={() => setRailCollapsed(!railCollapsed)}
       closeMobile={() => setSidebar(false)} navigate={navigate} openProfile={() => setModal("profile")} />}>

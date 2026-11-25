@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { MathPreview, MathText, SymbolBar } from "../../components/Math";
 import type { Attempt } from "../../domain/types";
 import "../grading.css";
@@ -75,6 +76,29 @@ export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
     setSeenSolution(assistance.solution);
     setSelfChecks([]);
   }, [exercise.id]);
+  useWorkspaceEndpoint(
+    "exercises",
+    JSON.stringify([
+      unit.id,
+      exercise.id,
+      exercise.title,
+      exercise.type,
+      exercise.hint,
+      answer,
+    ]),
+    {
+      query: () => ({
+        exercise: {
+          id: exercise.id,
+          unit_id: unit.id,
+          title: exercise.title,
+          type: exercise.type,
+          draft_answer: answer.slice(0, 6000),
+          hint: exercise.hint,
+        },
+      }),
+    },
+  );
   const recordAssistance = (kind: "hint" | "solution") => {
     const next = {
       hint: usedHint || kind === "hint",

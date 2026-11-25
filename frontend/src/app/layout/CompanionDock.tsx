@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { CompanionStage } from "../../modules/companion/CompanionStage";
+import { CompanionPanel } from "../../modules/companion/CompanionPanel";
 import { PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 
-export function CompanionDock({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export function CompanionDock({ page, collapsed, onToggle }: { page: string; collapsed: boolean; onToggle: () => void }) {
   const element = useRef<HTMLDivElement>(null);
   const stage = useRef<CompanionStage | null>(null);
   const collapsedNow = useRef(collapsed);
@@ -36,6 +37,7 @@ export function CompanionDock({ collapsed, onToggle }: { collapsed: boolean; onT
       <div ref={element} className="companion-stage" aria-label="Hiyori 舞台">
         {unavailable && <p role="status">此设备无法显示 WebGL 舞台。</p>}
       </div>
+      <CompanionPanel page={page} stage={stage} />
     </div>
   </aside>;
 }

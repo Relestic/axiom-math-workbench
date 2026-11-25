@@ -58,3 +58,44 @@ export function loadFunctionScene(): Scene {
 export function applyFunctionScene(candidate: unknown): Scene {
   return validateScene(candidate);
 }
+
+const analysisParameters = {
+  graph: ["x0"],
+  continuity: ["x0", "epsilon", "delta"],
+  derivative: ["x0", "h"],
+  integral: ["x0", "integralStart", "integralEnd", "subdivisions"],
+  taylor: ["x0", "order"],
+} as const satisfies Record<Scene["mode"], readonly (keyof Scene)[]>;
+
+export function functionParameterHints(scene: Scene) {
+  return Object.fromEntries(
+    analysisParameters[scene.mode].map((name) => [name, scene[name]]),
+  );
+}
+
+export function functionParameterCandidate(
+  scene: Scene,
+  name: string,
+  value: number,
+): Scene | null {
+  if (!Number.isFinite(value)) return null;
+  const parameter = scene.parameters.find((item) => item.name === name);
+  const control = analysisParameters[scene.mode].find((item) => item === name);
+
+  try {
+    if (parameter && parameter.value !== value) {
+      return applyFunctionScene({
+        ...scene,
+        parameters: scene.parameters.map((item) =>
+          item === parameter ? { ...item, value } : item,
+        ),
+      });
+    }
+    if (control && scene[control] !== value) {
+      return applyFunctionScene({ ...scene, [control]: value });
+    }
+  } catch {
+    // Retain the current scene when validation rejects a suggestion.
+  }
+  return null;
+}

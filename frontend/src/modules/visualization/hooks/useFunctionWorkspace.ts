@@ -2,12 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyFunctionScene,
   FUNCTION_MODES,
+  functionParameterCandidate,
+  functionParameterHints,
   loadFunctionScene,
   type Scene,
 } from "../scene/functionScene";
 import { requestPlotChange, testAIConnection } from "../api";
 import { useAIConnection } from "../../ai/connection";
 import { analyze } from "../../../pages/FunctionPlot";
+import { useWorkspaceEndpoint } from "../../../app/useWorkspaceEndpoint";
+import { sceneParameterBatch } from "../scene/parameterBatch";
 
 export type FunctionWorkspaceProps = {
   onNavigate: (page: string) => void;
@@ -188,6 +192,32 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
   }
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(scene);
+  useWorkspaceEndpoint(
+    classic ? null : "explore",
+    JSON.stringify([scene, draft, busy]),
+    {
+      query: () => ({
+        function_scene: {
+          mode: scene.mode,
+          active_expression: math.curve.expression,
+          curves: scene.curves,
+          parameters: scene.parameters,
+          range: {
+            xMin: scene.xMin,
+            xMax: scene.xMax,
+            yMin: scene.yMin,
+            yMax: scene.yMax,
+          },
+          controls: dirty || busy ? {} : functionParameterHints(scene),
+        },
+      }),
+      command: (actions) => {
+        if (dirty || busy) return false;
+        const next = sceneParameterBatch(scene, actions, functionParameterCandidate);
+        return next !== null && commit(next);
+      },
+    },
+  );
   const setCurve = (id: string, value: Partial<Scene["curves"][number]>) =>
     setDraft((current) => ({
       ...current,

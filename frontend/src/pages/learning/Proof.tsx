@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MathText } from "../../components/Math";
-import { useAppData } from "../../app/DataProvider";
+import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
 export function Proof({ onNavigate, onSaveNote, notify }: Props) {
@@ -48,6 +48,28 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
               i
             ] || "补充说明",
         );
+  const steps = unit.proof.map((text, index) => ({
+    ref: `${unit.id}:${index}`,
+    index,
+    title: titles[index],
+    text,
+  }));
+  const proof = { unit_id: unit.id, current_step: steps[step], steps };
+  useWorkspaceEndpoint("proof", JSON.stringify(proof), {
+    query: () => ({ proof }),
+    command: (actions) => {
+      let targetIndex = step;
+      for (const action of actions) {
+        if (action.type === "highlight_proof_step") {
+          targetIndex =
+            steps.find((item) => item.ref === action.ref)?.index ?? targetIndex;
+        }
+      }
+      if (targetIndex === step) return false;
+      setStep(targetIndex);
+      return true;
+    },
+  });
   return (
     <div className="learning-page proof-page">
       <Heading
@@ -62,15 +84,17 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
           <h3>{unit.id === "uniform" ? "Heine–Cantor 定理" : unit.title}</h3>
           <p className="muted">完整证明 · {unit.proof.length} 个步骤</p>
           <div className="proof-step-list">
-            {titles.map((t, i) => (
+            {steps.map(({ ref, title, index: i }) => (
               <button
                 className={step === i ? "active" : ""}
-                key={i}
+                key={ref}
+                data-proof-step-ref={ref}
+                aria-current={step === i ? "step" : undefined}
                 onClick={() => setStep(i)}
               >
                 <span>{checked.includes(i) ? <Check size={13} /> : i + 1}</span>
                 <div>
-                  {t}
+                  {title}
                   <small>
                     {checked.includes(i) ? "已阅读确认" : "点击查看这一步"}
                   </small>
@@ -184,8 +208,8 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
           </button>
         </div>
         <ol>
-          {unit.proof.map((p, i) => (
-            <li key={i}><MathText>{p}</MathText></li>
+          {steps.map(({ ref, text }) => (
+            <li key={ref}><MathText>{text}</MathText></li>
           ))}
         </ol>
         <a

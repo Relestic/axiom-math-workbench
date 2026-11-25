@@ -16,8 +16,8 @@ export function ThemeSwitch() {
   </button>;
 }
 
-export function WorkbenchShell({ rail, children, collapsed }: {
-  rail: ReactNode; children: ReactNode; collapsed: boolean;
+export function WorkbenchShell({ page, rail, children, collapsed }: {
+  page: string; rail: ReactNode; children: ReactNode; collapsed: boolean;
 }) {
   const [dockCollapsed, setDockCollapsed] = useState(() => window.innerWidth < 1024);
   useEffect(() => {
@@ -29,6 +29,6 @@ export function WorkbenchShell({ rail, children, collapsed }: {
   return <div className="workbench-shell" data-rail={collapsed ? "closed" : "open"} data-dock={dockCollapsed ? "closed" : "open"}>
     {rail}
     {children}
-    <CompanionDock collapsed={dockCollapsed} onToggle={() => setDockCollapsed(!dockCollapsed)} />
+    <CompanionDock page={page} collapsed={dockCollapsed} onToggle={() => setDockCollapsed(!dockCollapsed)} />
   </div>;
 }

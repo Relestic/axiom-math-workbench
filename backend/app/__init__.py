@@ -144,6 +144,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .api.admin import bp as admin_bp
     from .api.ai import bp as ai_bp
     from .api.ai import legacy_bp
+    from .api.companion import bp as companion_bp
     from .api.archive import bp as archive_bp
     from .api.auth import bp as auth_bp
     from .api.bootstrap import bp as bootstrap_bp
@@ -171,6 +172,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         reports_bp,
         ai_bp,
         archive_bp,
+        companion_bp,
         legacy_bp,
         admin_bp,
     ):
