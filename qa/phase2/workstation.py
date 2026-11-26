@@ -1,3 +1,4 @@
+import re
 from urllib.parse import urlsplit
 
 from playwright.sync_api import expect
@@ -76,3 +77,28 @@ def restore_into_clean_workstation(page, server, archive_path):
     with page.expect_response(lambda r: r.url.endswith("/archive/import") and r.request.method == "POST") as restored:
         page.locator(".learning-archive-settings input[type=file]").set_input_files(archive_path)
     assert restored.value.ok, restored.value.text()
+
+
+def observe_speech(page):
+    # Observe the real voice engine and keep its native callbacks intact.
+    page.evaluate("""() => {
+        window.qaSpeech = { started: false };
+        const original = SpeechSynthesis.prototype.speak;
+        SpeechSynthesis.prototype.speak = function(utterance) {
+            window.qaSpeech.text = utterance.text;
+            utterance.addEventListener('start', () => { window.qaSpeech.started = true; });
+            return original.call(this, utterance);
+        };
+        speechSynthesis.getVoices();
+    }""")
+
+
+def check_speech(page, expected_text):
+    voices = page.evaluate("speechSynthesis.getVoices().filter(v => v.localService && /^zh/i.test(v.lang)).map(v => v.name)")
+    if voices:
+        page.wait_for_function("window.qaSpeech.started", timeout=10000)
+        assert expected_text in page.evaluate("window.qaSpeech.text")
+        print("Chrome native speech start:", voices[0])
+    else:
+        expect(page.locator(".companion-dock")).to_contain_text(re.compile("语音|朗读.*不可用"))
+        print("Chrome exposed no local Chinese voice; verified transcript and voice-unavailable state")

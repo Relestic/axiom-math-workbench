@@ -8,11 +8,11 @@
 >
 > **MVP：数学分析中从连续性到定积分的章节。标准正式版：覆盖本科数学分析完整主干，随后扩展到其他数学系核心课程。**
 
-## 本地工作台 · Phase 1
+## 本地工作台 · Phase 2
 
-Windows 源码目录可双击 [启动工作台.cmd](启动工作台.cmd)，默认打开本机 5186 端口。首次从 Git 检出项目时，需先安装后端依赖，并在 frontend 中安装 Node 依赖、构建便携前端。完整免安装包的使用者直接解压并运行包内的 `启动 Axiom.cmd` 即可。
+Windows x64 用户可完整解压最新的 `Axiom-Windows-Full-*.zip`，双击包内的 `启动 Axiom.cmd`。源码目录使用 [启动工作台.cmd](启动工作台.cmd)，默认地址为 `http://127.0.0.1:5186/`。从 Git 首次运行须安装 Python 后端依赖和 Node.js。启动脚本会补齐前端依赖并生成四栏工作台；后续改动源码后可运行 `启动工作台.cmd --rebuild` 强制重建。
 
-工作台默认进入本地学习空间。在右上角配置个人 DeepSeek 接入，在个人设置迁移学习存档。右栏 Hiyori 可跟随当前讲义、证明、图像和作答进行讲解。[运行与分阶段验收说明](PHASE1.md)
+工作台默认免登录。通过「学习书桌」读讲义、看图和做题，通过「书架与笔记」上传并逐页阅读 PDF。证明结构自查、符号计算、反例检验与本地朗读可离线使用。在顶栏配置个人 DeepSeek Key 后可生成页码卡片、逐步审阅证明并按错因生成变式题。顶栏头像下的导入与导出可迁移教材和学习记录。[Phase 2 验收记录](PHASE2.md) · [Phase 1 验收记录](PHASE1.md)
 
 ## 当前实现状态（2026-11-07）
 
@@ -24,7 +24,7 @@ Windows 源码目录可双击 [启动工作台.cmd](启动工作台.cmd)，默�
 
 - **后端（新增）**：`backend/` 提供可运行的单机演示后端，覆盖邀请账号与权限、教材导入与发布、定义/条件/证明/经典案例、知识图谱、图像场景与数学校验、练习与完整解答、作答记录与反馈、练习热力图、诊断、笔记、内容纠错、后台任务与模型用量。102 项 pytest 通过；启动、接口清单与验证边界见 [后端说明](backend/README.md) 与 [验证记录](backend/docs/verification.md)。
 - **运行入口**：稳定本地预览双击 `启动本地预览.cmd`（`http://127.0.0.1:8080/`）；完整前后端演示双击 `启动完整演示.cmd`；也可进入 `frontend` 后运行 `npm ci`、`npm run dev`。后端在 `backend` 下运行 `python -m app.cli seed --demo` 与 `python run.py`，API 文档为 <http://127.0.0.1:8000/api/docs>。
-- **文件分享**：`releases/` 中提供 Windows x64 免安装 ZIP，解压后双击包内的 `启动 Axiom.cmd`；随包提供运行环境，AI 需接收者自行配置密钥。该 ZIP 是 2026-11-02 的前端独立包，不含本次后端联调；联调版请使用 `启动完整演示.cmd`，待正式发布前再重新打包。
+- **文件分享**：本地 `releases/` 中的 Phase 2 Windows x64 完整包随附前端、后端和 Python。构建结果与校验值见 [Phase 2 验收记录](PHASE2.md)。
 - **前端说明**：[功能、运行与实现边界](frontend/README.md)；[数据层与迭代指南](frontend/docs/architecture.md)；[验证记录](frontend/docs/verification.md)。
 - **在线预览与部署**：临时公网地址、演示账号与隧道重启方式见 [ONLINE_PREVIEW.md](ONLINE_PREVIEW.md)。该地址依赖开发机，不是正式上线；真正部署使用 [`Dockerfile`](Dockerfile)、[`docker-compose.yml`](docker-compose.yml) 和 [部署说明](deploy/README.md)（腾讯云 Lighthouse/CVM、VPS、Render/Railway/Fly.io）。
 - **自由函数与 AI 改图**：新增 Math.js 表达式引擎、Plotly 交互绘图和本地 Node API。支持通过可配置的 OpenAI 兼容接口生成函数、参数、比较曲线与分析配置，经过校验后应用；未填写模型配置时可直接编辑公式。配置方法见 [AI 改图说明](frontend/docs/ai-functions.md)。

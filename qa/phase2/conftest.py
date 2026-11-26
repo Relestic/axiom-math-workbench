@@ -19,6 +19,13 @@ from playwright.sync_api import sync_playwright
 
 REPO = Path(__file__).resolve().parents[2]
 
+
+def workstation_env(port):
+    env = {k: v for k, v in os.environ.items()
+           if not k.upper().startswith(("AXIOM_", "AI_", "DEEPSEEK_", "OPENAI_"))}
+    env.update(AXIOM_PORT=str(port), AXIOM_NO_OPEN="1", PYTHONUTF8="1")
+    return env
+
 # The real Flask entry point and migrations run normally. Block external sockets
 # in the child process as well as in the browser, even when a model is configured.
 BOOT = """
@@ -62,13 +69,13 @@ class PortableServer:
         self.url = f"http://127.0.0.1:{self.port}"
 
     def start(self):
-        env = {k: v for k, v in os.environ.items()
-               if not k.upper().startswith(("AXIOM_", "AI_", "DEEPSEEK_", "OPENAI_"))}
-        env.update(AXIOM_PORT=str(self.port), AXIOM_NO_OPEN="1", PYTHONUTF8="1")
+        env = workstation_env(self.port)
         log_path = self.root / "server.log"
+        embedded = any(Path(self.python).parent.glob("python*._pth"))
+        options = ["-s", "-B"] if embedded else ["-B"]
         with log_path.open("ab") as log:
             self.process = subprocess.Popen(
-                [self.python, "-c", BOOT, str(self.root / "backend" / "portable_server.py"),
+                [self.python, *options, "-c", BOOT, str(self.root / "backend" / "portable_server.py"),
                  str(Path(__file__).with_name("fake_deepseek.py"))],
                 cwd=self.root, env=env, stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 45
@@ -101,19 +108,22 @@ class PortableServer:
 
 
 def pytest_addoption(parser):
+    parser.addoption("--portable-backend", default=str(REPO / "backend"),
+                     help="Backend (app, migrations and portable_server.py) from the checkout or extracted ZIP")
     parser.addoption("--portable-web", default=str(REPO / "frontend" / "dist-portable"),
                      help="Built portable web folder to copy into the isolated workstation")
     parser.addoption("--portable-python", default=sys.executable,
                      help="Python interpreter containing the portable server dependencies")
     parser.addoption("--chrome-binary", default=os.environ.get("AXIOM_QA_CHROME"),
                      help="Use this Chrome/Chromium executable instead of the installed Chrome channel")
+    parser.addoption("--release-root", help="Root of the freshly extracted Windows ZIP containing runtime and web")
 
 
 @pytest.fixture
 def server(pytestconfig):
     with tempfile.TemporaryDirectory(prefix="axiom-acceptance-") as temp:
         instance = PortableServer(Path(temp), Path(pytestconfig.getoption("--portable-web")),
-                                  pytestconfig.getoption("--portable-python"))
+                                  pytestconfig.getoption("--portable-python"), Path(pytestconfig.getoption("--portable-backend")))
         try:
             instance.start()
             yield instance

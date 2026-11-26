@@ -17,9 +17,9 @@ if not (WEB / "index.html").is_file():
     WEB = ROOT / "frontend" / "dist-portable"
 if not (WEB / "index.html").is_file():
     raise RuntimeError("Build the frontend with node scripts/build-portable.mjs before starting Axiom.")
-DATA = ROOT / "data"
 load_dotenv(ROOT / "backend" / ".env", override=False)
-DATA.mkdir(exist_ok=True)
+DATA = Path(os.environ.get("AXIOM_DATA_DIR") or ROOT / "data").resolve()
+DATA.mkdir(parents=True, exist_ok=True)
 secret_path = DATA / "session-secret.txt"
 if not secret_path.exists():
     secret_path.write_text(secrets.token_urlsafe(48), encoding="utf8")

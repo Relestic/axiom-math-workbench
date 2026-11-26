@@ -10,6 +10,7 @@ from playwright.sync_api import expect
 
 from conftest import PortableServer, REPO
 from fake_deepseek import DUMMY_KEY
+from workstation import check_speech, observe_speech
 from workstation import SOURCE_B, bootstrap, drag_pdf, export_zip, restore_into_clean_workstation
 
 
@@ -119,28 +120,11 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
     expect(exercise).to_contain_text(REVIEW["steps"][0]["suggestion"])
     page.locator(".companion-stage[data-ready]").wait_for()
     page.get_by_role("button", name="开启伴学朗读").click()
-    # Observe the real voice engine and keep its native callbacks intact.
-    page.evaluate("""() => {
-        window.qaSpeech = { started: false };
-        const original = SpeechSynthesis.prototype.speak;
-        SpeechSynthesis.prototype.speak = function(utterance) {
-            window.qaSpeech.text = utterance.text;
-            utterance.addEventListener('start', () => { window.qaSpeech.started = true; });
-            return original.call(this, utterance);
-        };
-        speechSynthesis.getVoices();
-    }""")
+    observe_speech(page)
     exercise.get_by_role("button", name=EXPLAIN_BUTTON).click()
     transcript = page.get_by_role("log", name="伴学对话记录")
     expect(transcript).to_contain_text(REVIEW["summary"])
-    voices = page.evaluate("speechSynthesis.getVoices().filter(v => v.localService && /^zh/i.test(v.lang)).map(v => v.name)")
-    if voices:
-        page.wait_for_function("window.qaSpeech.started", timeout=10000)
-        assert "尺度" in page.evaluate("window.qaSpeech.text")
-        print("Chrome native speech start:", voices[0])
-    else:
-        expect(page.locator(".companion-dock")).to_contain_text(re.compile("语音|朗读.*不可用"))
-        print("Chrome exposed no local Chinese voice; verified transcript and voice-unavailable state")
+    check_speech(page, "尺度")
     page.get_by_role("button", name="静音只看字幕").click()
 
     variant = posted(page, "/local/exercises/variant", exercise.get_by_role("button", name=VARIANT_BUTTON).click)
