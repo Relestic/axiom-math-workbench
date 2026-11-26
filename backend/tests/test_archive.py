@@ -64,3 +64,22 @@ def test_archive_portable_pdf_attachment(app, client):
         restored = Path(session.query(Asset).filter_by(sha256=digest).one().storage_path)
         assert restored.is_relative_to(config.data_dir / "uploads")
         assert restored.read_bytes() == content
+
+def test_archive_accepts_maximum_sized_local_textbook(app, client):
+    from app.db import session_scope
+    from app.models import Asset
+    config = app.config["AXIOM"]
+    config.local_mode = True
+    path = config.data_dir / "uploads" / "full-size.pdf"
+    path.parent.mkdir(exist_ok=True)
+    with path.open("wb") as output:
+        output.write(b"%PDF-1.7\n")
+        output.truncate(50 * 1024 * 1024)
+    with path.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    with session_scope() as session:
+        session.add(Asset(kind="pdf", filename=path.name, mime="application/pdf",
+                          sha256=digest, size_bytes=path.stat().st_size, storage_path=str(path)))
+    archive = client.get("/api/v1/archive/export")
+    assert archive.status_code == 200
+    assert upload(client, archive.data, preview=True).status_code == 200

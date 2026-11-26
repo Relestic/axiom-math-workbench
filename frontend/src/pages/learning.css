@@ -1,6 +1,8 @@
 .learning-page {
   font-size: 13px;
 }
+.local-lecture-card h1 { font-size: 21px; }
+.local-lecture-card li, .local-lecture-card p { line-height: 1.85; }
 .learning-page .section-title {
   gap: 9px;
   flex-wrap: wrap;

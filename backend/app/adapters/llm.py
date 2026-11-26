@@ -68,7 +68,7 @@ def _require_credentials() -> Credentials:
     require_local()
     credentials = local_key_store().read()
     if credentials is None:
-        raise ApiError("service_unavailable", "请先在工作台设置个人 DeepSeek API Key")
+        raise ApiError("service_unavailable", "请先在顶部配置个人 DeepSeek Key")
     return credentials
 
 

@@ -2,25 +2,25 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import os
 import re
 import sqlite3
+import shutil
 import tempfile
 import time
 import zipfile
 from contextlib import closing
 from pathlib import Path
 
-from flask import Blueprint, current_app, request, send_file
+from flask import Blueprint, Request, current_app, request, send_file
 
 from ..db import get_engine
 from ..errors import ApiError
 from .local_only import require_local
 
 bp = Blueprint("archive", __name__, url_prefix="/api/v1/archive")
-MAX_ARCHIVE = 50 * 1024 * 1024
+MAX_ARCHIVE = 256 * 1024 * 1024
 MAX_JSON = 8 * 1024 * 1024
 STORAGE_KEYS = {
     "name", "theme", "last-page", "offline-concept", "offline-notes", "offline-attempts",
@@ -29,6 +29,14 @@ STORAGE_KEYS = {
     "companion-muted",
 }
 DRAFT_KEY = re.compile(r"(?:draft|assistance|exercise-variant)-[\w.-]{1,160}")
+
+
+class WorkstationRequest(Request):
+    @property
+    def max_content_length(self):
+        if self.endpoint == "archive.import_archive" and current_app.config["AXIOM"].local_mode:
+            return MAX_ARCHIVE + 2 * 1024 * 1024  # ZIP headers and multipart framing
+        return super().max_content_length
 
 
 def invalid(message="文件不是有效的 Axiom 学习存档"):
@@ -63,10 +71,6 @@ def schema(conn):
     ).fetchall()
 
 
-def sha(data):
-    return hashlib.sha256(data).hexdigest()
-
-
 def upload_root():
     return (Path(current_app.config["AXIOM"].data_dir) / "uploads").resolve()
 
@@ -92,8 +96,22 @@ def export_archive():
     if not isinstance(payload, dict):
         raise invalid("导出设置格式错误")
     storage = check_storage(payload.get("storage", {}))
+    stream = tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024)
+    try:
+        write_archive(stream, storage)
+        size = stream.tell()
+        stream.seek(0)
+        response = send_file(stream, mimetype="application/zip", as_attachment=True,
+                             download_name="Axiom-learning.zip", max_age=0)
+        response.content_length = size
+        return response
+    except BaseException:
+        stream.close()
+        raise
+
+
+def write_archive(stream, storage):
     manifest = {"format": "axiom-learning", "version": 1, "storage": storage}
-    stream = io.BytesIO()
     with tempfile.TemporaryDirectory() as tmp:
         db_path = Path(tmp) / "learning.sqlite"
         with closing(get_engine().raw_connection()) as live, closing(sqlite3.connect(db_path)) as snap:
@@ -112,24 +130,23 @@ def export_archive():
                     raise invalid("教材附件缺失，无法生成完整存档")
                 total += path.stat().st_size
                 if total > MAX_ARCHIVE:
-                    raise ApiError("payload_too_large", "学习存档超过 50 MB")
-                data = path.read_bytes()
-                if sha(data) != digest:
-                    raise invalid("教材附件内容与记录不一致")
-                pack.writestr(f"files/{digest}.pdf", data)
+                    raise ApiError("payload_too_large", "学习存档超过 256 MB")
+                with path.open("rb") as source:
+                    if hashlib.file_digest(source, "sha256").hexdigest() != digest:
+                        raise invalid("教材附件内容与记录不一致")
+                    source.seek(0)
+                    with pack.open(f"files/{digest}.pdf", "w") as zipped:
+                        shutil.copyfileobj(source, zipped)
                 included.add(digest)
             if total > MAX_ARCHIVE:
-                raise ApiError("payload_too_large", "学习存档超过 50 MB")
-            db_bytes = db_path.read_bytes()
-            manifest["database_sha256"] = sha(db_bytes)
+                raise ApiError("payload_too_large", "学习存档超过 256 MB")
+            with db_path.open("rb") as source:
+                manifest["database_sha256"] = hashlib.file_digest(source, "sha256").hexdigest()
             metadata = json.dumps(manifest, ensure_ascii=False).encode("utf8")
             if len(metadata) > MAX_JSON or total + len(metadata) > MAX_ARCHIVE:
                 raise ApiError("payload_too_large", "学习存档超过容量限制")
-            pack.writestr("learning.sqlite", db_bytes)
+            pack.write(db_path, "learning.sqlite")
             pack.writestr("learning.json", metadata)
-    stream.seek(0)
-    return send_file(stream, mimetype="application/zip", as_attachment=True,
-                     download_name="Axiom-learning.zip", max_age=0)
 
 
 def validate_entries(pack):
@@ -147,14 +164,18 @@ def validate_entries(pack):
 def restore(pack, folder, preview):
     names = validate_entries(pack)
     info = json.loads(pack.read("learning.json"))
-    db_bytes = pack.read("learning.sqlite")
+    path = folder / "incoming.sqlite"
+    with pack.open("learning.sqlite") as source, path.open("wb") as target:
+        shutil.copyfileobj(source, target)
+    with path.open("rb") as source:
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+        source.seek(0)
+        magic = source.read(16)
     if (not isinstance(info, dict) or info.get("format") != "axiom-learning"
-            or info.get("version") != 1 or info.get("database_sha256") != sha(db_bytes)
-            or not db_bytes.startswith(b"SQLite format 3\x00")):
+            or info.get("version") != 1 or info.get("database_sha256") != digest
+            or magic != b"SQLite format 3\x00"):
         raise invalid()
     storage = check_storage(info.get("storage"))
-    path = folder / "incoming.sqlite"
-    path.write_bytes(db_bytes)
     with closing(sqlite3.connect(path)) as snap, closing(get_engine().raw_connection()) as db:
         snap.execute("PRAGMA trusted_schema=OFF")
         live = db.driver_connection
@@ -171,12 +192,16 @@ def restore(pack, folder, preview):
             raise invalid("存档缺少教材附件")
         destination = upload_root() / "restored"
         for name in names:
-            data = pack.read(name)
             digest = Path(name).stem
-            if sha(data) != digest or not data.startswith(b"%PDF-"):
-                raise invalid("存档附件校验失败")
-            if not preview:
-                (folder / digest).write_bytes(data)
+            staged_file = folder / digest
+            with pack.open(name) as source, staged_file.open("wb") as target:
+                shutil.copyfileobj(source, target)
+            with staged_file.open("rb") as source:
+                if source.read(5) != b"%PDF-":
+                    raise invalid("存档附件校验失败")
+                source.seek(0)
+                if hashlib.file_digest(source, "sha256").hexdigest() != digest:
+                    raise invalid("存档附件校验失败")
         if preview:
             return {"storage": storage}
         if names:
@@ -186,7 +211,8 @@ def restore(pack, folder, preview):
                 target = destination / f"{digest}.pdf"
                 # Content-addressed writes can be repeated safely if a restore is interrupted.
                 with tempfile.NamedTemporaryFile(dir=destination, delete=False) as staged:
-                    staged.write((folder / digest).read_bytes())
+                    with (folder / digest).open("rb") as source:
+                        shutil.copyfileobj(source, staged)
                 try:
                     os.replace(staged.name, target)
                 finally:

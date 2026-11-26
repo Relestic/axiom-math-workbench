@@ -1,0 +1,43 @@
+.textbook-shelf, .textbook-reader { color: var(--text); }
+.textbook-shelf h1 { margin: 0 0 15px; font-size: var(--font-xl); }
+.textbook-shelf .upload-zone { min-height: 125px; }
+.textbook-shelf .upload-zone:hover { background: var(--accent-soft); }
+.shelf-book { margin-top: 16px; }
+.shelf-book-heading, .shelf-book-heading > div, .shelf-actions, .shelf-inline,
+.reader-tools, .reader-tools form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shelf-book-heading { justify-content: space-between; }
+.shelf-book-heading > div:first-child { min-width: 0; flex-wrap: nowrap; }
+.shelf-book-heading svg { flex: none; color: var(--teal); }
+.shelf-book-heading h2 { margin: 0; overflow-wrap: anywhere; font-size: 17px; }
+.shelf-meta { margin: 12px 0; color: var(--muted); }
+.shelf-scan-list { max-height: 135px; overflow-y: auto; margin-bottom: 12px; color: var(--amber); }
+.shelf-book p, .textbook-shelf > p { font-size: 13px; }
+.shelf-scan-list p, .shelf-extract p, .shelf-inline p { margin: 5px 0; }
+.shelf-inline { margin-top: 12px; }
+.shelf-inline label, .reader-tools label { display: flex; align-items: center; gap: 6px; }
+.shelf-inline input, .reader-tools :is(input, select) {
+  max-width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+}
+.shelf-inline input[type="number"], .reader-tools input { width: 68px; }
+.shelf-extract { margin-top: 12px; border-top: 1px solid var(--border); }
+.shelf-error, .shelf-book .danger { color: var(--rose); }
+.textbook-reader { display: flex; min-width: 0; flex-direction: column; height: 100%; gap: 10px; }
+.reader-tools { padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); font-size: 12px; }
+.reader-tools > label { min-width: 0; max-width: 100%; }
+.reader-tools select { flex: 1; }
+.reader-tools form > span { color: var(--muted); }
+.textbook-reader iframe { flex: 1; width: 100%; min-height: 360px; border: 1px solid var(--border); border-radius: 9px; }
+.reader-empty h3 { margin-top: 0; }
+@media (max-width: 1023px) {
+  .textbook-reader iframe { min-height: 65dvh; }
+}

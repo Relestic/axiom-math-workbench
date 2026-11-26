@@ -4,6 +4,13 @@ import react from "@vitejs/plugin-react";
 import { createAIMiddleware } from "./server/ai";
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
+  const pdfProxy = {
+    "^/api/v1/local/textbooks/[^/]+/file$": {
+      target: env.VITE_API_BASE && env.VITE_API_BASE !== "__SAME_ORIGIN__"
+        ? env.VITE_API_BASE : "http://127.0.0.1:8000",
+      changeOrigin: true,
+    },
+  };
   const handler = createAIMiddleware({
     baseUrl: env.AI_BASE_URL || "https://api.openai.com/v1",
     model: env.AI_MODEL || "",
@@ -34,10 +41,11 @@ export default defineConfig(({ mode }) => {
     server: {
       fs: { allow: [process.cwd(), resolve("../backend/app/modules/spoken_math.json")] },
       host: "127.0.0.1",
+      proxy: pdfProxy,
       port: 5174,
       strictPort: true,
       watch: { ignored: ["**/.tmp/**", "**/dist/**"] },
     },
-    preview: { host: "127.0.0.1", port: 5175, strictPort: true },
+    preview: { host: "127.0.0.1", port: 5175, strictPort: true, proxy: pdfProxy },
   };
 });

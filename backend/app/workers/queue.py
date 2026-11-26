@@ -17,7 +17,7 @@ from flask import Flask
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..adapters.pdf import extract_text, inspect_pdf
+from ..adapters.pdf import page_data
 from ..config import Config
 from ..db import session_scope
 from ..errors import ApiError
@@ -110,38 +110,41 @@ def _parse_textbook(session: Session, job: Job, config: Config) -> dict[str, Any
     from pathlib import Path
 
     data = Path(asset.storage_path).read_bytes() if Path(asset.storage_path).exists() else b""
-    info = inspect_pdf(data)
-    text, error = extract_text(asset.storage_path) if info["extraction_available"] else (None, None)
+    error = None
+    try:
+        info = page_data(data)
+    except ApiError as exc:
+        # Existing admin jobs accept manual text import even for damaged PDFs.
+        info = {"extractor": "pypdf", "page_count": None, "pages": [], "outline": []}
+        error = exc.message
+    text = "\n\n".join(page["text"] for page in info["pages"]).strip()
     meta = dict(textbook.parse_meta or {})
     meta.update(
         {
             "asset_id": asset.id,
-            "page_count_estimate": info["page_count_estimate"],
+            "page_count_estimate": info["page_count"],
             "extractor": info["extractor"],
-            "extraction_available": info["extraction_available"],
+            "extraction_available": True,
             "extraction_error": error,
             "text_preview": (text or "")[:2000],
             "text_characters": len(text or ""),
-            "note": info["note"],
+            "note": "pypdf 按页提取文字；扫描页可对照原文人工录入。",
             "parsed_at": datetime.now(timezone.utc).isoformat(),
         }
     )
     textbook.parse_meta = meta
-    if textbook.page_count is None and info["page_count_estimate"]:
-        textbook.page_count = info["page_count_estimate"]
+    if textbook.page_count is None and info["page_count"]:
+        textbook.page_count = info["page_count"]
     if text:
         textbook.parse_state = "needs_review"
         message = "已提取文本，必须人工确认章节与公式后才能发布知识点。"
     else:
         textbook.parse_state = "needs_text_import"
-        message = (
-            "PDF 已保存并通过结构检查，但没有可用的文本提取器；"
-            "请导入已核对文本，或安装可选依赖后重新解析。"
-        )
+        message = error or "没有可提取的文字，请对照原页导入已核对文本。"
     return {
         "textbook_id": textbook.id,
         "parse_state": textbook.parse_state,
-        "page_count_estimate": info["page_count_estimate"],
+        "page_count_estimate": info["page_count"],
         "extractor": info["extractor"],
         "extracted_characters": len(text or ""),
         "message": message,

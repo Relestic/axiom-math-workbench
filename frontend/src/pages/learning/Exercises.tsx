@@ -32,7 +32,17 @@ function savedVariant(id: string) {
   return Number.isInteger(n) && n >= 2 && n <= 5 ? n : 2;
 }
 
-export function Exercises({ onNavigate, onSaveNote, notify }: Props) {
+export function Exercises(props: Props) {
+  const app = useAppData();
+  const {unit} = useUnit();
+  if (!app.data.exercises.some(item => item.topicId === unit.id)) {
+    return <section className="card"><h2>{unit.title}</h2><p>当前知识点还没有练习题。</p>
+      <button className="btn" onClick={() => props.onNavigate("textbook")}>阅读这张知识卡片</button></section>;
+  }
+  return <ExerciseWorkspace {...props}/>;
+}
+
+function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
   const { unit, select } = useUnit();
   const [coefficient, setCoefficient] = useState(() => savedVariant(unit.id));

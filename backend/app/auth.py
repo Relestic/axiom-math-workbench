@@ -18,6 +18,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .db import get_session
 from .errors import ApiError
 from .models import AuthEvent, Invite, RefreshToken, User, utcnow
+from .modules.content_visibility import use_shared_catalog
 
 ACCESS_TTL_DEFAULT = 1800
 REFRESH_TTL_DEFAULT = 14 * 24 * 3600
@@ -245,6 +246,7 @@ def require_auth(*roles: str) -> Callable:
                 raise ApiError("forbidden", "当前账号无权执行该操作")
             g.current_user = user
             g.current_session = session
+            use_shared_catalog(session)
             return func(*args, **kwargs)
 
         return wrapper

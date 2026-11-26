@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   offlineClassics,
   offlineCurriculum,
@@ -6,11 +6,12 @@ import {
 } from "../../data/offline";
 import type { DataBundleDto } from "../../domain/dto";
 import { buildUnits, mapClassicSets } from "../../domain/mappers";
-import type { AppData, DataSource, Exercise } from "../../domain/types";
+import type { AppData, CurriculumUnit, DataSource, Exercise } from "../../domain/types";
 
 const offlineContent = { units: offlineCurriculum, classics: offlineClassics };
 
-export function useTeachingContent(source: DataSource) {
+export function useTeachingContent(source: DataSource, localUnits: CurriculumUnit[]) {
+  const units = useMemo(() => [...offlineContent.units, ...localUnits], [localUnits]);
   const [serverContent, setServerContent] = useState<
     Pick<AppData, "units" | "classics">
   >({
@@ -43,7 +44,7 @@ export function useTeachingContent(source: DataSource) {
   );
 
   return {
-    ...(source === "server" ? serverContent : offlineContent),
+    ...(source === "server" ? serverContent : {units, classics:offlineContent.classics}),
     loadServer,
   };
 }

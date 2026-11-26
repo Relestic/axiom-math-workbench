@@ -38,7 +38,7 @@
 | 数学 | SymPy 1.13 + NumPy；白名单解析器，不执行用户或模型代码 |
 | 模型 | 任意 OpenAI 兼容 Chat Completions；另有明确标记的 `mock` 离线 Provider |
 | 任务 | SQLite 任务表 + 单进程线程 Worker；接口与 Celery 任务处理函数同形 |
-| PDF | 内置结构检查与页数估计；`pdfplumber`/`pypdf` 存在时才提取文本 |
+| PDF | 使用固定版本的纯 Python 依赖 `pypdf` 逐页读取文字、页数和目录。文字过少的页面标记为需要 OCR，可在书桌内对照原页阅读。 |
 | 测试 | pytest 7 |
 
 **为什么不是 FastAPI？** 根 `readme.md` 把 FastAPI 列为候选方案，同时要求“工程阶段选择受支持的组合”。本机评审环境完全离线，没有 FastAPI/uvicorn/starlette 与 Celery/Alembic/pdfplumber，无法安装。因此使用同一台机器已具备的 Flask + Pydantic + SQLAlchemy 实现同样的模块化单体边界：`api/`（入口）→ `modules/`（业务）→ `adapters/`（模型、数学、文件、PDF）→ `models/`（持久化）。业务层不依赖 Flask 的请求对象，迁移到 FastAPI 时主要替换 API 层与错误处理，数据库和业务服务可以保留。

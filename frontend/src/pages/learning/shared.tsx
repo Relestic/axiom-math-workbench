@@ -1,14 +1,25 @@
 import type { ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { useAppData } from "../../app/DataProvider";
 import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
+import { pageLabel } from "../../modules/teaching/localTextbooks";
 
 export type Props = {
   onNavigate: (page: string) => void;
   onSaveNote: (text: string, conceptId?: string) => void;
   notify: (text: string) => void;
 };
+export type SourceProps = Props & { onReadSource: (bookId: string, page: number) => void };
+
+export function SourcePageButton({ source, read }: {
+  source: NonNullable<CurriculumUnit["textbookSource"]>;
+  read: SourceProps["onReadSource"];
+}) {
+  return <button className="btn" type="button" onClick={() => read(source.textbookId, source.pageStart)}>
+    <BookOpen size={15} />查看课本原文 · {pageLabel(source.pageStart, source.pageEnd)}
+  </button>;
+}
 export function useUnit() {
   const { data, selectedConceptId, selectConcept } = useAppData();
   const unit = (data.units.find((item) => item.id === selectedConceptId) ||

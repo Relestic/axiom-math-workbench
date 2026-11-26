@@ -9,9 +9,7 @@ sympy==1.13.2
 numpy==1.26.4
 python-dotenv==1.0.1
 
-# Optional, only needed for PDF text extraction:
-# pdfplumber>=0.11
-# pypdf>=4.2
+pypdf==7.1.1
 
 # Development / verification:
 # pytest==7.4.4

@@ -1,3 +1,9 @@
+export type LocalBook = {
+  id: string;
+  title: string;
+  page_count: number;
+  pages: { page: number; char_count: number; needs_ocr: boolean }[];
+};
 export type CurriculumUnit = {
   id: string;
   title: string;
@@ -13,6 +19,7 @@ export type CurriculumUnit = {
   conditions: string[];
   tools: string[];
   source: string;
+  textbookSource?: {textbookId: string; pageStart: number; pageEnd: number; theorem: string};
   symbols?: { symbol: string; reading: string; meaning: string }[];
 };
 
@@ -28,6 +35,8 @@ export type Exercise = {
   difficulty?: number;
   skill?: string;
   type?: string;
+  source?: string;
+  provenance?: {parent_attempt_id?: string; target_error?: string; model?: string};
 };
 
 export type AttemptFeedback = {

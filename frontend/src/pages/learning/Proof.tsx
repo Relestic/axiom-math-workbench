@@ -22,14 +22,14 @@ import {
 import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
-import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
+import { Heading, ModuleSelect, SourcePageButton, useUnit, type SourceProps } from "./shared";
 
-export function Proof(props: Props) {
+export function Proof(props: SourceProps) {
   const { unit } = useUnit();
   return <ProofSteps key={unit.id} {...props} />;
 }
 
-function ProofSteps({ onNavigate, onSaveNote, notify }: Props) {
+function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProps) {
   const { unit, select } = useUnit();
   const [step, setStep] = useState(0);
   const [checked, setChecked] = useState<number[]>([]);
@@ -213,7 +213,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify }: Props) {
             <li key={ref}><MathText>{text}</MathText></li>
           ))}
         </ol>
-        <a
+        {unit.textbookSource ? <SourcePageButton source={unit.textbookSource} read={onReadSource} /> : <a
           className="source-link"
           href={unit.source}
           target="_blank"
@@ -221,7 +221,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify }: Props) {
         >
           <ExternalLink size={14} />
           查看相关定理的参考讲义
-        </a>
+        </a>}
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 """Run the portable entry point with a private SQLite database and headless Chrome."""
+import json
 import os
 from pathlib import Path
 import shutil
@@ -34,6 +35,8 @@ def offline(event, args):
 sys.addaudithook(offline)
 server = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(server.parent))
+if (server.parent.parent / "model-rules.json").is_file():
+    runpy.run_path(sys.argv[2])["install"](server.parent.parent)
 runpy.run_path(str(server), run_name='__main__')
 """
 
@@ -64,7 +67,8 @@ class PortableServer:
         log_path = self.root / "server.log"
         with log_path.open("ab") as log:
             self.process = subprocess.Popen(
-                [self.python, "-c", BOOT, str(self.root / "backend" / "portable_server.py")],
+                [self.python, "-c", BOOT, str(self.root / "backend" / "portable_server.py"),
+                 str(Path(__file__).with_name("fake_deepseek.py"))],
                 cwd=self.root, env=env, stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline and self.process.poll() is None:
@@ -84,6 +88,15 @@ class PortableServer:
     def restart(self):
         self.stop()
         self.start()
+
+    def use_mock_deepseek(self, rules):
+        """Use the real local credential store; substitute only upstream HTTPS."""
+        (self.root / "model-rules.json").write_text(json.dumps(rules), encoding="utf-8")
+        self.restart()
+
+    def model_requests(self):
+        log = self.root / "model-requests.jsonl"
+        return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
 
 
 def pytest_addoption(parser):

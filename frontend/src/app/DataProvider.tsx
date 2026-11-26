@@ -15,6 +15,7 @@ import { useSelectedConcept } from "../modules/identity/hooks/useSelectedConcept
 import { useExercises } from "../modules/practice/hooks/useExercises";
 import { useProgress } from "../modules/progress/hooks/useProgress";
 import { useNotes } from "../modules/records/hooks/useNotes";
+import { useLocalCatalog } from "./useLocalCatalog";
 import { useTeachingContent } from "../modules/teaching/useTeachingContent";
 
 type DataStatus = "loading" | "ready" | "error";
@@ -32,9 +33,16 @@ function useWorkspaceData(serverUserId: string | null) {
   const active = useRef(false);
 
   const identity = useSelectedConcept(source);
-  const practice = useExercises(source);
+  const local = useLocalCatalog(source === "offline");
+  const practice = useExercises(source, local.catalog.exercises);
   const records = useNotes(source);
-  const teaching = useTeachingContent(source);
+  const teaching = useTeachingContent(source, local.catalog.units);
+  useEffect(() => {
+    if (source === "offline" && local.available && !teaching.units.some(unit => unit.id === identity.selectedConceptId)) {
+      const fallback = teaching.units.find(unit => unit.id === "uniform") || teaching.units[0];
+      if (fallback) identity.selectConcept(fallback.id);
+    }
+  }, [source, local.available, teaching.units, identity.selectedConceptId, identity.selectConcept]);
   const progress = useProgress(
     source,
     practice.attempts,
@@ -96,10 +104,12 @@ function useWorkspaceData(serverUserId: string | null) {
     practice.reloadOffline();
     records.reloadOffline();
     progress.reloadOffline();
+    await local.refresh().catch(() => undefined);
   }, [
     loadServer,
     practice.reloadOffline,
     progress.reloadOffline,
+    local.refresh,
     records.reloadOffline,
     source,
   ]);
@@ -159,6 +169,9 @@ function useWorkspaceData(serverUserId: string | null) {
       data,
       status,
       error,
+      localBooks: local.catalog.books,
+      localAvailable: local.available,
+      refreshLocal: local.refresh,
       selectedConceptId: identity.selectedConceptId,
       selectConcept: identity.selectConcept,
       refresh,
@@ -174,6 +187,7 @@ function useWorkspaceData(serverUserId: string | null) {
       data,
       status,
       error,
+      local.catalog.books, local.available, local.refresh,
       identity.selectedConceptId,
       identity.selectConcept,
       refresh,

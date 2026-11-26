@@ -29,11 +29,12 @@ type AttemptInput = {
 const offlineExercises = offlineExerciseCatalog();
 const emptyAttempts: Attempt[] = [];
 
-export function useExercises(source: DataSource) {
+export function useExercises(source: DataSource, extraExercises: Exercise[]) {
   const offline = useLocalData("axiom-offline-attempts", emptyAttempts);
   const [serverExercises, setServerExercises] = useState<Exercise[]>([]);
   const [serverAttempts, setServerAttempts] = useState<Attempt[]>([]);
-  const exercises = source === "server" ? serverExercises : offlineExercises;
+  const exercises = useMemo(() => source === "server" ? serverExercises : [...offlineExercises, ...extraExercises],
+    [source, serverExercises, extraExercises]);
   const attempts = source === "server" ? serverAttempts : offline.value;
 
   const loadServer = useCallback(

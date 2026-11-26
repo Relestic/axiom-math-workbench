@@ -1,76 +1,44 @@
-"""PDF inspection with optional extraction.
+"""Inspect local PDFs once and preserve page boundaries for source citations."""
 
-The review environment does not ship pdfplumber. Rather than pretending to parse
-formulas, this adapter reports exactly which stage is available: file validation,
-page-count estimation, and text extraction only when an optional extractor is
-installed. Admin can always import reviewed text explicitly.
-"""
+import io
 
-from __future__ import annotations
+from pypdf import PdfReader
 
-import re
-from typing import Any
-
-PAGE_RE = re.compile(rb"/Type\s*/Page\b")
-COUNT_RE = re.compile(rb"/Count\s+(\d+)")
+from ..errors import ApiError
 
 
-def available_extractor() -> str | None:
+def page_data(data: bytes) -> dict:
     try:
-        import pdfplumber  # type: ignore
-
-        return "pdfplumber"
-    except Exception:
-        pass
-    try:
-        import pypdf  # type: ignore
-
-        return "pypdf"
-    except Exception:
-        return None
-
-
-def inspect_pdf(data: bytes) -> dict[str, Any]:
-    pages = len(PAGE_RE.findall(data))
-    counts = [int(match.group(1)) for match in COUNT_RE.findall(data)]
-    estimated = max(pages, max(counts) if counts else 0)
-    extractor = available_extractor()
-    return {
-        "magic_ok": data.startswith(b"%PDF-"),
-        "size_bytes": len(data),
-        "page_count_estimate": estimated or None,
-        "counts_entries": counts[:10],
-        "extractor": extractor,
-        "extraction_available": extractor is not None,
-        "text": None,
-        "note": (
-            f"使用 {extractor} 提取文本。"
-            if extractor
-            else "未安装 PDF 文本提取器；文件已保存并通过结构检查。请管理员粘贴/导入已核对文本，"
-            "或安装可选依赖 pdfplumber 后重试。"
-        ),
-    }
-
-
-def extract_text(path: str) -> tuple[str | None, str | None]:
-    extractor = available_extractor()
-    if extractor == "pdfplumber":
-        try:
-            import pdfplumber  # type: ignore
-
-            chunks = []
-            with pdfplumber.open(path) as pdf:
-                for page in pdf.pages:
-                    chunks.append(page.extract_text() or "")
-            return "\n\n".join(chunks), None
-        except Exception as exc:
-            return None, f"pdfplumber 提取失败：{exc}"
-    if extractor == "pypdf":
-        try:
-            from pypdf import PdfReader  # type: ignore
-
-            reader = PdfReader(path)
-            return "\n\n".join((page.extract_text() or "") for page in reader.pages), None
-        except Exception as exc:
-            return None, f"pypdf 提取失败：{exc}"
-    return None, "没有可用的 PDF 文本提取器"
+        with PdfReader(io.BytesIO(data)) as reader:
+            if reader.is_encrypted:
+                raise ApiError("unprocessable", "请先解除 PDF 密码保护")
+            pages = []
+            for number, page in enumerate(reader.pages, 1):
+                try:
+                    text = (page.extract_text() or "").strip()
+                except Exception:
+                    text = ""
+                readable = sum(ch.isalnum() for ch in text)
+                pages.append(
+                    {"page": number, "text": text, "char_count": readable, "needs_ocr": readable < 5}
+                )
+            if not pages:
+                raise ApiError("unprocessable", "PDF 没有可阅读的页面")
+            outline = []
+            try:
+                pending = list(reversed(reader.outline))
+                while pending:
+                    item = pending.pop()
+                    if isinstance(item, list):
+                        pending.extend(reversed(item))
+                        continue
+                    index = reader.get_destination_page_number(item)
+                    if index is not None and 0 <= index < len(pages):
+                        outline.append({"title": str(item.title), "page": index + 1})
+            except Exception:
+                pass  # A damaged bookmark tree does not invalidate the pages.
+            return {"extractor": "pypdf", "page_count": len(pages), "pages": pages, "outline": outline}
+    except ApiError:
+        raise
+    except Exception as exc:
+        raise ApiError("unprocessable", "无法读取 PDF 结构，请检查文件是否完整") from exc

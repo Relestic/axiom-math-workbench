@@ -51,7 +51,10 @@ def _cors_origin(config: Config, origin: str | None) -> str | None:
 
 def create_app(overrides: dict | None = None) -> Flask:
     config = load_config(overrides)
+    from .api.archive import WorkstationRequest
+
     app = Flask(__name__)
+    app.request_class = WorkstationRequest
     app.config["AXIOM"] = config
     app.config["MAX_CONTENT_LENGTH"] = config.max_content_length
     app.config["PROPAGATE_EXCEPTIONS"] = False
@@ -112,7 +115,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     def _after(response: Response):
         response.headers["X-Request-ID"] = getattr(g, "request_id", "")
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Cache-Control"] = response.headers.get(
@@ -153,6 +156,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .api.exercises import bp as exercises_bp
     from .api.graph import bp as graph_bp
     from .api.health import bp as health_bp
+    from .api.local_workstation import bp as local_workstation_bp
     from .api.notes import bp as notes_bp
     from .api.progress import bp as progress_bp
     from .api.reports import bp as reports_bp
@@ -172,6 +176,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         reports_bp,
         ai_bp,
         archive_bp,
+        local_workstation_bp,
         companion_bp,
         legacy_bp,
         admin_bp,

@@ -52,6 +52,8 @@ const LocalTextbook = lazy(() =>
     default: module.LocalTextbook,
   })),
 );
+const TextbookReader = lazy(() => import("./pages/LocalTextbook").then((module) => ({ default: module.TextbookReader })));
+import type { ReadingPosition } from "./modules/teaching/localTextbooks";
 const SurfaceWorkspace = lazy(
   () => import("./modules/visualization/three-d/SurfaceWorkspace"),
 );
@@ -74,6 +76,7 @@ export default function App() {
   const [section, subpage] = route.split("/");
   const page = subpage || section;
   const [activePane, setActivePane] = useState(page);
+  const [reading, setReading] = useState({ bookId: "", page: 1, revision: 0 });
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState("");
@@ -214,6 +217,13 @@ export default function App() {
     }
     localStorage.setItem("axiom-last-page", route);
   }, [route]);
+  function seekTextbook(position: ReadingPosition) {
+    setReading((previous) => ({ ...position, revision: previous.revision + 1 }));
+  }
+  function readTextbook(bookId: string, page: number) {
+    seekTextbook({ bookId, page });
+    navigate("pdf");
+  }
   const common = { onNavigate: navigate, onSaveNote: saveNote, notify };
   const localSearchResults = [
     ...app.data.units.map((unit) => ({
@@ -332,21 +342,23 @@ export default function App() {
           )}
           {section === "desk" && <DeskWorkbench pane={page} navigate={navigate} onActivePane={setActivePane} renderPane={id => {
             switch (id) {
-              case "textbook": return <Textbook {...common}/>;
+              case "textbook": return <Textbook {...common} onReadSource={readTextbook}/>;
               case "examples": return <Examples {...common}/>;
-              case "proof": return <Proof {...common}/>;
+              case "proof": return <Proof {...common} onReadSource={readTextbook}/>;
               case "exercises": return <Exercises {...common}/>;
               case "review": return <Review {...common}/>;
               case "explore": return <Exploration {...common}/>;
               case "surface": return <SurfaceWorkspace onOpenSettings={() => setModal("ai")}/>;
-              case "pdf": return <section className="panel"><p>在书架选择教材后，可在此对照原文。</p><button className="btn" onClick={()=>navigate("books")}>打开教材书架</button></section>;
+              case "pdf": return <TextbookReader position={reading} change={seekTextbook} openShelf={() => navigate("books")}/>;
             }
           }}/>}
           {(section === "atlas" || section === "shelf") && <nav className="section-tabs segmented" aria-label={sectionTitle}>
             {Object.entries(subpages[section]).map(([id,label]) => <button key={id} className={page === id ? "active" : ""}
               aria-current={page === id ? "page" : undefined} onClick={()=>navigate(id)}>{label}</button>)}
           </nav>}
-          {page === "books" && <LocalTextbook notify={notify}/>}
+          {page === "books" && <LocalTextbook read={readTextbook} openCard={(id) => {
+            app.selectConcept(id); navigate("textbook");
+          }}/>}
           {page === "archive" && <LearningArchiveSettings/>}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />
@@ -403,10 +415,10 @@ export default function App() {
           }}
         >
           <section
-            className={`modal ${modal === "upload" ? "upload-modal" : ""}`}
+            className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label={modal === "ai" ? "个人 DeepSeek 接入设置" : modal === "upload" ? "本地教材" : "工作台设置"}
+            aria-label={modal === "ai" ? "个人 DeepSeek 接入设置" : "工作台设置"}
           >
             <button
               className="icon-button modal-close"
