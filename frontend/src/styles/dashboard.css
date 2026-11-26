@@ -207,7 +207,7 @@
   min-height: 0;
   height: 100%;
 }
-.constellation-preview .constellation-mini svg {
+.constellation-preview .constellation-mini > svg {
   height: 100%;
 }
 

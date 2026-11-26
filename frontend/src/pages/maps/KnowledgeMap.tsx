@@ -1,303 +1,129 @@
-import {
-  ArrowDownRight,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpLeft,
-  BookOpen,
-  Check,
-  ChevronRight,
-  CircleHelp,
-  Download,
-  Filter,
-  Flame,
-  Focus,
-  Grid2X2,
-  Info,
-  Layers,
-  ListFilter,
-  Network,
-  PlayCircle,
-  RotateCcw,
-  Sparkles,
-  Waypoints,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
-import { useState } from "react";
+import { ArrowDownRight, ArrowRight, ArrowUpLeft, BookOpen, Crosshair, Maximize, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { MathText } from "../../components/Math";
+import { conceptIdForGraphNode } from "../../domain/graphConcept";
+import type { CurriculumUnit, GraphNode } from "../../domain/types";
 import { Constellation } from "./Constellation";
-import type { GraphNode } from "../../domain/types";
-import type { MapProps } from "./shared";
+import { layoutGraph } from "./layoutGraph";
 
-export function KnowledgeMap({ onNavigate, notify }: MapProps) {
-  const app = useAppData();
-  const nodes = app.data.graph.nodes;
-  const edges = app.data.graph.edges;
-  const nodeById = (id: string): GraphNode =>
-    nodes.find((node) => node.id === id) || nodes[0];
-  const [selected, setSelected] = useState("uniform"),
-    [onlyUnlocked, setOnlyUnlocked] = useState(false),
-    [showExamples, setShowExamples] = useState(true),
-    [highlightGaps, setHighlightGaps] = useState(true),
-    [relationsOnly, setRelationsOnly] = useState(false);
-  const current = nodes.find((n) => n.id === selected) || nodeById("uniform");
-  const openCurrent = (page: string) => {
-    if (current.conceptId) app.selectConcept(current.conceptId);
-    onNavigate(page);
+function conceptId(node: GraphNode) {
+  return node.conceptId || conceptIdForGraphNode(node.id);
+}
+
+function RelationLinks({ title, nodes, select, outgoing = false }: {
+  title: string; nodes: GraphNode[]; select: (id: string) => void; outgoing?: boolean;
+}) {
+  const Icon = outgoing ? ArrowDownRight : ArrowUpLeft;
+  return <section className="atlas-relations">
+    <h3><Icon size={15} />{title}<small>{nodes.length}</small></h3>
+    {nodes.length ? <div>{nodes.map(node =>
+      <button key={node.id} onClick={() => select(node.id)}>{node.name}</button>)}</div> :
+      <p>暂无直接{outgoing ? "后继" : "前置"}</p>}
+  </section>;
+}
+
+export function KnowledgeMap({ onRead }: { onRead: (unit: CurriculumUnit) => void }) {
+  const { data, localBooks, selectedConceptId } = useAppData();
+  const [scope, setScope] = useState("all");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<string>();
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const [camera, setCamera] = useState<{ id?: string; revision: number }>({ revision: 0 });
+  const nodes = useMemo(() => data.graph.nodes.filter(n => n.kind !== "case" && n.kind !== "extension"), [data.graph.nodes]);
+  const bookScopes = useMemo(() => {
+    const titles = new Map<string, string>(data.source === "offline"
+      ? localBooks.map(book => [book.id, book.title]) : []);
+    for (const node of nodes) if (node.textbookId) titles.set(node.textbookId, node.textbookTitle || "本地教材");
+    return [...titles];
+  }, [nodes, localBooks, data.source]);
+  const activeScope = scope === "builtin" || bookScopes.some(([id]) => id === scope) ? scope : "all";
+  const layout = useMemo(() => layoutGraph(nodes.filter(n =>
+    activeScope === "all" || (n.textbookId ?? "builtin") === activeScope), data.graph.edges),
+  [nodes, activeScope, data.graph.edges]);
+  const visible = useMemo(() => new Map(layout.nodes.map(node => [node.id, node])), [layout]);
+  const current = selected ? visible.get(selected) : undefined;
+  const unit = current && data.units.find(item => item.id === conceptId(current));
+  const direct = layout.edges.filter(([, , kind]) => kind === "prerequisite");
+  const predecessors = current ? direct.filter(([, to]) => to === current.id).map(([id]) => visible.get(id)!) : [];
+  const successors = current ? direct.filter(([from]) => from === current.id).map(([, id]) => visible.get(id)!) : [];
+  const findMatches = (value: string) => {
+    const key = value.trim().toLocaleLowerCase();
+    return key ? layout.nodes.filter(n => n.name.toLocaleLowerCase().includes(key)).map(n => n.id) : [];
   };
-  const dependencies = edges
-    .filter(
-      ([a, b, k]) => b === current.id && k !== "case" && k !== "extension" && k !== "sequence",
-    )
-    .map(([a, , k]) => ({ node: nodeById(a), type: k }));
-  const supported = edges
-    .filter(([a, , k]) => a === current.id && k !== "case" && k !== "extension" && k !== "sequence")
-    .map(([, b, k]) => ({ node: nodeById(b), type: k }));
-  const gaps = nodes.filter(
-    (n) => n.progress != null && n.progress > 0 && n.progress < 50 && n.kind !== "case",
-  );
-  return (
-    <div className="maps-page knowledge-page">
-      <div className="page-heading map-heading">
-        <div>
-          <h1>数学总地图</h1>
-          <p>
-            看见知识之间的联系。从一个定义出发，追溯它的来路，也找到它的去向。
-          </p>
-        </div>
-        <button
-          className="btn primary"
-          onClick={() => {
-            setSelected("uniform");
-            setOnlyUnlocked(false);
-            setRelationsOnly(false);
-            notify("已定位到当前学习：一致连续");
-          }}
-        >
-          <Focus size={16} />
-          定位当前学习
-        </button>
+  const matches = findMatches(query);
+  function focus(id?: string) {
+    setCamera(last => ({ id, revision: last.revision + 1 }));
+  }
+  function selectAndFocus(id: string) {
+    setSelected(id);
+    focus(id);
+  }
+  function changeScope(id: string) {
+    setScope(id);
+    setSelected(undefined);
+    setQuery("");
+    focus();
+  }
+  function search(value: string) {
+    setQuery(value);
+    const [first] = findMatches(value);
+    setSelected(first);
+    focus(first);
+  }
+  const studyNode = nodes.find(n => n.id === selectedConceptId) ||
+    nodes.find(n => n.id === "continuity" && conceptId(n) === selectedConceptId) ||
+    nodes.find(n => n.id === "mvt" && conceptId(n) === selectedConceptId) ||
+    nodes.find(n => conceptId(n) === selectedConceptId);
+  function locateStudy() {
+    if (!studyNode) return;
+    if (!visible.has(studyNode.id)) setScope(studyNode.textbookId ?? "builtin");
+    setQuery("");
+    selectAndFocus(studyNode.id);
+  }
+  return <div className="maps-page atlas-page">
+    <header className="atlas-heading"><h1>知识星图</h1>
+      <span>{layout.nodes.length} 个知识点</span></header>
+    <div className="atlas-toolbar">
+      <div className="atlas-scopes" role="group" aria-label="教材范围">
+        {([["all", "全部"], ["builtin", "内置课程"], ...bookScopes]).map(([id, label]) =>
+          <button key={id} type="button" title={label} aria-pressed={activeScope === id}
+            onClick={() => changeScope(id)}>{label}</button>)}
       </div>
-      <div className="map-controls">
-        <div className="map-segment">
-          <button
-            className={!relationsOnly ? "active" : ""}
-            onClick={() => setRelationsOnly(false)}
-          >
-            全部关系
-          </button>
-          <button
-            className={relationsOnly ? "active" : ""}
-            onClick={() => setRelationsOnly(true)}
-          >
-            蕴含与反例
-          </button>
-        </div>
-        <div className="map-filter-buttons">
-          <button
-            className={`btn ${onlyUnlocked ? "selected" : ""}`}
-            aria-pressed={onlyUnlocked}
-            onClick={() => {
-              setOnlyUnlocked((v) => !v);
-              if (current.kind === "extension") setSelected("uniform");
-            }}
-          >
-            <Filter size={14} />
-            仅看 MVP
-          </button>
-          <button
-            className={`btn ${highlightGaps ? "map-pink selected" : ""}`}
-            aria-pressed={highlightGaps}
-            onClick={() => setHighlightGaps((v) => !v)}
-          >
-            标出待复习
-          </button>
-          <button
-            className={`btn ${showExamples ? "map-orange selected" : ""}`}
-            aria-pressed={showExamples}
-            onClick={() => {
-              setShowExamples((v) => !v);
-              if (current.kind === "case") setSelected("uniform");
-            }}
-          >
-            <CircleHelp size={14} />
-            显示反例
-          </button>
-        </div>
-      </div>
-      <div className="map-main-grid">
-        <div className="map-left-column">
-          <Constellation
-            onSelect={setSelected}
-            selected={selected}
-            onlyUnlocked={onlyUnlocked}
-            showExamples={showExamples}
-            highlightGaps={highlightGaps}
-            relationsOnly={relationsOnly}
-          />
-          <section className="card map-proof-path">
-            <div className="map-section-head">
-              <h3>
-                <Waypoints size={17} />
-                可追溯路径 · 从条件走向结论
-              </h3>
-              <span>点击节点查看准确关系</span>
-            </div>
-            <div className="proof-path-steps">
-              {["中值定理", "导数有界", "Lipschitz 条件", "一致连续"].map(
-                (name, i) => (
-                  <div className="path-step-wrap" key={name}>
-                    <button
-                      className={`path-step ${current.name === name ? "active" : ""}`}
-                      onClick={() => setSelected(nodes.find(node => node.name === name)?.id ?? selected)}
-                    >
-                      <strong>{name}</strong>
-                      <small>
-                        {i === 0
-                          ? "证明工具"
-                          : i === 1
-                            ? "区间上的充分条件"
-                            : i === 2
-                              ? "统一线性估计"
-                              : "统一的 δ"}
-                      </small>
-                    </button>
-                    {i < 3 && <ArrowRight size={16} />}
-                  </div>
-                ),
-              )}
-            </div>
-            <div className="info-strip">
-              <Sparkles size={16} />
-              <span>
-                在区间上，由中值定理把导数上界转成增量估计。注意：一致连续不必具有有界导数。
-              </span>
-            </div>
-          </section>
-        </div>
-        <aside className="map-right-column">
-          <section className="card node-detail">
-            <div className="node-detail-top">
-              <span className="badge">
-                {current.kind === "extension"
-                  ? "正式版拓展"
-                  : current.kind === "case"
-                    ? "经典反例"
-                    : "当前选中节点"}
-              </span>
-              <Network size={16} />
-            </div>
-            <h2>{current.name}</h2>
-            <p className="muted">{current.description}</p>
-            {current.state === "unpracticed" ? <span className="badge">未练习</span> :
-              current.progress == null ? <span className="badge">已作答 · 待评分</span> :
-              <div className="map-progress">
-                <div><i style={{ width: `${current.progress}%` }} /></div>
-                <span>{current.progress}%</span>
-              </div>}
-            <small className="map-demo-caption">
-              掌握度由学习记录估算，不是能力标签
-            </small>
-            <p className="node-explanation">{current.detail}</p>
-            <h4>
-              <ArrowUpLeft size={14} />
-              前置 / 推导来源（{dependencies.length}）
-            </h4>
-            <div className="relation-tags">
-              {dependencies.length ? (
-                dependencies.map(({ node, type }) => (
-                  <button
-                    key={node.id}
-                    onClick={() => setSelected(node.id)}
-                    title={
-                      type === "implication"
-                        ? "在所述条件下蕴含"
-                        : "教学或证明依赖"
-                    }
-                  >
-                    <Check size={11} />
-                    {node.name}
-                  </button>
-                ))
-              ) : (
-                <span className="muted">基础节点，查看定义即可开始</span>
-              )}
-            </div>
-            <h4>
-              <ArrowDownRight size={14} />
-              连接到（{supported.length}）
-            </h4>
-            <div className="relation-tags purple">
-              {supported.length ? (
-                supported.map(({ node, type }) => (
-                  <button key={node.id} onClick={() => setSelected(node.id)}>
-                    {type === "implication" ? "⇒ " : ""}
-                    {node.name}
-                  </button>
-                ))
-              ) : (
-                <span className="muted">继续探索相邻概念</span>
-              )}
-            </div>
-            <div className="map-action-stack">
-              <button
-                className="btn primary"
-                disabled={current.kind === "extension"}
-                onClick={() =>
-                  openCurrent(current.kind === "case" ? "textbook" : "explore")
-                }
-              >
-                <PlayCircle size={15} />
-                {current.kind === "extension"
-                  ? "正式版内容 · 规划中"
-                  : current.kind === "case"
-                    ? "打开相关讲义"
-                    : "回到图像探索"}
-              </button>
-              <button
-                className="btn"
-                disabled={current.kind === "extension"}
-                onClick={() => openCurrent("textbook")}
-              >
-                <BookOpen size={15} />
-                查看定义与条件
-              </button>
-            </div>
-          </section>
-          {gaps.length > 0 && (
-            <button
-              className="map-gap-strip"
-              onClick={() => setSelected(gaps[0].id)}
-            >
-              <span className="map-gap-dot" />
-              <span>待复习 {gaps.length} 个节点</span>
-              <ChevronRight size={14} />
-            </button>
-          )}
-          <section className="map-dark-note">
-            <h3>
-              <Layers size={16} />
-              地图阅读方式
-            </h3>
-            <p>
-              实线表示有方向的知识联系；“蕴含与反例”视图只保留逻辑蕴含和反例。
-            </p>
-            <div>
-              <span>MVP 内容节点</span>
-              <strong>
-                {nodes.filter((n) => n.kind !== "extension").length}
-              </strong>
-            </div>
-            <div>
-              <span>正式版拓展</span>
-              <strong>
-                {nodes.filter((n) => n.kind === "extension").length}
-              </strong>
-            </div>
-            <small>课程地图来自已审核图谱 · 不代表完整教材解析</small>
-          </section>
-        </aside>
+      <div className="atlas-actions">
+        <label className="atlas-search"><Search size={16} aria-hidden="true" />
+          <input aria-label="搜索节点" placeholder="搜索节点" value={query} onChange={e => search(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && matches.length) {
+                const next = (matches.indexOf(selected ?? "") + 1) % matches.length;
+                selectAndFocus(matches[next]);
+              }
+            }}/>
+          {query && <small role="status">{matches.length ? `${matches.length} 项` : "无匹配"}</small>}
+        </label>
+        <button className="atlas-review" type="button" aria-pressed={reviewOnly}
+          onClick={() => setReviewOnly(!reviewOnly)}><i aria-hidden="true"/>仅标出待复习</button>
+        <button className="btn" onClick={locateStudy} disabled={!studyNode}><Crosshair size={15}/>定位当前学习</button>
+        <button className="btn" onClick={() => focus()}><Maximize size={15}/>适屏居中</button>
       </div>
     </div>
-  );
+    <div className={"atlas-content" + (current ? " with-detail" : "")}>
+      {layout.nodes.length ? <Constellation layout={layout} selected={current?.id} onSelect={setSelected}
+        matches={new Set(matches)} reviewOnly={reviewOnly} cameraRequest={camera}/> :
+        <p className="atlas-empty" role="status">{bookScopes.some(([id]) => id === activeScope)
+          ? "这本教材还没有学习卡片。可在书架选取 PDF 页码生成卡片。" : "当前范围还没有知识点。"}</p>}
+      {current && <aside className="node-detail atlas-detail" aria-label="节点详情">
+        <header><span><BookOpen size={14}/>{current.textbookTitle ?? "内置课程"}{current.pageStart && ` · P.${current.pageStart}`}</span>
+          <button type="button" aria-label="关闭节点详情" onClick={() => setSelected(undefined)}><X size={16}/></button></header>
+        <h2>{current.name}</h2>
+        <small>{current.state === "unpracticed" ? "未练习" : current.progress != null ? `掌握度 ${current.progress}%` : "已作答 · 待评分"}</small>
+        <p className="atlas-definition"><MathText>{current.textbookId ? unit?.definition || current.detail : current.detail || unit?.definition || current.description}</MathText></p>
+        {unit?.formula && <section className="atlas-formula"><h3>{!current.textbookId && conceptId(current) !== current.id ? "关联讲义公式" : "核心公式"}</h3><MathText>{unit.formula}</MathText></section>}
+        <RelationLinks title="前置来源" nodes={predecessors} select={selectAndFocus}/>
+        <RelationLinks title="后续推导" nodes={successors} select={selectAndFocus} outgoing/>
+        <button className="btn primary atlas-read" disabled={!unit} onClick={() => unit && onRead(unit)}>
+          去学习书桌研读<ArrowRight size={15}/></button>
+      </aside>}
+    </div>
+  </div>;
 }

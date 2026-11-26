@@ -51,6 +51,7 @@ const LocalTextbook = lazy(() =>
   })),
 );
 const TextbookReader = lazy(() => import("./pages/LocalTextbook").then((module) => ({ default: module.TextbookReader })));
+import type { CurriculumUnit } from "./domain/types";
 import type { ReadingPosition } from "./modules/teaching/localTextbooks";
 const SurfaceWorkspace = lazy(
   () => import("./modules/visualization/three-d/SurfaceWorkspace"),
@@ -76,6 +77,10 @@ export default function App() {
   const [activePane, setActivePane] = useState(page);
   const [deskPanes, setDeskPanes] = useState<DeskPanes>({study:"textbook", board:"explore", collapsed:false});
   const [reading, setReading] = useState({ bookId: "", page: 1, revision: 0 });
+  const [openSourceWithStudy, setOpenSourceWithStudy] = useState(false);
+  useEffect(() => {
+    if (section === "desk") setOpenSourceWithStudy(false);
+  }, [section]);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState("");
@@ -224,6 +229,13 @@ export default function App() {
     seekTextbook({ bookId, page });
     navigate("pdf");
   }
+  function readGraphUnit(unit: CurriculumUnit) {
+    app.selectConcept(unit.id);
+    const source = unit.textbookSource;
+    if (source) seekTextbook({ bookId: source.textbookId, page: source.pageStart });
+    setOpenSourceWithStudy(Boolean(source));
+    navigate("textbook");
+  }
   const common = { onNavigate: navigate, onSaveNote: saveNote, notify };
   const localSearchResults = [
     ...app.data.units.map((unit) => ({
@@ -340,7 +352,7 @@ export default function App() {
               onUpload={() => navigate("books")}
             />
           )}
-          {section === "desk" && <DeskWorkbench pane={page} navigate={navigate} onActivePane={setActivePane} onPanesChange={setDeskPanes} renderPane={id => {
+          {section === "desk" && <DeskWorkbench pane={page} initialBoard={openSourceWithStudy ? "pdf" : "explore"} navigate={navigate} onActivePane={setActivePane} onPanesChange={setDeskPanes} renderPane={id => {
             switch (id) {
               case "textbook": return <Textbook {...common} onReadSource={readTextbook}/>;
               case "proof": return <Proof {...common} onReadSource={readTextbook}/>;
@@ -363,7 +375,7 @@ export default function App() {
             <PracticeMap onNavigate={navigate} notify={notify} />
           )}
           {page === "knowledge-map" && (
-            <KnowledgeMap onNavigate={navigate} notify={notify} />
+            <KnowledgeMap onRead={readGraphUnit} />
           )}
           {page === "notes" && (
             <Notes

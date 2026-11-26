@@ -90,8 +90,8 @@ export type GraphNode = {
   textbookTitle?: string;
   pageStart?: number;
   name: string;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
   color: string;
   size?: number;
   kind?: "case" | "extension";

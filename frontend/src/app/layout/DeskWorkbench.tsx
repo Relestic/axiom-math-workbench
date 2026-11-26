@@ -55,8 +55,8 @@ type DeskSelection = DeskPanes & {
   visited: string[];
 };
 
-function openRoute(pane: string, previous?: DeskSelection): DeskSelection {
-  const board = isBoard(pane) ? pane : previous?.board ?? "explore";
+function openRoute(pane: string, previous?: DeskSelection, initialBoard = "explore"): DeskSelection {
+  const board = isBoard(pane) ? pane : previous?.board ?? initialBoard;
   const study = isBoard(pane) ? previous?.study ?? "textbook" : pane;
   return {
     route: pane, study, board, active: pane,
@@ -65,15 +65,16 @@ function openRoute(pane: string, previous?: DeskSelection): DeskSelection {
   };
 }
 
-export function DeskWorkbench({ pane, navigate, renderPane, onActivePane, onPanesChange }: {
+export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActivePane, onPanesChange }: {
   pane: string;
+  initialBoard: "explore" | "pdf";
   navigate: (id: string) => void;
   renderPane: (id: string) => ReactNode;
   onActivePane: (id: string) => void;
   onPanesChange: (panes: DeskPanes) => void;
 }) {
   const { unit, select } = useUnit();
-  const [desk, setDesk] = useState(() => openRoute(pane));
+  const [desk, setDesk] = useState(() => openRoute(pane, undefined, initialBoard));
   const toggleButton = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
   if (pane !== desk.route) setDesk(openRoute(pane, desk));

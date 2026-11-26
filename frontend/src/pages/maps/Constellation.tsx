@@ -1,356 +1,282 @@
-import {
-  ArrowDownRight,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpLeft,
-  BookOpen,
-  Check,
-  ChevronRight,
-  CircleAlert,
-  CircleHelp,
-  Download,
-  Filter,
-  Flame,
-  Focus,
-  Grid2X2,
-  Info,
-  Layers,
-  ListFilter,
-  Network,
-  PlayCircle,
-  RotateCcw,
-  Sparkles,
-  Waypoints,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { BookOpen, LibraryBig, Minus, Plus } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useAppData } from "../../app/DataProvider";
 import type { GraphNode } from "../../domain/types";
+import { layoutGraph, LANE_HEADER_HEIGHT, type GraphLayout, type LayoutNode } from "./layoutGraph";
+import "./constellation.css";
 
-export function Constellation({
-  mini = false,
-  onSelect,
-  selected = "uniform",
-  onlyUnlocked = false,
-  showExamples = true,
-  highlightGaps = true,
-  relationsOnly = false,
-}: {
-  mini?: boolean;
-  onSelect?: (id: string) => void;
-  selected?: string;
-  onlyUnlocked?: boolean;
-  showExamples?: boolean;
-  highlightGaps?: boolean;
-  relationsOnly?: boolean;
+type Point = { x: number; y: number };
+type Camera = Point & { zoom: number; base: number };
+type Size = { width: number; height: number };
+type CameraRequest = { id?: string; revision: number };
+
+export function needsReview(node: GraphNode) {
+  if (node.state === "needs_review") return true;
+  if (["unpracticed", "locked", "locked_extension", "unlocked_not_started"].includes(node.state ?? "")) return false;
+  return node.progress != null && node.progress < 50 && (node.progress > 0 || node.state === "practiced");
+}
+
+function fitCamera(layout: GraphLayout, size: Size, mini: boolean): Camera {
+  const { x, y, width, height } = layout.bounds;
+  const padding = mini ? 5 : Math.min(24, size.width * 0.045);
+  const scale = Math.min(1.15, Math.max(1, size.width - 2 * padding) / Math.max(1, width),
+    Math.max(1, size.height - 2 * padding) / Math.max(1, height));
+  // Very large overviews need a wider base view than the normal reading view.
+  const base = Math.min(1, scale / 0.4);
+  return { zoom: scale / base, base, x: size.width / 2 - (x + width / 2) * scale,
+    y: size.height / 2 - (y + height / 2) * scale };
+}
+
+function readingCamera(node: LayoutNode, size: Size): Camera {
+  const zoom = Math.min(1.1, Math.max(0.4, (size.width - 28) / node.width));
+  return { zoom, base: 1, x: size.width / 2 - (node.x + node.width / 2) * zoom,
+    y: size.height / 2 - (node.y + node.height / 2) * zoom };
+}
+
+function zoomAt(view: Camera, factor: number, anchor: Point): Camera {
+  const zoom = Math.max(0.4, Math.min(2, view.zoom * factor));
+  const ratio = zoom / view.zoom;
+  return { ...view, zoom, x: anchor.x - (anchor.x - view.x) * ratio,
+    y: anchor.y - (anchor.y - view.y) * ratio };
+}
+
+/** Keep long edges in the 24px row / 40px column gutters, rounding each turn. */
+function gutterPath(points: Point[]) {
+  let path = `M${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1], turn = points[i], next = points[i + 1];
+    const radius = Math.min(6, Math.hypot(turn.x-prev.x, turn.y-prev.y)/2,
+      Math.hypot(next.x-turn.x, next.y-turn.y)/2);
+    const beforeX = turn.x - Math.sign(turn.x - prev.x) * radius;
+    const beforeY = turn.y - Math.sign(turn.y - prev.y) * radius;
+    const afterX = turn.x + Math.sign(next.x - turn.x) * radius;
+    const afterY = turn.y + Math.sign(next.y - turn.y) * radius;
+    path += ` L${beforeX} ${beforeY} C${turn.x} ${turn.y}, ${turn.x} ${turn.y}, ${afterX} ${afterY}`;
+  }
+  const last = points[points.length - 1];
+  return path + ` L${last.x} ${last.y}`;
+}
+
+function connection(from: LayoutNode, to: LayoutNode) {
+  const fromMid = from.x + from.width / 2, toMid = to.x + to.width / 2;
+  const bottom = from.y + from.height, gutterY = bottom + (to.x < from.x ? 13 : 8);
+  if (from.y === to.y && (from.x > to.x || to.layer > from.layer + 1)) {
+    return gutterPath([{x:fromMid, y:bottom}, {x:fromMid, y:gutterY}, {x:toMid, y:gutterY}, {x:toMid, y:bottom}]);
+  }
+  if (from.x > to.x || to.layer > from.layer + 1) {
+    const right = from.x < to.x;
+    const endX = right ? to.x : to.x + to.width, endY = to.y + to.height / 2;
+    const gutterX = endX + (right ? -16 : 16);
+    return gutterPath([{x:fromMid, y:bottom}, {x:fromMid, y:gutterY}, {x:gutterX, y:gutterY},
+      {x:gutterX, y:endY}, {x:endX, y:endY}]);
+  }
+  if (from.x === to.x) {
+    const self = from.id === to.id;
+    if (self || Math.abs(from.y - to.y) > from.height * 2) {
+      const x = from.x + from.width, start = from.y + from.height * (self ? 0.3 : 0.5);
+      const end = to.y + to.height * (self ? 0.7 : 0.5);
+      return gutterPath([{x, y:start}, {x:x + 12, y:start}, {x:x + 12, y:end}, {x, y:end}]);
+    }
+    const down = to.y > from.y;
+    const start = from.y + (down ? from.height : 0), end = to.y + (down ? 0 : to.height);
+    const x = from.x + from.width / 2, mid = (start + end) / 2;
+    return `M${x} ${start} C${x} ${mid}, ${x} ${mid}, ${x} ${end}`;
+  }
+  const right = to.x > from.x;
+  const x1 = from.x + (right ? from.width : 0), y1 = from.y + from.height / 2;
+  const x2 = to.x + (right ? 0 : to.width), y2 = to.y + to.height / 2;
+  const mid = (x1 + x2) / 2;
+  return `M${x1} ${y1} C${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`;
+}
+
+export function Constellation({ layout: providedLayout, selected, onSelect, matches, reviewOnly = false,
+  cameraRequest, mini = false }: {
+  layout?: GraphLayout; selected?: string; onSelect?: (id: string) => void; matches?: ReadonlySet<string>;
+  reviewOnly?: boolean; cameraRequest?: CameraRequest; mini?: boolean;
 }) {
   const { data } = useAppData();
-  const nodes = data.graph.nodes;
-  const edges = data.graph.edges;
-  const nodeById = (id: string): GraphNode =>
-    nodes.find((node) => node.id === id) || nodes[0];
-  const [zoom, setZoom] = useState(1),
-    [pan, setPan] = useState({ x: 0, y: 0 });
-  const svgRef = useRef<SVGSVGElement>(null),
-    drag = useRef<{ x: number; y: number; px: number; py: number } | null>(
-      null,
-    ),
-    moved = useRef(false);
-  const uid = useId().replaceAll(":", "");
-  const visible = nodes.filter(
-    (n) =>
-      (!onlyUnlocked || n.kind !== "extension") &&
-      (showExamples || n.kind !== "case"),
-  );
-  const ids = new Set(visible.map((n) => n.id));
-  const visibleEdges = edges.filter(
-    ([a, b, k]) =>
-      ids.has(a) &&
-      ids.has(b) &&
-      (!relationsOnly || k === "implication" || k === "case"),
-  );
-  const active = nodes.find((n) => n.id === selected);
-  const pick = (n: GraphNode) => {
-    onSelect?.(n.id);
-  };
-  const reset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  };
-  return (
-    <div className={`constellation ${mini ? "constellation-mini" : ""}`}>
-      {!mini && (
-        <div className="constellation-top">
-          <div className="map-legend">
-            <span>
-              <i style={{ background: "#dddfff" }} />
-              当前学习
-            </span>
-            <span>
-              <i style={{ background: "#80a1fa" }} />
-              知识点
-            </span>
-            <span>
-              <i style={{ background: "#ffcc70" }} />
-              反例
-            </span>
-            <span>
-              <i className="outline" />
-              正式版拓展
-            </span>
-          </div>
-          <div className="map-tools">
-            <button
-              title="放大地图"
-              aria-label="放大地图"
-              onClick={() => setZoom((z) => Math.min(2.1, z + 0.2))}
-            >
-              <ZoomIn size={15} />
-            </button>
-            <button
-              title="缩小地图"
-              aria-label="缩小地图"
-              onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))}
-            >
-              <ZoomOut size={15} />
-            </button>
-            <button title="复位地图" aria-label="复位地图" onClick={reset}>
-              <Focus size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-      <svg
-        ref={svgRef}
-        viewBox={mini ? "80 100 680 420" : "0 0 900 660"}
-        role="img"
-        aria-label="数学知识关系图，节点支持点击与键盘选择"
-        onPointerDown={(e) => {
-          if (mini || (e.target as Element).closest(".map-node")) return;
-          drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
-          moved.current = false;
-          svgRef.current?.setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          if (!drag.current) return;
-          const w = svgRef.current?.getBoundingClientRect().width || 900;
-          const dx = ((e.clientX - drag.current.x) * 900) / w,
-            dy = ((e.clientY - drag.current.y) * 900) / w;
-          if (Math.abs(dx) + Math.abs(dy) > 5) moved.current = true;
-          setPan({ x: drag.current.px + dx, y: drag.current.py + dy });
-        }}
-        onPointerUp={() => {
-          drag.current = null;
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-        }}
-      >
-        <defs>
-          <radialGradient id={`${uid}-nebula`}>
-            <stop offset="0" stopColor="#5145f5" stopOpacity=".13" />
-            <stop offset="1" stopColor="#5145f5" stopOpacity=".01" />
-          </radialGradient>
-          <marker
-            id={`${uid}-arrow`}
-            viewBox="0 0 8 8"
-            refX="7"
-            refY="4"
-            markerWidth="4"
-            markerHeight="4"
-            orient="auto"
-          >
-            <path d="M0 0L8 4L0 8" fill="#808cb8" />
-          </marker>
-        </defs>
-        <g
-          transform={`translate(${450 + pan.x} ${330 + pan.y}) scale(${zoom}) translate(-450 -330)`}
-        >
-          <ellipse
-            cx="430"
-            cy="310"
-            rx="260"
-            ry="300"
-            fill={`url(#${uid}-nebula)`}
-          />
-          <ellipse
-            cx="195"
-            cy="380"
-            rx="190"
-            ry="210"
-            fill="#14b6bc"
-            opacity=".035"
-          />
-          <ellipse
-            cx="692"
-            cy="351"
-            rx="159"
-            ry="285"
-            fill="#ed4e99"
-            opacity=".035"
-          />
-          {[90, 190, 290, 390, 490, 590].map((y, i) => (
-            <path
-              key={y}
-              d={`M10 ${y} C250 ${y - 65} 540 ${y + 75} 880 ${y - 8}`}
-              fill="none"
-              stroke="#fff"
-              opacity=".055"
-              strokeWidth="1"
-            />
-          ))}
-          {[150, 380, 650, 810].map((x) => (
-            <path
-              key={x}
-              d={`M${x} 20 Q${x + 80} 300 ${x + 30} 650`}
-              fill="none"
-              stroke="#fff"
-              opacity=".055"
-            />
-          ))}
-          {Array.from({ length: 48 }, (_, i) => (
-            <circle
-              key={`s${i}`}
-              cx={35 + ((i * 83) % 815)}
-              cy={45 + ((i * 67) % 560)}
-              r={i % 7 === 0 ? 1.4 : 0.8}
-              fill="#bdc4dd"
-              opacity={0.13 + (i % 3) * 0.07}
-            />
-          ))}
-          {visibleEdges.map(([a, b, k]) => {
-            const n1 = nodeById(a),
-              n2 = nodeById(b);
-            const isActive = active && (active.id === a || active.id === b);
-            return (
-              <path
-                key={JSON.stringify([a,b,k])} data-edge-type={k} data-from={a} data-to={b}
-                d={`M${n1.x} ${n1.y} Q${(n1.x + n2.x) / 2 + (n1.y - n2.y) * 0.15} ${(n1.y + n2.y) / 2 - 28} ${n2.x} ${n2.y}`}
-                fill="none"
-                stroke={
-                  k === "case" ? "#f45394" : isActive ? "#a8a0ff" : n1.color
-                }
-                strokeWidth={isActive ? 1.8 : 1.1}
-                opacity={k === "extension" ? 0.18 : isActive ? 0.8 : 0.32}
-                strokeDasharray={
-                  k === "sequence" ? "4 5" : k === "case" ? "6 5" : k === "extension" ? "3 5" : undefined
-                }
-                markerEnd={!mini ? `url(#${uid}-arrow)` : undefined}
-              />
-            );
-          })}
-          {visible.map((n, i) => {
-            const isActive = n.id === selected;
-            const gap =
-              highlightGaps &&
-              n.progress != null && n.progress > 0 &&
-              n.progress < 50 &&
-              n.kind !== "case";
-            return (
-              <g
-                key={n.id} data-node-id={n.id}
-                className={`map-node ${n.kind === "extension" ? "is-extension" : ""}`}
-                role={onSelect ? "button" : undefined}
-                tabIndex={onSelect ? 0 : -1}
-                aria-label={`${n.name}，${n.description}`}
-                onClick={() => pick(n)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelect?.(n.id);
-                  }
-                }}
-              >
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={isActive ? 42 : n.size ? 29 : 21}
-                  fill={n.color}
-                  opacity={isActive ? 0.13 : 0.045}
-                />
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={isActive ? 31 : n.size ? 21 : 14}
-                  fill="none"
-                  stroke={n.color}
-                  opacity={isActive ? 0.6 : 0.13}
-                />
-                {isActive && (
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r="24"
-                    fill="none"
-                    stroke="#cac6ff"
-                    opacity=".65"
-                  />
-                )}
-                {n.size &&
-                  [0, 1, 2].map((j) => (
-                    <circle
-                      key={j}
-                      cx={n.x + Math.cos(i * 1.3 + j * 2.1) * 36}
-                      cy={n.y + Math.sin(i * 1.3 + j * 2.1) * 36}
-                      r={j === 0 ? 3 : 2.1}
-                      fill={n.color}
-                      opacity=".7"
-                    />
-                  ))}
-                <circle
-                  cx={n.x}
-                  cy={n.y}
-                  r={n.size || 5.5}
-                  fill={gap ? "#fa5c9c" : n.color}
-                />
-                <circle cx={n.x} cy={n.y} r="19" fill="transparent" />
-                <text
-                  x={n.x + (n.id === "uniform" ? 35 : 0)}
-                  y={
-                    n.y +
-                    (n.id === "uniform"
-                      ? 5
-                      : n.id === "derivative"
-                        ? -24
-                        : n.id === "reciprocal"
-                          ? 30
-                          : n.id === "lipschitz"
-                            ? 23
-                            : n.id === "continuity"
-                              ? -22
-                              : 28)
-                  }
-                  textAnchor={n.id === "uniform" ? "start" : "middle"}
-                  fill={
-                    isActive
-                      ? "#fff"
-                      : n.kind === "extension"
-                        ? "#69718e"
-                        : n.kind === "case"
-                          ? "#f5ca6d"
-                          : "#a2abc2"
-                  }
-                  fontSize={mini ? 13 : 12.5}
-                  fontWeight={isActive ? "600" : "400"}
-                >
-                  {n.name}
-                </text>
-              </g>
-            );
-          })}
-        </g>
-      </svg>
-      {!mini && (
-        <div className="constellation-bottom">
-          <span>
-            <Info size={13} /> 拖动平移 · 点击节点查看关系 · 教材页序用虚线标记
-          </span>
-          <span>
-            {visible.length} 节点 · {visibleEdges.length} 条关系
-          </span>
-        </div>
-      )}
-    </div>
-  );
+  const layout = useMemo(() => providedLayout ?? layoutGraph(
+    data.graph.nodes.filter(n => !n.textbookId && !n.kind), data.graph.edges,
+  ), [providedLayout, data.graph]);
+  const positions = useMemo(() => new Map(layout.nodes.map(node => [node.id, node])), [layout]);
+  const [hovered, setHovered] = useState<string>();
+  const active = hovered && positions.has(hovered) ? hovered : selected;
+  const neighbors = useMemo(() => {
+    if (!active || !positions.has(active)) return null;
+    const adjacent = new Set([active]);
+    for (const [from, to, type] of layout.edges) {
+      if (type !== "prerequisite") continue;
+      if (from === active) adjacent.add(to);
+      if (to === active) adjacent.add(from);
+    }
+    return adjacent;
+  }, [active, layout, positions]);
+  const svg = useRef<SVGSVGElement>(null);
+  const [size, setSize] = useState<Size>({ width: 0, height: 0 });
+  const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1, base: 1 });
+  const previous = useRef<{ layout: GraphLayout; size: Size; request?: number }>(undefined);
+  const drag = useRef<{ pointer: number; origin: Point; pan: Point } | null>(null);
+  const moved = useRef(false);
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const scale = camera.base * camera.zoom;
+
+  useLayoutEffect(() => {
+    const element = svg.current;
+    if (!element) return;
+    const measure = () => {
+      const {width, height} = element.getBoundingClientRect();
+      setSize(old => old.width === width && old.height === height ? old : {width, height});
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!size.width || !size.height) return;
+    const last = previous.current;
+    const requested = cameraRequest && last?.request !== cameraRequest.revision;
+    const resized = !!last && size !== last.size;
+    const changed = layout !== last?.layout;
+    previous.current = {layout, size, request: cameraRequest?.revision};
+    if (!requested && !changed && !resized) return;
+    const target = requested ? cameraRequest.id : resized && !changed ? selected : undefined;
+    const node = target && positions.get(target);
+    setCamera(node ? readingCamera(node, size) : fitCamera(layout, size, mini));
+  }, [size, layout, positions, cameraRequest, selected, mini]);
+
+  useEffect(() => {
+    const element = svg.current;
+    if (!element || mini) return;
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = element.getBoundingClientRect();
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1);
+      const anchor = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      setCamera(view => zoomAt(view, Math.exp(-delta * 0.002), anchor));
+    };
+    element.addEventListener("wheel", wheel, { passive: false });
+    return () => element.removeEventListener("wheel", wheel);
+  }, [mini]);
+
+  const style = {
+    "--graph-title-size": Math.min(24, Math.max(16, 12 / scale)) + "px",
+    "--graph-meta-size": Math.min(16, Math.max(11, 8 / scale)) + "px",
+  } as CSSProperties;
+  return <div className={"constellation graph-atlas" + (mini ? " constellation-mini" : "")} style={style}>
+    <svg ref={svg} className="graph-viewport" data-graph-viewport="" data-zoom={camera.zoom}
+      data-pan-x={camera.x} data-pan-y={camera.y} data-scale={scale} role={mini ? "img" : "group"}
+      aria-label={mini ? "内置课程知识图谱预览" : "数学知识关系图，拖动平移，滚轮缩放，节点可用键盘选择"}
+      onPointerDown={event => {
+        if (mini || !event.isPrimary || event.button !== 0) return;
+        moved.current = false;
+        drag.current = { pointer: event.pointerId, origin: {x:event.clientX, y:event.clientY}, pan:camera };
+      }}
+      onPointerMove={event => {
+        const current = drag.current;
+        if (!current || event.pointerId !== current.pointer || !event.buttons) return;
+        const dx = event.clientX - current.origin.x, dy = event.clientY - current.origin.y;
+        if (!moved.current && Math.hypot(dx, dy) < 4) return;
+        if (!moved.current) {
+          moved.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setHovered(undefined);
+        }
+        setCamera(view => ({ ...view, x: current.pan.x + dx, y: current.pan.y + dy }));
+      }}
+      onPointerUp={() => { drag.current = null; }}
+      onPointerCancel={() => { drag.current = null; }}
+      onLostPointerCapture={() => { drag.current = null; }}
+      onClickCapture={event => {
+        if (moved.current) { event.stopPropagation(); moved.current = false; }
+      }}>
+      <defs>
+        {["default", "active", "sequence", "implication"].map(name => <marker key={name} id={uid + "-" + name}
+          viewBox="0 0 8 8" markerWidth="6" markerHeight="6" refX="7.5" refY="4" orient="auto">
+          <path className={"graph-arrow graph-arrow-" + name} d="M0 0L8 4L0 8Z"/>
+        </marker>)}
+      </defs>
+      <g data-graph-world="" transform={`translate(${camera.x} ${camera.y}) scale(${scale})`}>
+        {layout.lanes.map(lane => <g key={lane.id} data-lane-id={lane.id} className="graph-lane">
+          <rect className="graph-lane-frame" x={lane.x} y={lane.y} width={lane.width} height={lane.height} rx={14}/>
+          <foreignObject x={lane.x} y={lane.y} width={lane.width} height={LANE_HEADER_HEIGHT}>
+            <div className="graph-lane-heading" title={lane.title}>
+              {lane.id === "builtin" ? <LibraryBig aria-hidden="true" /> : <BookOpen aria-hidden="true" />}
+              <span className="graph-lane-title">{lane.title}</span>
+              <span className="graph-lane-count">{lane.nodeCount} 节点</span>
+            </div>
+          </foreignObject>
+        </g>)}
+        {layout.edges.map(([from, to, type]) => {
+          const source = positions.get(from), target = positions.get(to);
+          if (!source || !target) return null;
+          const linked = type === "prerequisite" && (from === active || to === active);
+          const variant = linked ? "active" : type === "prerequisite" ? "default" : type;
+          return <path className={"graph-edge graph-edge-" + variant} key={JSON.stringify([from,to,type])}
+            data-from={from} data-to={to} data-edge-type={type} d={connection(source, target)}
+            opacity={neighbors && !linked ? 0.35 : 1}
+            strokeDasharray={type === "sequence" ? "5 5" : type === "implication" ? "1 4" : undefined}
+            markerEnd={`url(#${uid}-${variant})`}>
+            <title>{type === "sequence" ? "页序参考" : type === "implication" ? "条件推导" : "前置关系"}</title>
+          </path>;
+        })}
+        {layout.nodes.map(node => {
+          const chosen = selected === node.id, match = !!matches?.has(node.id), review = needsReview(node);
+          const dim = (neighbors && !neighbors.has(node.id)) || (reviewOnly && !review && node.id !== active)
+            || (matches?.size && !match && !neighbors);
+          const color = chosen ? " chosen" : node.id === active ? " hovered" : match ? " matched" : "";
+          const score = node.state === "unpracticed" ? null : node.progress;
+          const status = score == null ? (node.state === "unpracticed" ? "未练习" : "待评分") : `${score}%`;
+          return <g key={node.id} data-node-id={node.id} data-review={review} data-match={match}
+            className={"graph-node" + color} opacity={dim ? 0.35 : 1}
+            role={onSelect ? "button" : undefined} tabIndex={onSelect ? 0 : undefined}
+            aria-pressed={onSelect ? chosen : undefined} aria-label={`${node.name}，${status}`}
+            onPointerEnter={() => { if (!mini && !drag.current) setHovered(node.id); }}
+            onPointerLeave={() => { if (!mini) setHovered(undefined); }}
+            onFocus={event => {
+              if (!onSelect || !event.currentTarget.matches(":focus-visible")) return;
+              setHovered(node.id);
+              const left = camera.x + node.x * scale, top = camera.y + node.y * scale;
+              if (left < 0 || top < 0 || left + node.width * scale > size.width || top + node.height * scale > size.height)
+                setCamera(readingCamera(node, size));
+            }}
+            onBlur={() => setHovered(undefined)} onClick={() => onSelect?.(node.id)}
+            onKeyDown={event => {
+              if (onSelect && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault(); onSelect(node.id);
+              }
+            }}>
+            <title>{node.name}</title>
+            <rect className="graph-card-frame" x={node.x} y={node.y} width={node.width} height={node.height} rx={9}/>
+            <foreignObject x={node.x} y={node.y} width={node.width} height={node.height}>
+              <div className="graph-card-body">
+                <strong className="graph-card-title" title={node.name}>{node.name}</strong>
+                <div className="graph-card-meta">
+                  {node.pageStart != null && <span className="graph-page">P.{node.pageStart}</span>}
+                  {reviewOnly && review && <span className="graph-review">待复习</span>}
+                  {score == null ? <span className="graph-status">{status}</span> : <span className="graph-mastery">
+                    <span className="graph-meter" aria-hidden="true"><i style={{ width: score + "%" }}/></span>{status}
+                  </span>}
+                </div>
+              </div>
+            </foreignObject>
+          </g>;
+        })}
+      </g>
+    </svg>
+    {!mini && <div className="graph-footer">
+      <div className="graph-legend" aria-label="图例"><span><i/>前置关系</span>
+        {layout.edges.some(([, , type]) => type === "sequence") && <span><i className="graph-dash"/>页序参考</span>}
+        {layout.edges.some(([, , type]) => type === "implication") && <span><i className="graph-logic"/>条件推导</span>}
+      </div>
+      <div className="graph-zoom">
+        <button type="button" aria-label="缩小地图" title="缩小地图" disabled={camera.zoom <= 0.4}
+          onClick={() => setCamera(view => zoomAt(view, 1 / 1.25, {x:size.width/2, y:size.height/2}))}><Minus/></button>
+        <output aria-label="地图缩放">{Math.round(camera.zoom * 100)}%</output>
+        <button type="button" aria-label="放大地图" title="放大地图" disabled={camera.zoom >= 2}
+          onClick={() => setCamera(view => zoomAt(view, 1.25, {x:size.width/2, y:size.height/2}))}><Plus/></button>
+      </div>
+    </div>}
+  </div>;
 }

@@ -42,7 +42,6 @@ export function deriveOfflineGraph(
     else attemptsByTopic.set(attempt.topicId, [attempt]);
   }
 
-  let position = 0;
   for (const book of books) {
     // bootstrap-extras returns creation order. Stable sort keeps that order for page ties.
     const cards = cardsByBook.get(book.id)!;
@@ -53,10 +52,9 @@ export function deriveOfflineGraph(
         id: unit.id, conceptId: unit.id, name: unit.title,
         textbookId: book.id, textbookTitle: book.title, pageStart: unit.textbookSource!.pageStart,
         detail: unit.definition, description: book.title, prerequisites: [], connections: [],
-        x: 90 + (position % 5) * 170, y: 68 - Math.floor(position / 5) * 75, color: "#55b9cb",
+        color: "#55b9cb",
         ...practiceState(attemptsByTopic.get(unit.id) ?? []),
       };
-      position++;
       localNodes.set(unit.id, node);
       nodes.push(node);
     }

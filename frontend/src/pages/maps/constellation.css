@@ -1,0 +1,201 @@
+.graph-atlas {
+  --graph-paper: #f7f6f0;
+  --graph-dot: #c9cbc0;
+  --graph-lane: rgb(250 250 244 / 42%);
+  --graph-rule: #ced1c6;
+  --graph-card: #fffefa;
+  --graph-ink: #283630;
+  --graph-note: #54675f;
+  --graph-accent: #327366;
+  --graph-edge: #83998b;
+  --graph-sequence: #96a69b;
+  --graph-implication: #9886a1;
+  --graph-fade: #e8ece6;
+  --graph-tag: #eef0eb;
+  --graph-review: #9e5637;
+  --graph-footer: rgb(250 249 244 / 97%);
+}
+:root[data-theme="dark"] .graph-atlas {
+  --graph-paper: #202623;
+  --graph-dot: #47514a;
+  --graph-lane: rgb(34 43 38 / 42%);
+  --graph-rule: #4b574f;
+  --graph-card: #2a342f;
+  --graph-ink: #e4ece6;
+  --graph-note: #b6c6ba;
+  --graph-accent: #90d6b8;
+  --graph-edge: #869e8d;
+  --graph-sequence: #6f8477;
+  --graph-implication: #af97b2;
+  --graph-fade: #45564b;
+  --graph-tag: #39443d;
+  --graph-review: #edb493;
+  --graph-footer: rgb(35 42 38 / 97%);
+}
+.constellation.graph-atlas {
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--graph-rule);
+  border-radius: 14px;
+  background-color: var(--graph-paper);
+  background-image: radial-gradient(circle, var(--graph-dot) 0.85px, transparent 1px);
+  background-size: 16px 16px;
+  background-position: 7px 7px;
+  color: var(--graph-ink);
+  box-shadow: none;
+  isolation: isolate;
+}
+.graph-atlas > .graph-viewport {
+  display: block;
+  width: 100%;
+  height: clamp(355px, 57vh, 660px);
+  min-height: 0;
+  max-height: none;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+.graph-atlas > .graph-viewport:active { cursor: grabbing; }
+.graph-atlas .graph-lane-frame { fill: var(--graph-lane); stroke: var(--graph-rule); stroke-width: 1; }
+.graph-lane-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: calc(100% - 7px);
+  padding: 0 16px;
+  color: var(--graph-ink);
+  background: var(--graph-tag);
+  border-bottom: 1px solid var(--graph-rule);
+  border-radius: 14px 14px 0 0;
+}
+.graph-lane-heading > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: var(--graph-accent);
+}
+.graph-lane-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: max(17px, var(--graph-title-size));
+  font-weight: 650;
+  line-height: 1.3;
+}
+.graph-lane-count {
+  color: var(--graph-note);
+  font-size: var(--graph-meta-size);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.graph-edge { stroke: var(--graph-edge); stroke-width: 1.7px; fill: none; pointer-events: none; }
+.graph-edge-active { stroke: var(--graph-accent); stroke-width: 2.4px; }
+.graph-edge-sequence { stroke: var(--graph-sequence); stroke-width: 1.4px; }
+.graph-edge-implication { stroke: var(--graph-implication); stroke-width: 1.65px; stroke-linecap: round; }
+.graph-arrow-default { fill: var(--graph-edge); }
+.graph-arrow-active { fill: var(--graph-accent); }
+.graph-arrow-sequence { fill: var(--graph-sequence); }
+.graph-arrow-implication { fill: var(--graph-implication); }
+.graph-node { outline: none; cursor: pointer; }
+.graph-card-frame {
+  fill: var(--graph-card);
+  stroke: var(--graph-rule);
+  stroke-width: 1.25px;
+}
+.graph-node:is(.chosen, .hovered, .matched, :focus-visible) .graph-card-frame {
+  stroke: var(--graph-accent);
+  stroke-width: 2.5px;
+}
+.graph-node.chosen .graph-card-frame { fill: color-mix(in srgb, var(--graph-accent) 9%, var(--graph-card)); }
+.graph-node:focus-visible .graph-card-frame { stroke: var(--focus); stroke-width: 3px; }
+.graph-card-body {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 12px;
+  color: var(--graph-ink);
+  line-height: 1.1;
+}
+.graph-card-title {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--graph-title-size);
+  line-height: 1.2;
+  font-weight: 650;
+}
+.graph-card-meta {
+  display: flex;
+  align-items: center;
+  min-height: 14px;
+  gap: 8px;
+  color: var(--graph-note);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--graph-meta-size);
+  line-height: 1.1;
+}
+.graph-page { font-family: "Segoe UI", sans-serif; }
+.graph-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--graph-tag);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.graph-mastery { display: inline-flex; align-items: center; gap: 6px; color: var(--graph-accent); }
+.graph-page ~ .graph-mastery { margin-left: auto; }
+.graph-meter { width: 36px; height: 4px; border-radius: 9px; overflow: hidden; background: var(--graph-fade); }
+.graph-meter i { display: block; height: 100%; background: var(--graph-accent); }
+.graph-review { color: var(--graph-review); white-space: nowrap; }
+.graph-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 11px 4px 16px;
+  border-top: 1px solid var(--graph-rule);
+  background: var(--graph-footer);
+  color: var(--graph-note);
+}
+.graph-legend, .graph-legend span, .graph-zoom { display: flex; align-items: center; gap: 6px; }
+.graph-legend { flex-wrap: wrap; gap: 4px 14px; font-size: 11px; }
+.graph-legend span { white-space: nowrap; }
+.graph-legend i { width: 17px; border-top: 2px solid var(--graph-edge); }
+.graph-legend .graph-dash { border-top: 2px dashed var(--graph-sequence); }
+.graph-legend .graph-logic { border-top: 2px dotted var(--graph-implication); }
+.graph-zoom {
+  flex-shrink: 0;
+  gap: 3px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.graph-zoom output { text-align: center; min-width: 38px; }
+.graph-zoom button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--graph-rule);
+  border-radius: 6px;
+  background: var(--graph-card);
+  color: var(--graph-ink);
+  cursor: pointer;
+}
+.graph-zoom button:disabled { opacity: 0.45; cursor: default; }
+.graph-zoom button:not(:disabled):hover { border-color: var(--graph-accent); color: var(--graph-accent); }
+.graph-zoom button > svg { width: 14px; height: 14px; }
+.constellation.graph-atlas.constellation-mini { height: 100%; min-height: 0; border-radius: 6px; }
+.graph-atlas.constellation-mini > .graph-viewport { height: 100%; min-height: 0; pointer-events: none; }
+@media (max-width: 700px) {
+  .graph-atlas > .graph-viewport { height: clamp(330px, 52vh, 440px); }
+  .graph-lane-count { font-size: 11px; }
+}
