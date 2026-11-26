@@ -1,4 +1,4 @@
-import { ArrowRight, BookmarkPlus, Settings2 } from "lucide-react";
+import { ArrowRight, BookmarkPlus } from "lucide-react";
 import type { FunctionWorkspaceState } from "../hooks/useFunctionWorkspace";
 
 export function WorkspaceHeader({
@@ -14,16 +14,9 @@ export function WorkspaceHeader({
         <div>
           <span className="badge">自由函数工作区 · 数学分析</span>
           <h1>先有问题，再有图像。</h1>
-          <p>用对话改变函数、添加参数与比较曲线，再沿着图像理解证明。</p>
+          <p>可在右侧向 Hiyori 描述想观察的函数或图像变化。</p>
         </div>
         <div className="button-row">
-          <button
-            className="btn"
-            onClick={() => state.setSettings((value) => !value)}
-          >
-            <Settings2 size={15} />
-            {state.status?.configured ? "模型已配置" : "连接 AI"}
-          </button>
           <button className="btn primary" onClick={state.save}>
             <BookmarkPlus size={15} />
             保存观察
@@ -31,14 +24,6 @@ export function WorkspaceHeader({
         </div>
       </div>
       <div className="fw-status">
-        <span
-          className={state.status?.configured ? "fw-online" : "fw-offline"}
-        >
-          <i />
-          {state.status?.configured
-            ? `${state.status.provider_label || state.status.provider} · ${state.status.model}`
-            : "AI 未连接 · 可先直接编辑公式"}
-        </span>
         <button className="text-button" onClick={() => onNavigate("surface")}>
           三维曲面实验室 <ArrowRight size={13} />
         </button>

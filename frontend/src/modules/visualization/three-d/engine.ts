@@ -1,4 +1,5 @@
 import { parse, type MathNode } from "mathjs";
+import { hasMinimumSpan } from "../../../lib/interval";
 import { defaultSurfaceScene, type SurfaceScene } from "./types";
 
 const functions = new Set([
@@ -144,8 +145,8 @@ export function normalizeSurfaceScene(input: unknown): SurfaceScene {
   xMax = clamp(xMax, -19.8, 20);
   yMin = clamp(yMin, -20, 19.8);
   yMax = clamp(yMax, -19.8, 20);
-  if (xMax - xMin < 0.2) xMax = xMin + 0.2;
-  if (yMax - yMin < 0.2) yMax = yMin + 0.2;
+  if (!hasMinimumSpan(xMin, xMax, 0.2)) xMax = xMin + 0.2;
+  if (!hasMinimumSpan(yMin, yMax, 0.2)) yMax = yMin + 0.2;
   const view = source.view || defaultSurfaceScene.view;
   const display = source.display || defaultSurfaceScene.display;
   return {

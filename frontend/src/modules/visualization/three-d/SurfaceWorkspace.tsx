@@ -1,28 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { MathPreview, MathText, SymbolBar } from "../../../components/Math";
-import {
-  ArrowRight,
-  Boxes,
-  ChevronDown,
-  Grid3X3,
-  LoaderCircle,
-  RotateCcw,
-  Send,
-  SlidersHorizontal,
-  Sparkles,
-  Undo2,
-  Wand2,
-} from "lucide-react";
-import { useSession } from "../../../lib/session";
-import { useAIConnection } from "../../ai/connection";
-import { requestSurfaceChange } from "../api";
+import { useState } from "react";
+import { Boxes, Grid3X3, RotateCcw, SlidersHorizontal, Undo2, Wand2 } from "lucide-react";
 import { normalizeSurfaceScene } from "./engine";
-import {
-  surfaceParameterCandidate,
-  surfaceParameterHints,
-} from "./companionScene";
+import { applySurfaceActions } from "./companionScene";
 import { useWorkspaceEndpoint } from "../../../app/useWorkspaceEndpoint";
-import { sceneParameterBatch } from "../scene/parameterBatch";
+import { sceneRange } from "../scene/companionActions";
 import { SurfacePlot3D } from "./SurfacePlot3D";
 import {
   defaultSurfaceScene,
@@ -32,10 +13,7 @@ import {
 } from "./types";
 import "./surface.css";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
-
 const STORAGE_SCENE = "axiom-surface-scene";
-const STORAGE_CHAT = "axiom-surface-chat";
 
 function readStoredScene(): SurfaceScene {
   try {
@@ -46,117 +24,60 @@ function readStoredScene(): SurfaceScene {
   }
 }
 
-function readStoredChat(): ChatMessage[] {
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_CHAT) || "[]");
-    return Array.isArray(stored) ? stored.slice(-20) : [];
-  } catch {
-    return [];
-  }
-}
-
-function persist(scene: SurfaceScene, messages: ChatMessage[]) {
+function persist(scene: SurfaceScene) {
   try {
     localStorage.setItem(STORAGE_SCENE, JSON.stringify(scene));
-    localStorage.setItem(STORAGE_CHAT, JSON.stringify(messages.slice(-20)));
   } catch {
     /* browsing remains available */
   }
 }
 
-export default function SurfaceWorkspace({
-  onOpenSettings,
-}: {
-  onOpenSettings: () => void;
-}) {
+export default function SurfaceWorkspace() {
   const [scene, setScene] = useState<SurfaceScene>(readStoredScene);
-  const [draft, setDraft] = useState(() => readStoredScene().expression);
+  const [draft, setDraft] = useState(scene.expression);
   const [undo, setUndo] = useState<SurfaceScene[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>(readStoredChat);
-  const [input, setInput] = useState("");
-  const chatInput = useRef<HTMLTextAreaElement>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const { serverMode } = useSession();
-  const { effective: status, status: localKey, available } = useAIConnection();
-  const local = !!available && (!!localKey?.configured || !serverMode);
-  const canSend = serverMode || (local && !!status?.configured);
-  const chatEnd = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = chatEnd.current?.parentElement;
-    if (container) container.scrollTop = container.scrollHeight;
-  }, [messages, busy]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_CHAT, JSON.stringify(messages.slice(-20)));
-    } catch {
-      /* ignore */
-    }
-  }, [messages]);
 
   const commit = (
     next: SurfaceScene,
-    options: { record?: boolean; message?: string } = {},
+    options: { record?: boolean; keepDraft?: boolean } = {},
   ) => {
     const normalized = normalizeSurfaceScene(next);
     if (options.record !== false) {
-      setUndo((history) => [...history.slice(-14), scene]);
+      setUndo(history => [...history.slice(-14), scene]);
     }
     setScene(normalized);
-    setDraft(normalized.expression);
-    persist(normalized, messages);
-    if (options.message) setError("");
+    if (!options.keepDraft) setDraft(normalized.expression);
+    persist(normalized);
+    setError("");
   };
 
   const dirty = draft !== scene.expression;
-  useWorkspaceEndpoint("surface", JSON.stringify([scene, draft, busy]), {
+  useWorkspaceEndpoint("surface", JSON.stringify([scene, draft]), {
     query: () => ({
       surface_scene: {
         expression: scene.expression,
+        range: sceneRange(scene),
         view: scene.view,
-        display: scene.display,
-        controls: dirty || busy ? {} : surfaceParameterHints(scene),
       },
     }),
     command: (actions) => {
-      if (dirty || busy) return false;
-      const next = sceneParameterBatch(scene, actions, surfaceParameterCandidate);
-      if (!next) return false;
-      commit(next);
-      return true;
+      if (dirty) return { reason: "请先应用正在编辑的曲面公式" };
+      return applySurfaceActions(scene, actions, next => commit(next, { record: true }));
     },
   });
 
-  const updateView = (patch: Partial<SurfaceScene["view"]>) => {
-    setScene((current) => {
-      const next = normalizeSurfaceScene({
-        ...current,
-        view: { ...current.view, ...patch },
-      });
-      persist(next, messages);
-      return next;
-    });
+  const updateView = (patch: Partial<SurfaceScene["view"]>, record = true) => {
+    commit({ ...scene, view: { ...scene.view, ...patch } }, { record, keepDraft: true });
   };
 
   const updateDisplay = (patch: Partial<SurfaceScene["display"]>) => {
-    setScene((current) => {
-      const next = normalizeSurfaceScene({
-        ...current,
-        display: { ...current.display, ...patch },
-      });
-      persist(next, messages);
-      return next;
-    });
+    commit({ ...scene, display: { ...scene.display, ...patch } }, { keepDraft: true });
   };
 
   const updateRange = (patch: Partial<SurfaceScene>) => {
     try {
-      const next = normalizeSurfaceScene({ ...scene, ...patch });
-      setScene(next);
-      persist(next, messages);
-      setError("");
+      commit({ ...scene, ...patch }, { keepDraft: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "范围不合法");
     }
@@ -164,9 +85,7 @@ export default function SurfaceWorkspace({
 
   const applyExpression = () => {
     try {
-      const next = normalizeSurfaceScene({ ...scene, expression: draft });
-      commit(next);
-      setError("");
+      commit({ ...scene, expression: draft });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "表达式不合法");
     }
@@ -178,53 +97,13 @@ export default function SurfaceWorkspace({
     setScene(previous);
     setDraft(previous.expression);
     setUndo(undo.slice(0, -1));
-    persist(previous, messages);
-  };
-
-  const send = async () => {
-    const text = input.trim();
-    if (!text || busy) return;
-    if (!canSend) {
-      onOpenSettings();
-      return;
-    }
-    setBusy(true);
+    persist(previous);
     setError("");
-    const userMessage: ChatMessage = { role: "user", content: text };
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
-    setInput("");
-    try {
-      const result = await requestSurfaceChange(
-        {
-          message: text,
-          scene,
-          history: messages.slice(-8),
-        },
-        local,
-      );
-      const assistant: ChatMessage = {
-        role: "assistant",
-        content: result.message,
-      };
-      setMessages([...nextMessages, assistant]);
-      if (result.scene) {
-        const next = normalizeSurfaceScene(result.scene);
-        commit(next, { message: "已应用 AI 修改" });
-      }
-    } catch (cause) {
-      setInput(text);
-      setError(
-        cause instanceof Error ? cause.message : "AI 暂时无法修改三维场景",
-      );
-    } finally {
-      setBusy(false);
-    }
   };
 
   const applyPreset = (expression: string) => {
     try {
-      commit(normalizeSurfaceScene({ ...scene, expression }));
+      commit({ ...scene, expression });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "预设不可用");
     }
@@ -239,7 +118,7 @@ export default function SurfaceWorkspace({
           </span>
           <h1>看见曲面，也看见关系。</h1>
           <p>
-            拖动旋转、滚轮缩放，或直接告诉 AI 你想看的曲面、范围和视角。
+            拖动旋转、滚轮缩放，或在右侧向 Hiyori 描述想观察的曲面、范围和视角。
           </p>
         </div>
         <div className="button-row">
@@ -253,10 +132,7 @@ export default function SurfaceWorkspace({
           </button>
           <button
             className="btn"
-            onClick={() => {
-              commit(defaultSurfaceScene);
-              setMessages([]);
-            }}
+            onClick={() => commit(defaultSurfaceScene)}
           >
             <RotateCcw size={15} /> 重置
           </button>
@@ -450,7 +326,7 @@ export default function SurfaceWorkspace({
             </div>
             <SurfacePlot3D
               scene={scene}
-              onViewChange={updateView}
+              onViewChange={patch => updateView(patch, false)}
               onResetView={() =>
                 updateView({ azimuth: 45, elevation: 28, zoom: 1 })
               }
@@ -474,106 +350,6 @@ export default function SurfaceWorkspace({
           )}
         </section>
 
-        <aside className="card surface-chat">
-          <div className="surface-chat-heading">
-            <div>
-              <span className="badge purple">
-                <Sparkles size={13} /> AI 协作
-              </span>
-              <h3>让 AI 改变这张曲面</h3>
-            </div>
-            <span className={status?.configured ? "fw-online" : "fw-offline"}>
-              <i />
-              {status?.configured
-                ? `${status.provider_label || "模型"} · ${status.model || ""}`
-                : "AI 未连接"}
-            </span>
-          </div>
-          <button className="btn" type="button" onClick={onOpenSettings}>
-            AI 接入设置
-          </button>
-          <div className="surface-chat-messages" aria-live="polite">
-            {!messages.length && (
-              <div className="surface-chat-empty">
-                <Sparkles size={22} />
-                <p>
-                  试试说：“把曲面换成 sin(x)cos(y)”“把视角转到 60°/35°”
-                  或“高度放大 1.5 倍”。
-                </p>
-              </div>
-            )}
-            {messages.map((message, index) => (
-              <div
-                className={`surface-message ${message.role}`}
-                key={`${message.role}-${index}`}
-              >
-                <small>{message.role === "user" ? "你" : "AI 助手"}</small>
-                <p><MathText>{message.content}</MathText></p>
-              </div>
-            ))}
-            {busy && (
-              <div className="surface-thinking">
-                <LoaderCircle size={15} /> 正在理解曲面与视角…
-              </div>
-            )}
-            <div ref={chatEnd} />
-          </div>
-          <div className="surface-quick-prompts">
-            {[
-              "换成 sin(x)cos(y)，保留范围",
-              "把视角转到 60° / 35°",
-              "换成马鞍面并显示网格",
-            ].map((prompt) => (
-              <button key={prompt} onClick={() => setInput(prompt)}>
-                <span><MathText>{prompt}</MathText></span>
-                <ArrowRight size={12} />
-              </button>
-            ))}
-          </div>
-          <form
-            className="surface-composer"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send();
-            }}
-          >
-            <textarea
-              ref={chatInput}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="例如：把高度放大到 1.5 倍，并换成高斯曲面…"
-              rows={3}
-              maxLength={2000}
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.nativeEvent.isComposing
-                ) {
-                  event.preventDefault();
-                  void send();
-                }
-              }}
-            />
-            <SymbolBar inputRef={chatInput} value={input} onChange={setInput} />
-            <MathPreview value={input} />
-            <div className="surface-composer-foot">
-              <span>
-                {status?.configured
-                  ? "Enter 发送 · Shift+Enter 换行"
-                  : "配置 AI 后即可对话；人工控制仍可用"}
-              </span>
-              <button
-                className="btn primary"
-                type="submit"
-                disabled={busy || !input.trim()}
-              >
-                {busy ? <LoaderCircle size={15} /> : <Send size={15} />}
-                发送
-              </button>
-            </div>
-          </form>
-        </aside>
       </div>
     </div>
   );

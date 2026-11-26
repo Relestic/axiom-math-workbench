@@ -27,3 +27,15 @@ test("all four sections and their historical aliases have a unique canonical rou
   }
   assert.equal(route.normalizeRoute("shelf/proof"), undefined);
 });
+
+test("retired example addresses replace history exactly once", () => {
+  for (const name of ["examples", "desk/examples"]) {
+    const location = {hash: "#" + name};
+    const changes = [];
+    const history = {replaceState(_state, _title, hash) { changes.push(hash); location.hash = hash; }};
+    const storage = {getItem() { return name; }};
+    assert.equal(route.pageFromHash(location, history, storage), "desk/textbook");
+    assert.equal(route.pageFromHash(location, history, storage), "desk/textbook");
+    assert.deepEqual(changes, ["#desk/textbook"]);
+  }
+});

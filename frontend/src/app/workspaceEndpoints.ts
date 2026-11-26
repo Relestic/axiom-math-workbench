@@ -1,12 +1,12 @@
-export type WorkspaceAction =
-  | { type: "highlight_proof_step"; ref: string }
-  | { type: "set_scene_param"; name: string; value: number };
+import type { WorkspaceAction } from "../modules/companion/actions";
+export type { WorkspaceAction };
 
-export type WorkspacePage = "proof" | "exercises" | "explore" | "surface" | "examples" | "textbook";
+export type WorkspacePage = "proof" | "exercises" | "explore" | "surface" | "textbook";
+export type WorkspaceCommandResult = boolean | "unchanged" | { reason: string };
 
 export type WorkspaceEndpoint = {
   query: () => Record<string, unknown>;
-  command?: (actions: readonly WorkspaceAction[]) => boolean | "unchanged";
+  command?: (actions: readonly WorkspaceAction[]) => WorkspaceCommandResult;
 };
 
 const endpoints = new Map<string, WorkspaceEndpoint>();

@@ -189,7 +189,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
   return (
     <div className="learning-page exercises-page">
       <Heading
-        step="第 5 步 / 共 6 步"
+        step="第 3 步 / 共 3 步"
         title="练习题库 · 从理解到独立证明"
         description="围绕当前知识点练习。每道题都有提示、思路和完整解答。"
       >
@@ -513,16 +513,6 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
               <div>
                 <b>证明思路</b>
                 <small>关键构造与引用依据</small>
-              </div>
-              <ArrowRight size={16} />
-            </button>
-            <button
-              className="review-link"
-              onClick={() => onNavigate("examples")}
-            >
-              <div>
-                <b>正反例实验室</b>
-                <small>检查命题的边界</small>
               </div>
               <ArrowRight size={16} />
             </button>

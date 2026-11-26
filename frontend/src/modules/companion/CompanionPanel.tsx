@@ -4,8 +4,8 @@ import { useAppData } from "../../app/DataProvider";
 import { MathText, SymbolBar, MathPreview } from "../../components/Math";
 import { useAIConnection } from "../ai/connection";
 import type { CompanionStage } from "./CompanionStage";
-import { localReply, requestReply, spokenMath, type Message } from "./reply";
-import { queryWorkspace } from "./workspace";
+import { companionErrorMessage, localReply, requestReply, spokenMath, type Message } from "./reply";
+import { queryDeskWorkspace, queryWorkspace, type DeskPanes } from "./workspace";
 import "./panel.css";
 
 function BubbleText({text}: {text:string}) {
@@ -18,11 +18,10 @@ function BubbleText({text}: {text:string}) {
     )}</div>)}</>;
 }
 
-type Turn = Message & { scope: string };
+type Turn = Message & { scope: string; actionNotice?: string };
 const quickQuestions: Record<string, string[]> = {
   textbook: ["解释当前定义", "梳理条件"],
   proof: ["解释这一步", "这一步的依据"],
-  examples: ["解释这个反例", "怎样补全条件"],
   exercises: ["给点提示", "检查作答思路"],
   review: ["梳理易错条件", "给个复习提示"],
   explore: ["解释当前图像", "怎样观察参数"],
@@ -34,8 +33,8 @@ function object(value: unknown): Record<string,unknown> {
 }
 function string(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
 
-export function CompanionPanel({page, stage, stageView}: {
-  page:string; stage:RefObject<CompanionStage | null>; stageView: ReactNode;
+export function CompanionPanel({page, desk, stage, stageView}: {
+  page:string; desk?: DeskPanes; stage:RefObject<CompanionStage | null>; stageView: ReactNode;
 }) {
   const {data, selectedConceptId} = useAppData();
   const {status} = useAIConnection();
@@ -53,7 +52,7 @@ export function CompanionPanel({page, stage, stageView}: {
   const speechId = useRef(0);
   const field = useRef<HTMLTextAreaElement>(null);
   const transcript = useRef<HTMLDivElement>(null);
-  const scope = page + "/" + selectedConceptId;
+  const scope = (desk ? "desk" : page) + "/" + selectedConceptId;
   const previousScope = useRef(scope);
   const requestedScope = useRef<string | null>(null);
 
@@ -137,8 +136,14 @@ export function CompanionPanel({page, stage, stageView}: {
   async function ask(raw:string) {
     const question = raw.trim();
     if (!question || request.current || !unit) return;
-    const workspace = queryWorkspace(page);
-    if (["textbook", "examples", "proof", "exercises", "explore", "surface"].includes(page) && !workspace.ready) {
+    let workspace: ReturnType<typeof queryWorkspace>;
+    try {
+      workspace = desk ? queryDeskWorkspace(desk.study, desk.board, desk.collapsed) : queryWorkspace(page);
+    } catch (cause) {
+      setNotice(companionErrorMessage(cause));
+      return;
+    }
+    if ((desk || ["textbook", "proof", "exercises", "explore", "surface"].includes(page)) && !workspace.ready) {
       setNotice("正在加载当前学习内容，请稍后再提问。");
       return;
     }
@@ -156,12 +161,14 @@ export function CompanionPanel({page, stage, stageView}: {
     try {
       const details = workspace.context;
       const proof = object(details.proof), exercise = object(details.exercise);
-      const expression = string(object(details.function_scene).active_expression) ?? string(object(details.surface_scene).expression);
+      const graphQuestion = /图像|图形|曲线|曲面|参数|黑板|切线/.test(question)
+        || (["explore","surface"].includes(page) && !/定义|条件|证明/.test(question));
+      const expression = graphQuestion ? string(object(details.function_scene).active_expression)
+        ?? string(object(details.surface_scene).expression) : undefined;
       const reply = local
         ? localReply(question, unit, data.classics.find(c => c.id === unit.id), {
-          step: string(object(proof.current_step).text), hint:string(exercise.hint),
+          step: graphQuestion ? undefined : string(object(proof.current_step).text), hint:string(exercise.hint),
           answer:string(exercise.draft_answer), expression,
-          evidence:string(object(details.example).evidence),
         })
         : await requestReply(question, {
           page, concept_id:unit.id, title:unit.title, definition:unit.definition, formula:unit.formula, ...details,
@@ -171,20 +178,21 @@ export function CompanionPanel({page, stage, stageView}: {
         setNotice("学习内容已更新，可按当前步骤重新提问。");
         return;
       }
+      let actionNotice: string | undefined;
       if (reply.actions.length) {
-        const applied = await workspace.dispatchActions(reply.actions, controller.signal, target => {
-          requestedScope.current = target + "/" + selectedConceptId;
+        const applied = await workspace.dispatchActions(reply.actions, controller.signal, () => {
+          if (!desk) requestedScope.current = "desk/" + selectedConceptId;
         });
         if (id !== sequence.current) return;
-        if (!applied) setNotice("当前步骤或参数与建议不符，已保留原内容。");
+        if (applied !== true) actionNotice = applied ? applied.reason : "学习内容已更新，请按当前步骤重新提问。";
       }
       setTurns(items => [...items.slice(-29), {role:"assistant",content:reply.display_markdown,
-        spoken:reply.spoken_text, local, scope}]);
+        spoken:reply.spoken_text, local, scope, actionNotice}]);
       if (mutedRef.current) void stage.current?.playMotion("TapBody");
       else void read(reply.spoken_text);
     } catch (cause) {
       if (id === sequence.current && !controller.signal.aborted) {
-        setNotice(cause instanceof Error && cause.name !== "ZodError" ? cause.message : "这次讲解格式有误，请重新提问。");
+        setNotice(companionErrorMessage(cause));
       }
     } finally {
       if (id === sequence.current) { setBusy(false); request.current = null; }
@@ -211,6 +219,7 @@ export function CompanionPanel({page, stage, stageView}: {
       {turns.map((m,i) => <article key={i} className={"companion-bubble " + m.role}>
         <small>{m.role === "user" ? "你" : m.local ? "Hiyori · 本地讲义" : "Hiyori · DeepSeek"}</small>
         <BubbleText text={m.content}/>
+        {m.actionNotice && <p className="companion-notice" role="status">{m.actionNotice}</p>}
         {m.spoken && !muted && <button type="button" className="read-reply" onClick={() => void read(m.spoken!)}>朗读</button>}
       </article>)}
       {busy && <p role="status" className="companion-intro">正在准备讲解…</p>}
@@ -219,7 +228,7 @@ export function CompanionPanel({page, stage, stageView}: {
     <div className="companion-compose"
       onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setSymbolsOpen(false); }}>
       {speaking && <button type="button" className="read-reply" onClick={stopVoice}><Square size={11}/> 停止朗读</button>}
-      <div className="companion-quick">{(quickQuestions[page] ?? ["解释当前定义", "举个反例"]).map(q =>
+      <div className="companion-quick">{(quickQuestions[page] ?? quickQuestions.textbook).map(q =>
         <button className="btn" type="button" key={q} disabled={busy} onClick={() => void ask(q)}>{q}</button>)}</div>
       <form onSubmit={e => { e.preventDefault(); void ask(input); }}>
         <textarea ref={field} rows={2} maxLength={2000} value={input} aria-label="向 Hiyori 提问"

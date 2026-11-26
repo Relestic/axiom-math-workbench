@@ -8,7 +8,7 @@ import {
 import { Metric, Range } from "./Range";
 
 export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
-  const { scene, math, busy, dirty, history } = state;
+  const { scene, math, dirty, history } = state;
   return (
     <section className="card fw-chart-card">
       <div className="fw-chart-heading">
@@ -22,7 +22,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
         </div>
         <button
           className="btn"
-          disabled={!history.length || busy}
+          disabled={!history.length}
           onClick={state.undo}
         >
           <Undo2 size={14} />
@@ -32,7 +32,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
       <FunctionPlot
         scene={scene}
         onPoint={(x) => {
-          if (!busy && !dirty)
+          if (!dirty)
             state.patch({ x0: Math.max(scene.xMin, Math.min(scene.xMax, x)) });
         }}
       />
@@ -51,7 +51,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                 max={Math.max(scene.xMax, scene.x0)}
                 step={(scene.xMax - scene.xMin) / 600}
                 change={(x0) => state.patch({ x0 })}
-                disabled={busy || dirty}
+                disabled={dirty}
               />
             )}
             {scene.mode === "derivative" && (
@@ -62,7 +62,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                 max={Math.max(1, scene.h)}
                 step={0.0001}
                 change={(h) => state.patch({ h })}
-                disabled={busy || dirty}
+                disabled={dirty}
               />
             )}
             {scene.mode === "continuity" && (
@@ -74,7 +74,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                   max={Math.max(2, scene.epsilon)}
                   step={0.001}
                   change={(epsilon) => state.patch({ epsilon })}
-                  disabled={busy || dirty}
+                  disabled={dirty}
                 />
                 <Range
                   label="邻域 δ"
@@ -83,7 +83,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                   max={Math.max(2, scene.delta)}
                   step={0.001}
                   change={(delta) => state.patch({ delta })}
-                  disabled={busy || dirty}
+                  disabled={dirty}
                 />
               </>
             )}
@@ -98,7 +98,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                           type="number"
                           aria-label={index ? "积分终点" : "积分起点"}
                           value={scene[key]}
-                          disabled={busy || dirty}
+                          disabled={dirty}
                           onChange={(event) =>
                             state.patch({ [key]: Number(event.target.value) })
                           }
@@ -114,7 +114,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                   max={200}
                   step={1}
                   change={(subdivisions) => state.patch({ subdivisions })}
-                  disabled={busy || dirty}
+                  disabled={dirty}
                 />
               </>
             )}
@@ -126,7 +126,7 @@ export function FunctionChart({ state }: { state: FunctionWorkspaceState }) {
                 max={5}
                 step={1}
                 change={(order) => state.patch({ order })}
-                disabled={busy || dirty}
+                disabled={dirty}
               />
             )}
           </div>

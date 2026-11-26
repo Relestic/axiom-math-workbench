@@ -4,7 +4,7 @@ import { initialScene } from "../scene/functionScene";
 import { Range } from "./Range";
 
 export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
-  const { scene, draft, busy, dirty } = state;
+  const { scene, draft, dirty } = state;
   return (
     <aside className="card fw-editor">
       <div className="fw-section-title">
@@ -14,7 +14,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
         </h3>
         <span>{scene.curves.length} / 4</span>
       </div>
-      <p className="fw-muted">写入任意支持的表达式，或让 AI 帮你修改。</p>
+      <p className="fw-muted">编辑公式后按 Enter 应用，或在右侧请 Hiyori 改图。</p>
       {draft.curves.map((curve, index) => (
         <div
           className={`fw-curve-editor ${scene.activeId === curve.id ? "active" : ""}`}
@@ -28,7 +28,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
                 aria-label={`分析函数 ${index + 1}`}
                 checked={scene.activeId === curve.id}
                 disabled={
-                  busy || dirty || !scene.curves.some((item) => item.id === curve.id)
+                  dirty || !scene.curves.some((item) => item.id === curve.id)
                 }
                 onChange={() => state.patch({ activeId: curve.id })}
               />
@@ -37,7 +37,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
             <button
               className="icon-button"
               aria-label={`删除函数 ${index + 1}`}
-              disabled={draft.curves.length === 1 || busy}
+              disabled={draft.curves.length === 1}
               onClick={() =>
                 state.setDraft((current) => ({
                   ...current,
@@ -57,7 +57,6 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
             aria-label={`函数 ${index + 1} 表达式`}
             value={curve.expression}
             maxLength={300}
-            disabled={busy}
             onChange={(event) =>
               state.setCurve(curve.id, { expression: event.target.value })
             }
@@ -130,7 +129,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
       ))}
       <button
         className="btn fw-add"
-        disabled={draft.curves.length >= 4 || busy}
+        disabled={draft.curves.length >= 4}
         onClick={() =>
           state.setDraft((current) => ({
             ...current,
@@ -175,7 +174,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
       </details>
       <button
         className="btn primary fw-apply"
-        disabled={busy || !dirty}
+        disabled={!dirty}
         onClick={() => state.commit(draft, "公式与范围已更新")}
       >
         <Check size={15} />
@@ -210,7 +209,7 @@ export function FunctionEditor({ state }: { state: FunctionWorkspaceState }) {
               min={parameter.min}
               max={parameter.max}
               step={(parameter.max - parameter.min) / 200}
-              disabled={busy || dirty}
+              disabled={dirty}
               change={(value) =>
                 state.patch({
                   parameters: scene.parameters.map((item) =>

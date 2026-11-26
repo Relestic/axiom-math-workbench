@@ -1,3 +1,4 @@
+import type { DeskPanes } from "../../modules/companion/workspace";
 import { useEffect, useState, type ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
 import { CompanionDock } from "./CompanionDock";
@@ -16,8 +17,8 @@ export function ThemeSwitch() {
   </button>;
 }
 
-export function WorkbenchShell({ page, rail, children, collapsed }: {
-  page: string; rail: ReactNode; children: ReactNode; collapsed: boolean;
+export function WorkbenchShell({ page, desk, rail, children, collapsed }: {
+  page: string; desk?: DeskPanes; rail: ReactNode; children: ReactNode; collapsed: boolean;
 }) {
   const [dockCollapsed, setDockCollapsed] = useState(() => window.innerWidth < 1024);
   useEffect(() => {
@@ -34,6 +35,6 @@ export function WorkbenchShell({ page, rail, children, collapsed }: {
   return <div className="workbench-shell" data-rail={collapsed ? "closed" : "open"} data-dock={dockCollapsed ? "closed" : "open"}>
     {rail}
     {children}
-    <CompanionDock page={page} collapsed={dockCollapsed} onToggle={() => setDockCollapsed(!dockCollapsed)} />
+    <CompanionDock page={page} desk={desk} collapsed={dockCollapsed} onToggle={() => setDockCollapsed(!dockCollapsed)} />
   </div>;
 }

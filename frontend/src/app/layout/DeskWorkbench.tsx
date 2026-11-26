@@ -1,10 +1,11 @@
+import type { DeskPanes } from "../../modules/companion/workspace";
 import { Suspense, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { BookOpen, PanelRightClose, PanelRightOpen, Presentation } from "lucide-react";
 import { ModuleSelect, useUnit } from "../../pages/learning/shared";
 import "./desk.css";
 
 const studyTabs = [
-  ["textbook", "讲义定义"], ["examples", "正反例"], ["proof", "证明思路"],
+  ["textbook", "讲义定义"], ["proof", "证明思路"],
   ["exercises", "练习与复盘"],
 ] as const;
 const boardTabs = [
@@ -48,12 +49,9 @@ function DeskTabs({ tabs, active, label, select }: {
   </div>;
 }
 
-type DeskSelection = {
+type DeskSelection = DeskPanes & {
   route: string;
-  study: string;
-  board: string;
   active: string;
-  collapsed: boolean;
   visited: string[];
 };
 
@@ -67,17 +65,34 @@ function openRoute(pane: string, previous?: DeskSelection): DeskSelection {
   };
 }
 
-export function DeskWorkbench({ pane, navigate, renderPane, onActivePane }: {
+export function DeskWorkbench({ pane, navigate, renderPane, onActivePane, onPanesChange }: {
   pane: string;
   navigate: (id: string) => void;
   renderPane: (id: string) => ReactNode;
   onActivePane: (id: string) => void;
+  onPanesChange: (panes: DeskPanes) => void;
 }) {
   const { unit, select } = useUnit();
   const [desk, setDesk] = useState(() => openRoute(pane));
   const toggleButton = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
   if (pane !== desk.route) setDesk(openRoute(pane, desk));
+  useLayoutEffect(() => {
+    onPanesChange({ study: desk.study, board: desk.board, collapsed: desk.collapsed });
+  }, [desk.study, desk.board, desk.collapsed, onPanesChange]);
+
+  useLayoutEffect(() => {
+    function reveal(event: Event) {
+      const target = (event as CustomEvent<{pane: string}>).detail?.pane;
+      if (!target || !isBoard(target)) return;
+      setDesk(current => ({
+        ...current, board: target, active: target, collapsed: false,
+        visited: current.visited.includes(target) ? current.visited : [...current.visited, target],
+      }));
+    }
+    window.addEventListener("axiom:reveal-pane", reveal);
+    return () => window.removeEventListener("axiom:reveal-pane", reveal);
+  }, []);
   useLayoutEffect(() => { onActivePane(desk.active); }, [desk.active, onActivePane]);
   useLayoutEffect(() => {
     if (restoreToggleFocus.current) {

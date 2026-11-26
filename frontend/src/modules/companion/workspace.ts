@@ -5,82 +5,146 @@ import {
   type WorkspaceEndpoint,
 } from "../../app/workspaceEndpoints";
 import { defaultSurfaceScene } from "../visualization/three-d/types";
+import { fitCompanionContext } from "./context";
 
 export type { WorkspaceAction };
+export type DeskPanes = { study: string; board: string; collapsed: boolean };
+type Context = Record<string, unknown>;
+type Target = "proof" | "explore" | "surface";
 
-// Lock a committed batch until the owner renders so another reply cannot
-// overwrite an update React has queued.
+// A React state update can be queued before its new endpoint revision is registered.
 const applied = new WeakSet<WorkspaceEndpoint>();
-type PlotHints = {
-  controls: Record<string, number>;
-  parameters?: { name: string; value: number; min: number; max: number }[];
-};
 
 function commit(endpoint: WorkspaceEndpoint | undefined, actions: readonly WorkspaceAction[]) {
   if (!actions.length || !endpoint || applied.has(endpoint)) return false;
   const result = endpoint.command?.(actions);
   if (result === true) applied.add(endpoint);
-  return Boolean(result);
+  return result === "unchanged" ? true : result ?? false;
 }
 
-function actionPane(action: WorkspaceAction, activePage: string, context: Record<string, unknown>) {
-  if (action.type === "highlight_proof_step") return "proof";
-  if (activePage === "explore") {
-    const scene = context.function_scene as { parameters?: {name: string}[] } | undefined;
-    if (scene?.parameters?.some(parameter => parameter.name === action.name)) return "explore";
+function record(value: unknown): Context {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Context : {};
+}
+function fields(value: unknown, names: string[]) {
+  const source = record(value);
+  return Object.fromEntries(names.filter(key => Object.hasOwn(source, key)).map(key => [key, source[key]]));
+}
+function items(value: unknown) {
+  return Array.isArray(value) ? value : [];
+}
+
+function actionTarget(action: WorkspaceAction, context: Context): Target {
+  switch (action.type) {
+    case "highlight_proof_step": return "proof";
+    case "set_surface_expression":
+    case "set_surface_range":
+    case "set_surface_view": return "surface";
+    case "set_scene_param": {
+      const parameters = items(record(context.function_scene).parameters);
+      if (parameters.some(p => record(p).name === action.name)) return "explore";
+      return Object.hasOwn(defaultSurfaceScene.view, action.name) || action.name === "opacity"
+        ? "surface" : "explore";
+    }
+    default: return "explore";
   }
-  return Object.hasOwn(defaultSurfaceScene.view, action.name) || action.name === "opacity"
-    ? "surface" : "explore";
 }
 
-export function queryWorkspace(page: string) {
+function workspaceSnapshot(page: string, context: Context, ready: boolean, isCurrent: () => boolean, desk = false) {
   const endpoint = getWorkspaceEndpoint(page);
   const targets = {
     proof: getWorkspaceEndpoint("proof"),
     explore: getWorkspaceEndpoint("explore"),
     surface: getWorkspaceEndpoint("surface"),
   };
-  const context = structuredClone(endpoint?.query() ?? {});
-  const available: Partial<Record<"explore" | "surface", PlotHints>> = {};
-  for (const pane of ["explore", "surface"] as const) {
-    if (pane === page) continue;
-    const source = targets[pane]?.query();
-    const scene = source?.[pane === "explore" ? "function_scene" : "surface_scene"] as PlotHints | undefined;
-    // The plot owner withholds controls during editing and AI requests.
-    if (!scene?.controls || !Object.keys(scene.controls).length) continue;
-    available[pane] = { controls: { ...scene.controls } };
-    if (scene.parameters) available[pane].parameters = scene.parameters.map(({ name, value, min, max }) =>
-      ({ name, value, min, max }));
-  }
-  if (Object.keys(available).length) context.available_scene_controls = available;
-  const isCurrent = () => getWorkspaceEndpoint(page) === endpoint;
   function applyActions(actions: readonly WorkspaceAction[]) {
     return isCurrent() && commit(endpoint, actions);
   }
   return {
-    context,
-    ready: Boolean(endpoint),
-    isCurrent,
-    applyActions,
-    async dispatchActions(actions: readonly WorkspaceAction[], signal: AbortSignal,
-      onReveal?: (target: string) => void) {
+    context: structuredClone(context), ready, isCurrent, applyActions,
+    apply: (action: WorkspaceAction) => applyActions([action]),
+    async dispatchActions(actions: readonly WorkspaceAction[], signal: AbortSignal, onReveal?: (target: Target) => void) {
       if (!actions.length || signal.aborted || !isCurrent()) return false;
-      const target = actionPane(actions[0], page, context);
-      if (actions.some(action => actionPane(action, page, context) !== target)) return false;
-      if (target === page && endpoint) return applyActions(actions);
-      const original = targets[target];
-      if (original && original !== getWorkspaceEndpoint(target)) return false;
-
-      const ready = waitForWorkspaceEndpoint(target, signal);
-      onReveal?.(target);
-      window.dispatchEvent(new CustomEvent("axiom:reveal-pane", { detail: { pane: target } }));
-      if (!await ready || signal.aborted) return false;
-      const current = getWorkspaceEndpoint(target);
-      if (original && current !== original) return false;
-      return commit(current, actions);
-    },
-    apply(action: WorkspaceAction) {
-      return applyActions([action]);
+      const groups = new Map<Target, WorkspaceAction[]>();
+      for (const action of actions) {
+        const target = actionTarget(action, context);
+        if (!groups.has(target)) groups.set(target, []);
+        groups.get(target)!.push(action);
+      }
+      for (const target of groups.keys()) {
+        if (targets[target] && targets[target] !== getWorkspaceEndpoint(target)) return false;
+      }
+      const reasons: string[] = [];
+      for (const [target, batch] of groups) {
+        if (signal.aborted) return false;
+        if (desk || target !== page || !endpoint) {
+          const mounted = waitForWorkspaceEndpoint(target, signal);
+          onReveal?.(target);
+          window.dispatchEvent(new CustomEvent("axiom:reveal-pane", { detail: { pane: target } }));
+          if (!await mounted || signal.aborted) return false;
+        }
+        const current = getWorkspaceEndpoint(target);
+        if (targets[target] && targets[target] !== current) return false;
+        const result = commit(current, batch);
+        if (result !== true) reasons.push(result ? result.reason : "当前步骤或参数已变更，未应用这组操作。");
+      }
+      return reasons.length ? { reason: reasons.join(" ") } : true;
     },
   };
+}
+
+/** Other sections may suggest an operation that opens the learning desk. */
+export function queryWorkspace(page: string) {
+  const endpoint = getWorkspaceEndpoint(page);
+  const context = { ...endpoint?.query() };
+  const available: Context = {};
+  for (const pane of ["explore", "surface"] as const) {
+    if (pane === page) continue;
+    const source = getWorkspaceEndpoint(pane)?.query();
+    const scene = record(source?.[pane === "explore" ? "function_scene" : "surface_scene"]);
+    if (Object.keys(record(scene.controls)).length) available[pane] = fields(scene, ["controls", "parameters"]);
+  }
+  if (Object.keys(available).length) context.available_scene_controls = available;
+  return workspaceSnapshot(page, context, Boolean(endpoint), () => getWorkspaceEndpoint(page) === endpoint);
+}
+
+function studyContext(pane: string, source: Context): Context {
+  if (pane === "textbook") {
+    const lecture = record(source.lecture);
+    return { lecture: {
+      conditions: lecture.conditions,
+      proof_refs: items(lecture.proof_steps).map(step => record(step).ref),
+    } };
+  }
+  if (pane === "proof") {
+    const proof = record(source.proof);
+    return { proof: {
+      unit_id: proof.unit_id,
+      current_step: fields(proof.current_step, ["ref", "title", "text"]),
+      refs: items(proof.steps).map(step => record(step).ref),
+    } };
+  }
+  return source;
+}
+
+export function queryDeskWorkspace(studyPane: string, boardPane: string, boardCollapsed: boolean) {
+  const study = getWorkspaceEndpoint(studyPane);
+  const board = boardPane === "pdf" ? undefined : getWorkspaceEndpoint(boardPane);
+  const context: Context = {
+    ...studyContext(studyPane, study?.query() ?? {}),
+    study_pane: studyPane,
+    board: { mounted: Boolean(board), tab: boardPane, collapsed: boardCollapsed },
+  };
+  const boardContext = board?.query();
+  if (boardContext?.function_scene) {
+    const scene = record(boardContext.function_scene);
+    context.function_scene = {
+      ...fields(scene, ["active_expression", "mode", "range", "controls"]),
+      curves: items(scene.curves).map(curve => fields(curve, ["id", "label", "expression", "domainMin", "domainMax"])),
+      parameters: items(scene.parameters).map(parameter => fields(parameter, ["name", "value", "min", "max"])),
+    };
+  } else if (boardContext?.surface_scene) {
+    context.surface_scene = fields(boardContext.surface_scene, ["expression", "range", "view"]);
+  }
+  return workspaceSnapshot(studyPane, fitCompanionContext(context), Boolean(study) || studyPane === "review",
+    () => getWorkspaceEndpoint(studyPane) === study && (!board || getWorkspaceEndpoint(boardPane) === board), true);
 }

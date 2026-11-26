@@ -70,7 +70,7 @@ export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: Sourc
   return (
     <div className="learning-page textbook-page">
       <Heading
-        step="第 1 步 / 共 6 步"
+        step="第 1 步 / 共 3 步"
         title="教材定义与条件"
         description="把每一个定义、符号和条件读清楚，让直觉与严谨的论证连接起来。"
       >

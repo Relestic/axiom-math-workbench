@@ -66,41 +66,18 @@ def test_offline_proof_structure_and_calculation_grading(page, server):
     expect(exercise.get_by_text("自动批改通过", exact=True)).to_be_visible()
 
 
-def check_reciprocal(page, server, interval):
-    page.goto(server.url + "/#desk/examples")
-    form = page.get_by_role("region", name="我来构造反例")
-    form.get_by_label("函数表达式", exact=True).fill("1/x")
-    form.get_by_role("combobox", name=re.compile("区间类型")).select_option(interval)
-    form.get_by_label("左端点", exact=True).fill("0")
-    form.get_by_label("右端点", exact=True).fill("1")
-    result = posted(page, "/local/counterexamples/check", form.get_by_role("button", name="检验反例").click)
-    findings = result["findings"]
-    assert result["interval"].replace(" ", "") == interval[0] + "0,1" + interval[1]
-    for basis, badge in (("symbolic", "符号推导"), ("numeric-sample", "数值辅助检验")):
-        assert any(row["verdict_basis"] == basis for row in findings)
-        expect(form.locator(f'[data-verdict-basis="{basis}"]').first).to_contain_text(badge)
-    return [row["text"] for row in findings if row["verdict_basis"] == "symbolic"]
-
-
-def save_evidence_note(page):
-    page.get_by_role("button", name="保存检验到笔记").click()
-    page.wait_for_function("""() => JSON.parse(localStorage.getItem('axiom-offline-notes') || '[]')
-      .some(note => note.text.includes('verdict_basis=symbolic') && note.text.includes('verdict_basis=numeric-sample'))""")
-    return next(note for note in page.evaluate("JSON.parse(localStorage.getItem('axiom-offline-notes'))")
-                if "verdict_basis=symbolic" in note["text"])
-
-
-def test_open_and_closed_endpoint_evidence_and_saved_note(page, server):
-    open_facts = check_reciprocal(page, server, "()")
-    closed_facts = check_reciprocal(page, server, "[]")
-    assert open_facts != closed_facts
-    assert any("0" in text and "不计入区间" in text for text in open_facts)
-    assert any("0" in text and re.search("未定义|无定义", text) for text in closed_facts)
-    assert not any("0" in text and "该点未定义" in text for text in open_facts)
-    note = save_evidence_note(page)
-    page.goto(server.url + "/#shelf/notes")
-    expect(page.get_by_text(re.compile("verdict_basis=symbolic")).first).to_be_visible()
-    assert "1/x" in note["text"]
+# The Phase 2 counterexample editor produced this text for 1/x on [0,1].
+# Historical notes still belong in personal records and in a complete ZIP.
+LEGACY_NOTE = {
+    "id": "phase2-reciprocal", "date": "2026-11-24", "conceptId": "uniform",
+    "text": """自拟反例检验 · f(x) = 1/x · [0, 1]
+[verdict_basis=symbolic] 符号推导：所选区间内，符号算法得到的实数连续域为 (0, 1]。
+[verdict_basis=symbolic] 符号推导：x = 0 属于 [0, 1]，原式在该点未定义。
+[verdict_basis=symbolic] 符号推导：在原式有定义的区间内部，f′(x) = -1/x^2。
+[verdict_basis=symbolic] 符号推导：0 计入区间，趋近该端点的右极限为 +∞，沿区间内有定义的点，函数值无界。
+[verdict_basis=symbolic] 符号推导：1 计入区间，从区间内部趋近该端点的左极限为 1。
+[verdict_basis=numeric-sample] 数值辅助检验，非严格证明：在已确认的实数连续域内检验 256 个网格点，其中 256 个得到有限实数值，样本最小值 1、最大值 256。有限采样不能证明连续、有界或可积。""",
+}
 
 
 def test_review_voice_variant_and_complete_workstation_archive(page, server, sample_pdf, tmp_path):
@@ -145,8 +122,7 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
     expect(review).to_be_visible()
     expect(review.get_by_role("button", name=EXPLAIN_BUTTON)).to_be_visible()
 
-    check_reciprocal(page, server, "[]")
-    note = save_evidence_note(page)
+    page.evaluate("note => localStorage.setItem('axiom-offline-notes', JSON.stringify([note]))", LEGACY_NOTE)
     page.goto(server.url + "/#shelf/books")
     book = drag_pdf(page, sample_pdf)
     extracted = page.request.post(f"{server.url}/api/v1/local/textbooks/{book['id']}/extract-cards",
@@ -164,8 +140,10 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
         stored = db.execute("SELECT ai_review, answer_text FROM attempts WHERE id=?", (attempt["id"],)).fetchone()
     assert json.loads(stored[0]) == REVIEW and stored[1] == WRONG
     page.wait_for_function("""id => JSON.parse(localStorage.getItem('axiom-offline-notes') || '[]')
-                          .some(note => note.id === id)""", arg=note["id"])
-    assert note in page.evaluate("JSON.parse(localStorage.getItem('axiom-offline-notes'))")
+                          .some(note => note.id === id)""", arg=LEGACY_NOTE["id"])
+    assert LEGACY_NOTE in page.evaluate("JSON.parse(localStorage.getItem('axiom-offline-notes'))")
+    page.goto(server.url + "/#shelf/notes")
+    expect(page.get_by_text(re.compile("verdict_basis=symbolic")).first).to_be_visible()
 
 
 def test_browser_imports_genuine_phase1_export(page, server, tmp_path):

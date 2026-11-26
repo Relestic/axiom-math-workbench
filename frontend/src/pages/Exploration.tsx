@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { MathPreview, MathText, SymbolBar } from "../components/Math";
+import { MathText } from "../components/Math";
+import type { WorkspaceEndpoint } from "../app/workspaceEndpoints";
 import { useWorkspaceEndpoint } from "../app/useWorkspaceEndpoint";
 import {
   ArrowRight,
@@ -13,13 +14,10 @@ import {
   Lightbulb,
   Link2,
   Maximize2,
-  MessageCircle,
   Pencil,
   RotateCcw,
-  Send,
   SlidersHorizontal,
   Sparkles,
-  Trash2,
   Undo2,
   X,
   ZoomIn,
@@ -39,9 +37,9 @@ import {
   type Config,
 } from "../lib/explorationMath";
 
-type Message = { role: "user" | "assistant"; content: string };
 type Observation = { id: number; text: string; time: string };
 type Props = {
+  onBoardActions: NonNullable<WorkspaceEndpoint["command"]>;
   onNavigate: (page: string) => void;
   onSaveNote: (text: string) => void;
   notify: (text: string) => void;
@@ -743,25 +741,17 @@ function SurfacePlot({ c }: { c: Config }) {
   );
 }
 
-export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
+export default function Exploration({ onNavigate, onSaveNote, notify, onBoardActions }: Props) {
   const [c, setC] = useState<Config>(readConfig);
   useWorkspaceEndpoint("explore", JSON.stringify(c), {
     query: () => ({ function_scene: {
-      mode: labels[c.topic], active_expression: c.dimension === 3 ? "x² + y²" : names[c.fn], controls: {},
+      mode: c.topic,
+      active_expression: c.dimension === 3 ? "x² + y²" : c.topic === "taylor" ? "exp(x)" : names[c.fn],
+      controls: {},
     } }),
+    command: onBoardActions,
   });
   const [history, setHistory] = useState<Config[]>([]);
-  const [messages, setMessages] = useState<Message[]>(() =>
-    read("axiom-exploration-chat", [
-      {
-        role: "assistant",
-        content:
-          "试着固定 ε，移动基准点 x₀：同一个 δ 还能让邻域内的函数值留在水平带里吗？你可以拖动滑块，也可以用右侧的演示指令改图。",
-      },
-    ]),
-  );
-  const [input, setInput] = useState("");
-  const chatInput = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState("");
   const [observations, setObservations] = useState<Observation[]>(() =>
     read("axiom-observations", []),
@@ -774,12 +764,11 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
   useEffect(() => {
     try {
       localStorage.setItem("axiom-exploration", JSON.stringify(c));
-      localStorage.setItem("axiom-exploration-chat", JSON.stringify(messages));
       localStorage.setItem("axiom-observations", JSON.stringify(observations));
     } catch {
       /* Browser storage may be unavailable. */
     }
-  }, [c, messages, observations]);
+  }, [c, observations]);
   const update = (patch: Partial<Config>) => {
     setHistory((v) => [...v.slice(-29), c]);
     setC((v) => {
@@ -827,9 +816,8 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
   const maxError = localError(c),
     maxDelta = safeDelta(c),
     safe = maxError < c.epsilon;
-  const saveObservation = (text?: string) => {
+  const saveObservation = () => {
     const content =
-      text ||
       note.trim() ||
       (c.topic === "continuity"
         ? `${c.dimension}D · ${c.dimension === 3 ? "x² + y²" : names[c.fn]}，ε=${fmt(c.epsilon)}，δ=${fmt(c.delta)}，x₀=${fmt(c.x0)}。闭邻域误差上界 ${fmt(maxError)}，${safe ? "满足当前精度要求" : "需要缩小邻域"}。`
@@ -852,120 +840,6 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
     onSaveNote(content);
     setNote("");
     notify("观察已保存到我的笔记");
-  };
-  const send = (text = input) => {
-    if (!text.trim()) return;
-    let patch: Partial<Config> = {};
-    const result: string[] = [];
-    const matchValue = (pattern: RegExp) => {
-      const match = text.match(pattern);
-      return match ? Number(match[1]) : null;
-    };
-    const eps = matchValue(
-      /(?:ε|epsilon|精度)[^\d]{0,12}(0?\.\d+|\d+(?:\.\d+)?)/i,
-    );
-    const delta = matchValue(/(?:δ|delta)[^\d]{0,12}(0?\.\d+|\d+(?:\.\d+)?)/i);
-    const center = matchValue(
-      /(?:x₀|x0|基准点)[^\d-]{0,12}(-?(?:0?\.\d+|\d+(?:\.\d+)?))/i,
-    );
-    if (eps !== null) {
-      patch.epsilon = clamp(eps, 0.01, 0.2);
-      result.push(
-        `ε 已设为 ${fmt(patch.epsilon)}${patch.epsilon !== eps ? "（已限制在 0.01—0.20 范围）" : ""}`,
-      );
-    }
-    if (delta !== null) {
-      patch.delta = clamp(delta, 0.001, 0.2);
-      result.push(`δ 已设为 ${fmt(patch.delta)}`);
-    }
-    if (center !== null) {
-      patch.x0 = clamp(
-        center,
-        c.topic === "derivative" || c.topic === "taylor" ? -0.8 : 0.03,
-        c.dimension === 3 ? 0.9 : c.topic === "continuity" ? 0.98 : 0.8,
-      );
-      result.push(`基准点已移到 ${fmt(patch.x0)}`);
-    }
-    if (/三维|3d/i.test(text)) {
-      patch.dimension = 3;
-      patch.topic = "continuity";
-      patch.x0 = clamp(c.x0, 0.03, 0.9);
-      result.push(
-        "已打开 z = x² + y² 的三维拓展演示。ε 是水平夹层，δ 是定义域内的圆盘邻域",
-      );
-    } else if (/二维|2d|平面/i.test(text)) {
-      patch.dimension = 2;
-      result.push("已切回平面视图，保留 ε 与 δ 参数");
-    }
-    if (/√|sqrt|根号/.test(text)) {
-      patch.fn = "sqrt";
-      patch.dimension = 2;
-      patch.topic = "continuity";
-      result.push(
-        "已切换到 √x；它在 [0,1] 上一致连续，即使导数在靠近 0 时无界",
-      );
-    } else if (/sin\s*\(\s*1\s*\/\s*x\s*\)/i.test(text)) {
-      patch.fn = "oscillation";
-      patch.dimension = 2;
-      patch.topic = "continuity";
-      result.push(
-        "已切换到 sin(1/x)，当前显示正半轴的有限窗口；靠近 0 的全部振荡无法由有限像素呈现",
-      );
-    } else if (/1\s*\/\s*x/.test(text)) {
-      patch.fn = "inverse";
-      patch.dimension = 2;
-      patch.topic = "continuity";
-      result.push("已切换到 1/x；当前只显示 x ≥ 0.015 的部分，0 不在定义域内");
-    } else if (/x²|x\^2|平方/.test(text)) {
-      patch.fn = "square";
-      patch.dimension = 2;
-      patch.topic = "continuity";
-      result.push("已切换到 x² 在 [0,1] 上的图像");
-    }
-    if (/网格/.test(text)) {
-      patch.grid = !/关闭|隐藏/.test(text);
-      result.push(`已${patch.grid ? "显示" : "隐藏"}坐标网格`);
-    }
-    if (/积分|等分|分割/.test(text)) {
-      patch.topic = "integral";
-      patch.dimension = 2;
-      patch.fn = "square";
-      const n = matchValue(/(?:等分|分成|分割)[^\d]{0,8}(\d+)/);
-      if (n) patch.n = clamp(Math.round(n), 4, 80);
-      result.push(
-        `已打开 Riemann 和，分割数 ${patch.n || c.n}；数值趋近只是观察，不能代替可积性证明`,
-      );
-    }
-    if (/导数|割线/.test(text)) {
-      patch.topic = "derivative";
-      patch.dimension = 2;
-      patch.fn = "square";
-      result.push("已打开割线与切线，可以调整 h 观察差商");
-    }
-    if (/泰勒|taylor/i.test(text)) {
-      patch.topic = "taylor";
-      patch.dimension = 2;
-      patch.n = 3;
-      result.push("已打开 eˣ 的三阶 Taylor 多项式与误差估计");
-    }
-    if (/危险|越界|圈出/.test(text)) {
-      patch.danger = true;
-      result.push("已标出邻域的边界取值");
-    }
-    if (/撤销|还原/.test(text)) {
-      undo();
-      result.push("已执行撤销请求");
-    }
-    if (Object.keys(patch).length) update(patch);
-    const content = result.length
-      ? `${result.join("。")}。${patch.topic === "continuity" || (c.topic === "continuity" && !patch.topic) ? "当前图像验证的是指定基准点附近的误差；一致连续需要对全部点使用同一个 δ。" : ""}`
-      : "当前是本地指令演示，还不能回答任意数学问题。可以试试“把 ε 调到 0.02”“切换三维”“换成 √x”“等分 20 段”或“打开导数”。证明内容可在「证明思路」查看。";
-    setMessages((v) => [
-      ...v,
-      { role: "user", content: text.trim() },
-      { role: "assistant", content },
-    ]);
-    setInput("");
   };
   const sum = Array.from(
     { length: c.n },
@@ -1052,7 +926,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
             ],
             [
               "条件检查",
-              "定积分与面积直觉相关，但有界函数不一定可积。继续查看 Dirichlet 反例。",
+              "定积分与面积直觉相关，但有界函数不一定可积。可用上下和进一步检验。",
               "有界 ⇏ Riemann 可积",
             ],
           ]
@@ -1134,9 +1008,12 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
   return (
     <div className={`explore-page ${c.dimension === 3 ? "is-3d" : ""}`}>
       <div className="ex-topline">
-        <span className="badge">第 2 步 / 共 6 步</span>
+        <span className="badge">书桌黑板</span>
         <span className="muted">图像探索 · 从观察走向证明</span>
-        <button className="btn primary" onClick={() => saveObservation()}>
+        <button className="btn" disabled={!history.length} onClick={undo}>
+          <Undo2 size={14} /> 撤销改动
+        </button>
+        <button className="btn primary" onClick={saveObservation}>
           <BookmarkPlus size={15} />
           保存我的观察
         </button>
@@ -1145,7 +1022,7 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
         <div>
           <h1>{title}</h1>
           <p className="muted">
-            拖动参数，或用一句话描述想看到的变化。让抽象条件在图像中变得清晰。
+            拖动参数观察经典示例。在右侧请 Hiyori 改图时，将打开自由函数工作区。
           </p>
         </div>
       </div>
@@ -1556,110 +1433,6 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
           </div>
         </div>
       </div>
-      <section className="card ex-chat">
-        <div className="ex-card-heading">
-          <div>
-            <h3>
-              <span className="ex-icon-box">
-                <MessageCircle size={17} />
-              </span>
-              AI 对话改图
-            </h3>
-            <p>本地指令演示，未接入模型 · 支持参数、函数、维度和探索主题切换</p>
-          </div>
-          <div className="ex-actions">
-            <button className="btn" disabled={!history.length} onClick={undo}>
-              <Undo2 size={13} />
-              撤销改动
-            </button>
-            <button className="btn" onClick={() => setMessages([])}>
-              <Trash2 size={13} />
-              清空对话
-            </button>
-          </div>
-        </div>
-        <div className="ex-chat-grid">
-          <div>
-            <div className="ex-messages" aria-live="polite">
-              {messages.length ? (
-                messages.map((m, i) => (
-                  <div key={i} className={`ex-message ${m.role}`}>
-                    <span className={`ex-avatar ${m.role}`}>
-                      {m.role === "user" ? "林" : <Sparkles size={15} />}
-                    </span>
-                    <div>
-                      <p><MathText>{m.content}</MathText></p>
-                      {m.role === "assistant" && i > 0 && (
-                        <button
-                          className="ex-text-btn"
-                          onClick={() => saveObservation(m.content)}
-                        >
-                          <BookmarkPlus size={12} />
-                          存为观察
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="ex-empty">
-                  用一句话开始探索，或选择右侧的示例指令。
-                </p>
-              )}
-            </div>
-            <form
-              className="ex-chat-input"
-              onSubmit={(e) => {
-                e.preventDefault();
-                send();
-              }}
-            >
-              <Pencil size={15} />
-              <input
-                ref={chatInput}
-                aria-label="图像指令"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="例如：把 ε 调小到 0.02，看看哪些位置会越界…"
-              />
-              <button
-                aria-label="发送图像指令"
-                type="submit"
-                disabled={!input.trim()}
-              >
-                <Send size={17} />
-              </button>
-            </form>
-            <SymbolBar inputRef={chatInput} value={input} onChange={setInput} />
-            <MathPreview value={input} />
-          </div>
-          <aside className="ex-prompts">
-            <h4>常用改图指令</h4>
-            {[
-              "把 ε 调到 0.02，标出越界位置",
-              "切换为三维显示",
-              "换成 √x，观察 0 附近",
-              "把 [0,1] 等分 20 段",
-              "打开导数，观察割线",
-              "显示坐标网格",
-            ].map((prompt, i) => (
-              <button key={prompt} onClick={() => send(prompt)}>
-                <span className={`ex-prompt-icon tone-${i % 3}`}>
-                  {i === 1 ? (
-                    <Box size={14} />
-                  ) : i === 3 ? (
-                    <Grid2X2 size={14} />
-                  ) : (
-                    <Sparkles size={14} />
-                  )}
-                </span>
-                <span><MathText>{prompt}</MathText></span>
-              </button>
-            ))}
-            <p>指令只修改演示配置，不会改写教材定义。每次改动都可以撤销。</p>
-          </aside>
-        </div>
-      </section>
       <section className="card ex-proof">
         <div className="ex-card-heading">
           <h3>
@@ -1769,9 +1542,9 @@ export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
             </button>
             <button
               className="btn primary"
-              onClick={() => onNavigate("examples")}
+              onClick={() => onNavigate("textbook")}
             >
-              去看正反例
+              回到讲义
               <ArrowRight size={14} />
             </button>
           </div>

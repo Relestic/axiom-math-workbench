@@ -151,7 +151,7 @@ export function Dashboard({
             <div className="card-bottom">
               <small className={index ? "teal-text" : "orange-text"}>
                 {index
-                  ? `◉ ${currentConcept} ← 连接定义、证明与反例`
+                  ? `◉ ${currentConcept} ← 回顾定义、证明与练习`
                   : `◉ ${currentConcept} · 从量词理解开始补强`}
               </small>
               <button

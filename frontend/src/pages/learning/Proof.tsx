@@ -74,7 +74,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
   return (
     <div className="learning-page proof-page">
       <Heading
-        step="第 4 步 / 共 6 步"
+        step="第 2 步 / 共 3 步"
         title="证明思路 · 让直觉成为论证"
         description="把每一步为什么成立、条件用在哪里，写成可以检查的数学语言。"
       >

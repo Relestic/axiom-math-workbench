@@ -1,5 +1,6 @@
 import { WorkbenchShell, ThemeSwitch } from "./app/layout/WorkbenchShell";
 import { NavRail } from "./app/layout/NavRail";
+import type { DeskPanes } from "./modules/companion/workspace";
 import { DeskWorkbench } from "./app/layout/DeskWorkbench";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
@@ -19,9 +20,6 @@ import {
 const Exploration = lazy(() => import("./pages/FunctionWorkspace"));
 const Textbook = lazy(() =>
   import("./pages/Learning").then((module) => ({ default: module.Textbook })),
-);
-const Examples = lazy(() =>
-  import("./pages/Learning").then((module) => ({ default: module.Examples })),
 );
 const Proof = lazy(() =>
   import("./pages/Learning").then((module) => ({ default: module.Proof })),
@@ -76,6 +74,7 @@ export default function App() {
   const [section, subpage] = route.split("/");
   const page = subpage || section;
   const [activePane, setActivePane] = useState(page);
+  const [deskPanes, setDeskPanes] = useState<DeskPanes>({study:"textbook", board:"explore", collapsed:false});
   const [reading, setReading] = useState({ bookId: "", page: 1, revision: 0 });
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -107,7 +106,7 @@ export default function App() {
     }
     if (
       id === "explore" &&
-      ["textbook", "examples", "proof", "exercises", "knowledge-map"].includes(
+      ["textbook", "proof", "exercises", "knowledge-map"].includes(
         page,
       )
     )
@@ -145,8 +144,8 @@ export default function App() {
         if (!active) return;
         const pageByType: Record<string, string> = {
           concept: "textbook",
-          classic: "examples",
-          proposition: "examples",
+          classic: "textbook",
+          proposition: "textbook",
           proof: "proof",
           exercise: "exercises",
         };
@@ -194,6 +193,7 @@ export default function App() {
       const pane = (event as CustomEvent<{pane:string}>).detail?.pane;
       if (pane && Object.hasOwn(subpages.desk, pane)) {
         if (location.hash !== "#desk/" + pane) location.hash = "desk/" + pane;
+        setRoute("desk/" + pane);
         setActivePane(pane);
       }
     };
@@ -238,7 +238,7 @@ export default function App() {
     ? remoteResults
     : localSearchResults;
   return (
-    <WorkbenchShell page={section === "desk" ? activePane : page} collapsed={railCollapsed} rail={<NavRail page={section} sidebar={sidebar} collapsed={railCollapsed}
+    <WorkbenchShell desk={section === "desk" ? deskPanes : undefined} page={section === "desk" ? activePane : page} collapsed={railCollapsed} rail={<NavRail page={section} sidebar={sidebar} collapsed={railCollapsed}
       onToggle={() => setRailCollapsed(!railCollapsed)} closeMobile={() => setSidebar(false)} navigate={navigate} />}>
       <div className="main-shell">
         <header className="topbar">
@@ -340,15 +340,14 @@ export default function App() {
               onUpload={() => navigate("books")}
             />
           )}
-          {section === "desk" && <DeskWorkbench pane={page} navigate={navigate} onActivePane={setActivePane} renderPane={id => {
+          {section === "desk" && <DeskWorkbench pane={page} navigate={navigate} onActivePane={setActivePane} onPanesChange={setDeskPanes} renderPane={id => {
             switch (id) {
               case "textbook": return <Textbook {...common} onReadSource={readTextbook}/>;
-              case "examples": return <Examples {...common}/>;
               case "proof": return <Proof {...common} onReadSource={readTextbook}/>;
               case "exercises": return <Exercises {...common}/>;
               case "review": return <Review {...common}/>;
               case "explore": return <Exploration {...common}/>;
-              case "surface": return <SurfaceWorkspace onOpenSettings={() => setModal("ai")}/>;
+              case "surface": return <SurfaceWorkspace/>;
               case "pdf": return <TextbookReader position={reading} change={seekTextbook} openShelf={() => navigate("books")}/>;
             }
           }}/>}
@@ -441,7 +440,7 @@ export default function App() {
                 </span>
                 <h2>从一个问题开始</h2>
                 <p className="muted">
-                  在学习书桌阅读定义、对照图像、比较反例、理解证明，再完成练习。
+                  在学习书桌阅读讲义、对照黑板图像、梳理证明，再完成练习。
                 </p>
                 <div className="info-strip">
                   {session.serverMode

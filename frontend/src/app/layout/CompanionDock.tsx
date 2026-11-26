@@ -1,9 +1,10 @@
+import type { DeskPanes } from "../../modules/companion/workspace";
 import { useEffect, useRef, useState } from "react";
 import type { CompanionStage } from "../../modules/companion/CompanionStage";
 import { CompanionPanel } from "../../modules/companion/CompanionPanel";
 import { PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 
-export function CompanionDock({ page, collapsed, onToggle }: { page: string; collapsed: boolean; onToggle: () => void }) {
+export function CompanionDock({ page, desk, collapsed, onToggle }: { page: string; desk?: DeskPanes; collapsed: boolean; onToggle: () => void }) {
   const element = useRef<HTMLDivElement>(null);
   const stage = useRef<CompanionStage | null>(null);
   const collapsedNow = useRef(collapsed);
@@ -34,7 +35,7 @@ export function CompanionDock({ page, collapsed, onToggle }: { page: string; col
       </button>
     </header>
     <div className="dock-body" hidden={collapsed}>
-      <CompanionPanel page={page} stage={stage} stageView={
+      <CompanionPanel page={page} desk={desk} stage={stage} stageView={
         <div ref={element} className="companion-stage" aria-label="Hiyori 舞台">
         {unavailable && <p role="status">此设备无法显示 WebGL 舞台。</p>}
         </div>

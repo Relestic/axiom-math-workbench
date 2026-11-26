@@ -7,21 +7,18 @@
 }
 .surface-layout {
   display: grid;
-  grid-template-columns: 286px minmax(0, 1fr) 350px;
+  grid-template-columns: 286px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   margin-top: 20px;
 }
-.surface-controls,
-.surface-chat {
+.surface-controls {
   padding: 18px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 .surface-section-head,
 .surface-chart-heading,
-.surface-chat-heading,
-.surface-composer-foot,
 .surface-chart-foot {
   display: flex;
   align-items: center;
@@ -257,173 +254,9 @@
 .surface-error {
   margin-top: 12px;
 }
-.surface-chat {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 138px);
-  position: sticky;
-  top: 18px;
-}
-.surface-chat-heading {
-  align-items: flex-start;
-}
-.surface-chat-heading h3 {
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  font-size: 15px;
-}
-.surface-chat-heading > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.surface-chat-heading > span i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--surface-control);
-}
-.surface-chat-heading > span.fw-online i {
-  background: var(--green-solid);
-  box-shadow: 0 0 0 3px #18b9811c;
-}
-.surface-chat-heading > span.fw-offline i {
-  background: var(--amber-solid);
-}
-.surface-chat-messages {
-  flex: 1;
-  min-height: 230px;
-  overflow-y: auto;
-  padding: 14px 2px 8px;
-  border-top: 1px solid var(--border);
-  margin-top: 13px;
-}
-.surface-chat-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 9px;
-  padding: 35px 12px;
-  color: var(--muted);
-  text-align: center;
-}
-.surface-chat-empty svg {
-  color: var(--primary);
-}
-.surface-chat-empty p {
-  font-size: 11px;
-  line-height: 1.8;
-  margin: 0;
-}
-.surface-message {
-  max-width: 92%;
-  margin: 0 0 10px;
-  padding: 9px 11px;
-  border-radius: 11px;
-  background: var(--surface-raised);
-}
-.surface-message.user {
-  margin-left: auto;
-  background: var(--surface-raised);
-}
-.surface-message small {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--muted);
-  font-size: 9px;
-}
-.surface-message p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-.surface-thinking {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--primary);
-  font-size: 10px;
-  padding: 7px 4px;
-}
-.surface-thinking svg {
-  animation: surface-spin 1.1s linear infinite;
-}
-.surface-quick-prompts {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
-}
-.surface-quick-prompts button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  padding: 6px 8px;
-  color: var(--muted);
-  font-size: 10px;
-  text-align: left;
-  cursor: pointer;
-}
-.surface-quick-prompts button:hover {
-  border-color: var(--accent-border);
-  background: var(--surface-raised);
-}
-.surface-composer {
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-.surface-composer textarea {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-  min-height: 65px;
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
-  padding: 8px 9px;
-  color: var(--text-secondary);
-  background: var(--surface-raised);
-  font: 11.5px/1.65 var(--font-sans, sans-serif);
-  outline: none;
-}
-.surface-composer textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px #7c6cf615;
-}
-.surface-composer-foot {
-  margin-top: 7px;
-}
-.surface-composer-foot span {
-  color: var(--muted);
-  font-size: 9px;
-}
-.surface-composer-foot .btn {
-  padding: 7px 11px;
-  font-size: 10px;
-}
-@keyframes surface-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 @media (max-width: 1320px) {
   .surface-layout {
     grid-template-columns: 260px minmax(0, 1fr);
-  }
-  .surface-chat {
-    grid-column: 1 / -1;
-    position: static;
-    max-height: none;
-  }
-  .surface-chat-messages {
-    max-height: 280px;
   }
 }
 @media (max-width: 900px) {
@@ -435,9 +268,6 @@
   }
   .surface-main {
     order: 1;
-  }
-  .surface-chat {
-    order: 3;
   }
   .surface-heading {
     align-items: flex-start;

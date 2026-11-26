@@ -17,7 +17,7 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[1]
 
 
 def workstation_env(port):
@@ -117,6 +117,18 @@ def pytest_addoption(parser):
     parser.addoption("--chrome-binary", default=os.environ.get("AXIOM_QA_CHROME"),
                      help="Use this Chrome/Chromium executable instead of the installed Chrome channel")
     parser.addoption("--release-root", help="Root of the freshly extracted Windows ZIP containing runtime and web")
+    parser.addoption("--screenshot-dir", type=Path, help="Save acceptance screenshots to this directory")
+
+
+@pytest.fixture
+def capture(pytestconfig):
+    directory = pytestconfig.getoption("--screenshot-dir")
+
+    def save(page, filename):
+        if directory is not None:
+            directory.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=directory / filename, animations="disabled")
+    return save
 
 
 @pytest.fixture

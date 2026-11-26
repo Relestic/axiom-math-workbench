@@ -8,7 +8,7 @@ export const navigation = [
 ] as const;
 
 export const subpages = {
-  desk: { textbook:"讲义定义", examples:"正反例", proof:"证明思路", exercises:"练习", review:"复盘", explore:"2D 函数", surface:"3D 曲面", pdf:"课本原文" },
+  desk: { textbook:"讲义定义", proof:"证明思路", exercises:"练习", review:"复盘", explore:"2D 函数", surface:"3D 曲面", pdf:"课本原文" },
   atlas: { "knowledge-map":"知识地图", "practice-map":"练习分布", diagnostic:"前置诊断" },
   shelf: { books:"教材书架", notes:"我的笔记", archive:"学习存档" },
 } as const;
@@ -23,6 +23,8 @@ for (const [section, children] of Object.entries(subpages)) {
     routes.set(address,address);
   }
 }
+routes.set("examples", "desk/textbook");
+routes.set("desk/examples", "desk/textbook");
 export const validRoutes = [...routes.keys()];
 export const normalizeRoute = (route: string) => routes.get(route);
 export function pageFromHash(current = window.location, stack = window.history, storage = window.localStorage): string {

@@ -6,6 +6,7 @@ const compiled = await build({
   stdin: {
     contents: [
       'export * from "./src/modules/companion/workspace";',
+      'export * from "./src/modules/companion/context";',
       'export * from "./src/modules/companion/reply";',
       'export * from "./src/app/workspaceEndpoints";',
       'export * from "./src/modules/visualization/scene/functionScene";',
@@ -22,7 +23,8 @@ const compiled = await build({
   define: { "import.meta.env.VITE_API_BASE": '""' },
 });
 const {
-  queryWorkspace, registerWorkspaceEndpoint, initialScene, applyFunctionScene, localReply,
+  queryWorkspace, queryDeskWorkspace, registerWorkspaceEndpoint, initialScene, applyFunctionScene, localReply,
+  actionSchema, fitCompanionContext, requestReply, companionErrorMessage,
   functionParameterCandidate, sceneParameterBatch, defaultSurfaceScene, surfaceParameterCandidate,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].contents).toString("base64")}`
@@ -142,7 +144,7 @@ test("leaving a requested target before it mounts cancels delivery", async () =>
   }
 });
 
-test("a stale target or mixed-target batch never causes a partial edit", async () => {
+test("a stale target is detected before any mixed-target command is issued", async () => {
   let changed = false;
   const endpoint = () => ({ query: () => ({}), command: () => { changed = true; return true; } });
   const remove = registerWorkspaceEndpoint("explore", endpoint());
@@ -152,13 +154,127 @@ test("a stale target or mixed-target batch never causes a partial edit", async (
     const signal = new AbortController().signal;
     const sceneAction = { type: "set_scene_param", name: "x0", value: 2 };
     assert.equal(await snapshot.dispatchActions([sceneAction], signal), false);
-    assert.equal(await queryWorkspace("textbook").dispatchActions([
-      sceneAction, { type: "highlight_proof_step", ref: "uniform:3" },
+    assert.equal(await snapshot.dispatchActions([
+      { type: "highlight_proof_step", ref: "uniform:3" }, sceneAction,
     ], signal), false);
     assert.equal(changed, false);
   } finally {
     update(); remove();
   }
+});
+
+test("a desk reply reveals each target and groups its actions into a single undoable edit", async () => {
+  const revealed = [], batches = [];
+  const action = {type:"set_curve", expression:"sin(x)"};
+  const range = {type:"set_range", xMin:-4};
+  const highlight = {type:"highlight_proof_step", ref:"unit:1"};
+  const surface = {type:"set_surface_expression", expression:"x*y"};
+  const cleanups = [];
+  globalThis.window = new EventTarget();
+  window.addEventListener("axiom:reveal-pane", ({detail:{pane}}) => {
+    revealed.push(pane);
+    queueMicrotask(() => cleanups.push(registerWorkspaceEndpoint(pane, {
+      query: () => ({}), command: batch => { batches.push(batch); return true; },
+    })));
+  });
+  try {
+    const workspace = queryDeskWorkspace("textbook", "pdf", true);
+    assert.deepEqual(workspace.context.board, {mounted:false, tab:"pdf", collapsed:true});
+    assert.equal(await workspace.dispatchActions([highlight, action, surface, range], new AbortController().signal), true);
+    assert.deepEqual(revealed, ["proof", "explore", "surface"]);
+    assert.deepEqual(batches, [[highlight], [action, range], [surface]]);
+  } finally {
+    cleanups.forEach(remove => remove());
+    delete globalThis.window;
+  }
+});
+
+test("desk context is scoped to the selected board, study step and proof references", () => {
+  const step = {ref:"lesson:0", title:"第一步", text:"当前步骤"};
+  const curve = {id:"f", expression:"a*x", domainMin:null, domainMax:2, label:"f", visible:true};
+  const cleanups = [
+    registerWorkspaceEndpoint("textbook", {query: () => ({lecture:{
+      conditions:["连续"], proof_steps:[step, {ref:"lesson:1", text:"其他步骤".repeat(1000)}],
+    }})}),
+    registerWorkspaceEndpoint("proof", {query: () => ({proof:{
+      current_step:step, steps:[step,{ref:"lesson:1",text:"其他步骤".repeat(1000)}],
+    }})}),
+    registerWorkspaceEndpoint("explore", {query: () => ({function_scene:{
+      active_expression:"a*x", mode:"graph", range:{xMin:-1,xMax:1,yMin:-2,yMax:2}, curves:[curve],
+      controls:{x0:0.5}, parameters:[{name:"a",min:-1,max:1,value:0.5}],
+    }})}),
+    registerWorkspaceEndpoint("surface", {query: () => ({surface_scene:{
+      expression:"x*y", range:{xMin:-1,xMax:1,yMin:-2,yMax:2}, view:{azimuth:45}, display:{opacity:1},
+    }})}),
+  ];
+  try {
+    const lecture = queryDeskWorkspace("textbook","pdf",false).context;
+    assert.deepEqual(lecture.lecture, {conditions:["连续"], proof_refs:["lesson:0","lesson:1"]});
+    assert.deepEqual(lecture.board,{mounted:false, tab:"pdf", collapsed:false});
+    assert.equal(lecture.function_scene, undefined);
+    const workspace = queryDeskWorkspace("proof","explore",true).context;
+    assert.deepEqual(workspace.board,{mounted:true, tab:"explore", collapsed:true});
+    assert.deepEqual(workspace.proof.current_step, step);
+    assert.deepEqual(workspace.proof.refs, ["lesson:0","lesson:1"]);
+    assert.equal(workspace.proof.steps, undefined);
+    assert.equal(workspace.function_scene.active_expression,"a*x");
+    assert.equal(workspace.function_scene.curves[0].visible,undefined);
+    assert.equal(workspace.available_scene_controls,undefined);
+    assert.equal(workspace.surface_scene,undefined);
+    const other = queryDeskWorkspace("proof","surface",false).context;
+    assert.deepEqual(Object.keys(other.surface_scene).sort(), ["expression","range","view"]);
+  } finally {
+    cleanups.forEach(remove => remove());
+  }
+});
+
+test("a board validation refusal reaches the companion with its original Chinese reason", async () => {
+  const reason = "对比曲线最多 4 条";
+  const remove = registerWorkspaceEndpoint("explore", {
+    query: () => ({}), command: () => ({reason}),
+  });
+  try {
+    const result = await queryWorkspace("explore").dispatchActions([
+      {type:"add_curve", expression:"x"},
+    ],new AbortController().signal);
+    assert.deepEqual(result, {reason});
+  } finally { remove(); }
+});
+
+test("long imported passages and escaped text fit the request budget without truncating plot IDs", () => {
+  const original = {
+    definition:"定义".repeat(4000), formula:"x", lecture:{conditions:Array(20).fill('"'.repeat(3000))},
+    proof:{current_step:{ref:"kept-ref", text:"长段".repeat(2000)}},
+    board:{mounted:true, tab:"explore", collapsed:false},
+    function_scene:{curves:[{id:"stable-id", expression:"a*x"}]},
+  };
+  const fitted = fitCompanionContext(original);
+  assert.ok(JSON.stringify(fitted).length <= 22000);
+  assert.ok(fitted.excerpted);
+  assert.deepEqual(fitted.function_scene, original.function_scene);
+  assert.deepEqual(fitted.board, original.board);
+  assert.equal(fitted.proof.current_step.ref, "kept-ref");
+  assert.ok(original.definition.length > fitted.definition.length);
+});
+
+test("the response reader distinguishes malformed explanations from connectivity failures", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => Response.json({display_markdown:"", spoken_text:""});
+    const ask = () => requestReply("定义",{},[],new AbortController().signal);
+    await assert.rejects(ask, error => companionErrorMessage(error).includes("格式校验失败"));
+    globalThis.fetch = async () => { throw new TypeError("Failed to fetch"); };
+    await assert.rejects(ask, error => companionErrorMessage(error).includes("网络"));
+    globalThis.fetch = async () => Response.json({error:{code:"companion_format",message:"上游格式"}}, {status:502});
+    await assert.rejects(ask, error => companionErrorMessage(error).includes("格式校验失败"));
+    globalThis.fetch = async () => Response.json({
+      display_markdown:"讲解", spoken_text:"讲解", actions:[{type:"set_curve",expression:"x",scene:{}},
+        {type:"set_surface_view",elevation:35}, {type:"set_curve",expression:"x"}],
+    });
+    assert.deepEqual((await ask()).actions, [{type:"set_surface_view",elevation:35},{type:"set_curve",expression:"x"}]);
+    assert.equal(actionSchema.safeParse({type:"set_parameter_range",name:"e",value:1,min:0,max:2}).success,false);
+    assert.equal(actionSchema.safeParse({type:"set_mode",mode:"taylor"}).success,true);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test("an active 2D plot keeps a user parameter whose name matches a surface control", async () => {

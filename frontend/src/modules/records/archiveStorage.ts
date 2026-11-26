@@ -223,8 +223,9 @@ export function validateLearningStorage(input: unknown): LearningStorage {
     const validate = validator(key);
     if (!validate) throw new Error("存档包含不支持的浏览器数据项。");
     try {
-      validate(value);
-      if (key === "axiom-last-page") result.data[key] = normalizeRoute(value)!;
+      const normalized = key === "axiom-last-page" ? normalizeRoute(value) ?? value : value;
+      validate(normalized);
+      result.data[key] = normalized;
     } catch {
       throw new Error(
         `学习记录格式无效（${validators.has(key) ? key : "练习草稿或选项"}）。`,

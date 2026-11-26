@@ -20,7 +20,9 @@ def install(root):
             log.write(json.dumps({"model": payload["model"], "messages": messages}) + "\n")
         prompt = "\n".join(message["content"] for message in messages)
         for rule in rules:
-            if all(mark in prompt for mark in rule["contains"]):
+            if "question" in rule and json.loads(messages[-1]["content"]).get("question") != rule["question"]:
+                continue
+            if all(mark in prompt for mark in rule.get("contains", [])):
                 return httpx.Response(200, json={
                     "choices": [{"message": {"role": "assistant", "content": json.dumps(rule["reply"])}}],
                     "usage": {"prompt_tokens": 5, "completion_tokens": 7},

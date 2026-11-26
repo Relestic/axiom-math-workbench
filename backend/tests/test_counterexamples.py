@@ -59,30 +59,5 @@ def test_interval_must_be_finite_and_increasing(a, b):
         Candidate.model_validate(payload(a=a, b=b))
 
 
-def test_local_counterexample_route_and_optional_no_key_feedback(app, client, monkeypatch):
-    assert client.post(URL, json=payload()).status_code == 404
-    monkeypatch.setattr(app.config["AXIOM"], "local_mode", True)
-    assert client.post(URL, json=payload(), headers={"Origin": "https://example.test"}).status_code == 403
-    invalid = client.post(URL, json=payload("unknownFunction(x)"))
-    assert invalid.status_code == 422 and "表达式不被允许" in invalid.json["error"]["message"]
-    checked = client.post(URL, json=payload(model=True))
-    assert checked.status_code == 200
-    assert checked.json["model_status"] == "请先在顶部配置个人 DeepSeek Key"
-    assert by_basis(checked.json, "symbolic") and not by_basis(checked.json, "model-explanation")
-
-
-def test_model_explanation_is_appended_with_its_own_evidence_type(app, client, monkeypatch):
-    from app.adapters.llm import LLMResult
-    from app.api import local_counterexamples
-
-    monkeypatch.setattr(app.config["AXIOM"], "local_mode", True)
-    monkeypatch.setattr(local_counterexamples, "use_local_ai", lambda: None)
-    def explain(session, messages, **kwargs):
-        assert kwargs["purpose"] == "counterexample_explanation" and kwargs["user_id"]
-        assert "numeric-sample" in messages[-1]["content"]
-        return LLMResult("端点不属于开区间，仍可讨论右极限。", "mock", "test"), None
-    monkeypatch.setattr(local_counterexamples, "chat", explain)
-    original = client.post(URL, json=payload()).json
-    with_model = client.post(URL, json=payload(model=True)).json
-    assert original["findings"] == with_model["findings"][:-1]
-    assert with_model["findings"][-1]["verdict_basis"] == "model-explanation"
+def test_retired_local_counterexample_route(app):
+    assert URL not in {rule.rule for rule in app.url_map.iter_rules()}

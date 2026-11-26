@@ -71,7 +71,7 @@ export default function AuthScreen() {
           </li>
           <li>
             <Sparkles size={16} />
-            图像、正反例与完整练习连在一起
+            讲义、图像与练习连在一起
           </li>
           <li>
             <Sparkles size={16} />

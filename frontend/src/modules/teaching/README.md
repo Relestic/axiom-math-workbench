@@ -9,7 +9,7 @@
 
 ## 对外接口
 
-`pages/learning/Textbook.tsx`、`Examples.tsx`、`Proof.tsx`；`GET /api/v1/catalog`、`concepts/{id}`、`sections/{id}`、`proofs/{id}`。
+`pages/learning/Textbook.tsx`、`Proof.tsx`；`GET /api/v1/catalog`、`concepts/{id}`、`sections/{id}`、`proofs/{id}`。
 
 ## 数据归属
 

@@ -258,14 +258,14 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
                 className="btn primary"
                 disabled={current.kind === "extension"}
                 onClick={() =>
-                  openCurrent(current.kind === "case" ? "examples" : "explore")
+                  openCurrent(current.kind === "case" ? "textbook" : "explore")
                 }
               >
                 <PlayCircle size={15} />
                 {current.kind === "extension"
                   ? "正式版内容 · 规划中"
                   : current.kind === "case"
-                    ? "打开正反例实验室"
+                    ? "打开相关讲义"
                     : "回到图像探索"}
               </button>
               <button

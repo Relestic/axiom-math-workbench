@@ -1,7 +1,10 @@
 import { z } from "zod";
 import speech from "../../../../backend/app/modules/spoken_math.json";
-import { apiFetch } from "../../lib/api";
+import { ApiError, apiFetch } from "../../lib/api";
 import type { CurriculumUnit, ClassicSet } from "../../domain/types";
+import { actionSchema, type WorkspaceAction } from "./actions";
+import { fitCompanionContext } from "./context";
+export { actionSchema };
 
 function rules(text: string, entries: string[][]) {
   for (const [pattern, replacement] of entries) text = text.replace(new RegExp(pattern, "g"), replacement);
@@ -12,11 +15,7 @@ export function spokenMath(text: string): string {
   const converted = Array.from(rules(text, speech.rules), char => symbols[char] ?? char).join("");
   return rules(converted, speech.cleanup).trim();
 }
-export const actionSchema = z.discriminatedUnion("type", [
-  z.strictObject({type: z.literal("highlight_proof_step"), ref: z.string().min(1).max(160)}),
-  z.strictObject({type: z.literal("set_scene_param"), name: z.string().min(1).max(100), value: z.number().finite()}),
-]);
-export type Action = z.infer<typeof actionSchema>;
+export type Action = WorkspaceAction;
 const responseSchema = z.object({
   display_markdown: z.string().min(1).max(6000),
   spoken_text: z.string().max(3400),
@@ -24,10 +23,20 @@ const responseSchema = z.object({
 });
 export type Reply = {display_markdown: string; spoken_text: string; actions: Action[]};
 export type Message = {role: "user" | "assistant"; content: string; spoken?: string; local?: boolean};
-export async function requestReply(question: string, context: object, history: Message[], signal: AbortSignal): Promise<Reply> {
+
+export function companionErrorMessage(cause: unknown) {
+  if (cause instanceof z.ZodError || (cause instanceof ApiError && cause.code === "companion_format")) {
+    return "这次讲解格式校验失败，请重新提问。";
+  }
+  if (cause instanceof ApiError) return "伴学服务请求失败：" + cause.message;
+  return "无法连接伴学服务，请检查网络和本地工作台后重试。";
+}
+
+export async function requestReply(question: string, context: Record<string, unknown>, history: Message[], signal: AbortSignal): Promise<Reply> {
   const raw = await apiFetch<unknown>("/api/v1/ai/companion", {
     method: "POST", signal,
-    body: JSON.stringify({question, context, history: history.slice(-6).map(({role,content}) => ({role, content:content.slice(0,1400)}))}),
+    body: JSON.stringify({question, context:fitCompanionContext(context),
+      history: history.slice(-6).map(({role,content}) => ({role, content:content.slice(0,1400)}))}),
   }, { auth:false });
   const parsed = responseSchema.parse(raw);
   const actions = (parsed.actions ?? []).flatMap(input => {
@@ -51,10 +60,10 @@ export function localReply(question: string, unit: CurriculumUnit, classic: Clas
     display = lesson.step + "\n\n本单元可核对的依据：" + unit.tools.join("、") + "。";
   } else if (/提示|怎么做|思路/.test(question)) {
     display = (lesson.answer ? "对照你已写的作答，检查下面的关键条件。\n\n" : "") + (lesson.hint || unit.hint);
-  } else if (lesson.step) {
-    display = lesson.step;
   } else if (lesson.expression) {
     display = "当前图像的表达式为 $" + lesson.expression + "$。先固定一个点，改变一个参数或显示范围，观察图像如何变化。";
+  } else if (lesson.step) {
+    display = lesson.step;
   } else {
     display = unit.definition + "\n\n" + unit.formula;
   }

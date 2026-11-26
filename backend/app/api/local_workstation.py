@@ -16,12 +16,10 @@ from ..modules import local_textbooks as shelf
 from ..modules.local_practice import practice_attempts
 from .local_only import local_learner, require_local
 from .local_practice import bp as practice_bp
-from .local_counterexamples import bp as counterexamples_bp
 
 bp = Blueprint("local_workstation", __name__, url_prefix="/api/v1/local")
 bp.before_request(require_local)
 bp.register_blueprint(practice_bp)
-bp.register_blueprint(counterexamples_bp)
 # Keep a concurrent upload from reusing a file between deletion's commit and unlink.
 _shelf_write = RLock()
 

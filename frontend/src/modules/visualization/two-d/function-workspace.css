@@ -14,26 +14,6 @@
   margin: -6px 0 24px;
   font-size: 11px;
 }
-.fw-status > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.fw-status i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--surface-control);
-}
-.fw-status .fw-online i {
-  background: var(--teal-solid);
-}
-.fw-offline {
-  color: var(--muted);
-}
-.fw-online {
-  color: var(--teal);
-}
 .fw-status button {
   display: flex;
   gap: 8px;
@@ -368,145 +348,6 @@
   margin: 3px 0 0;
   overflow-wrap: anywhere;
 }
-.fw-chat {
-  padding: 22px !important;
-  border-color: var(--accent-border);
-}
-.fw-chat-heading {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.fw-chat-heading h3 {
-  font-size: 14px;
-  margin: 0 0 5px;
-}
-.fw-chat-heading p {
-  font-size: 10px;
-  color: var(--muted);
-  margin: 0;
-}
-.fw-chat-heading > .badge {
-  margin-left: auto;
-  white-space: nowrap;
-  font-size: 9px;
-}
-.fw-suggestions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 20px 0;
-}
-.fw-suggestions button {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 11px;
-  color: var(--muted);
-  text-align: left;
-  font-size: 10px;
-  line-height: 1.6;
-}
-.fw-suggestions button:hover {
-  background: var(--surface-raised);
-  border-color: var(--accent-border);
-  color: var(--primary);
-}
-.fw-messages {
-  max-height: 330px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  overflow-wrap: anywhere;
-}
-.fw-empty-chat {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  justify-content: center;
-  padding: 22px 10px 32px;
-  color: var(--muted);
-}
-.fw-empty-chat p {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
-  line-height: 2;
-}
-.fw-message {
-  max-width: 92%;
-  padding: 12px 15px;
-  border-radius: 10px;
-  background: var(--surface-raised);
-  margin: 12px 0;
-  color: var(--text-secondary);
-}
-.fw-message.user {
-  margin-left: auto;
-  background: var(--surface-raised);
-  color: var(--primary);
-}
-.fw-message small {
-  font-size: 9px;
-  color: var(--muted);
-}
-.fw-message p {
-  font-size: 12px;
-  line-height: 1.9;
-  margin: 6px 0 0;
-  white-space: pre-wrap;
-}
-.fw-thinking {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  padding: 15px;
-}
-.fw-thinking svg {
-  animation: fw-spin 1s linear infinite;
-}
-.fw-composer {
-  border: 1px solid var(--accent-border);
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 12px;
-  background: var(--surface);
-}
-.fw-composer:focus-within {
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px #f5f2ff;
-}
-.fw-composer textarea {
-  border: 0;
-  outline: none;
-  resize: vertical;
-  min-height: 53px;
-  max-height: 180px;
-  width: 100%;
-  background: transparent;
-  font-size: 12px;
-  line-height: 1.9;
-  color: var(--text-secondary);
-}
-.fw-composer textarea::placeholder {
-  color: var(--muted);
-}
-.fw-composer-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 6px;
-}
-.fw-composer-foot > span {
-  font-size: 9px;
-  color: var(--muted);
-}
-.fw-composer .btn {
-  font-size: 11px;
-  padding: 9px 13px;
-}
 .fw-next {
   display: flex;
   justify-content: space-between;
@@ -546,40 +387,8 @@
   border: 0;
   color: inherit;
 }
-.fw-settings {
-  margin-bottom: 22px;
-  border-color: var(--accent-border);
-}
-.fw-settings > div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.fw-settings h3 {
-  margin: 0;
-}
-.fw-settings p {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.9;
-}
-.fw-settings pre {
-  background: var(--surface-control);
-  border-radius: 9px;
-  padding: 18px;
-  color: var(--primary);
-  overflow: auto;
-  font:
-    12px/1.9 Consolas,
-    monospace;
-}
 .fw-back {
   margin-bottom: 20px;
-}
-@keyframes fw-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 @media (min-width: 1600px) {
   .fw-grid {
@@ -609,17 +418,8 @@
   .fw-plot {
     min-height: 390px;
   }
-  .fw-chat {
-    padding: 18px !important;
-  }
   .fw-chart-heading h2 span {
     font-size: 15px;
-  }
-  .fw-chat-heading p {
-    line-height: 1.7;
-  }
-  .fw-chat-heading > .badge {
-    display: none;
   }
 }
 @media (max-width: 950px) {
@@ -683,9 +483,6 @@
     gap: 12px;
     font-size: 10px;
   }
-  .fw-status > span {
-    line-height: 1.8;
-  }
   .fw-status button {
     font-size: 10px;
   }
@@ -726,15 +523,6 @@
     padding: 8px;
     font-size: 9px;
   }
-  .fw-chat {
-    padding: 16px !important;
-  }
-  .fw-composer-foot > span {
-    font-size: 8px;
-  }
-  .fw-suggestions {
-    margin: 16px 0;
-  }
   .fw-next {
     align-items: flex-start;
     flex-direction: column;
@@ -744,9 +532,6 @@
   }
   .fw-analysis {
     padding-top: 15px;
-  }
-  .fw-settings pre {
-    font-size: 10px;
   }
   .fw-metric {
     min-width: 115px;

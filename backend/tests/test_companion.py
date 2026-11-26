@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from app.adapters import llm
-from app.api.companion import spoken_math
+from app.api.companion import parse_answer, spoken_math
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -37,4 +37,52 @@ def test_companion_uses_personal_proxy_and_validates_reply(app, client, monkeypa
     assert captured[0]["response_format"] == {"type":"json_object"}
     assert json.loads(captured[0]["messages"][-1]["content"]) == question
     answer["display_markdown"] = ""
-    assert client.post("/api/v1/ai/companion", json=question).status_code == 502
+    malformed = client.post("/api/v1/ai/companion", json=question)
+    assert malformed.status_code == 502
+    assert malformed.json["error"]["code"] == "companion_format"
+
+    def unavailable(*args, **kwargs):
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(llm.httpx, "post", unavailable)
+    offline = client.post("/api/v1/ai/companion", json=question)
+    assert offline.status_code == 502
+    assert offline.json["error"]["code"] == "upstream_error"
+    assert client.post("/api/v1/ai/companion", json={**question, "context":{"text":"数" * 22000}}).status_code == 422
+
+
+@pytest.mark.parametrize("action", [
+    {"type":"set_curve", "expression":"-x", "label":"左段", "domainMax":0, "rightOpen":True},
+    {"type":"add_curve", "expression":"x", "id":"g", "domainMin":0, "leftOpen":False},
+    {"type":"remove_curve", "id":"g"},
+    {"type":"clear_comparison_curves"},
+    {"type":"set_range", "xMin":-2, "yMax":4},
+    {"type":"set_mode", "mode":"derivative"},
+    {"type":"set_parameter_range", "name":"z", "value":0, "min":-3, "max":3},
+    {"type":"set_surface_expression", "expression":"sin(x)*cos(y)"},
+    {"type":"set_surface_range", "yMin":-5, "yMax":5},
+    {"type":"set_surface_view", "azimuth":60, "elevation":25, "heightScale":1.5},
+    {"type":"set_scene_param", "name":"x0", "value":0},
+])
+def test_companion_preserves_valid_partial_action_fields(action):
+    answer = parse_answer(json.dumps({"display_markdown":"讲解", "actions":[action]}))
+    assert answer["actions"] == [action]
+
+
+@pytest.mark.parametrize("invalid", [
+    {"type":"set_scene", "scene":{}},
+    {"type":"set_curve", "expression":"x", "id":None},
+    {"type":"add_curve", "expression":"x", "rightOpen":1},
+    {"type":"clear_comparison_curves", "all":True},
+    {"type":"set_range", "xMin":"-4"},
+    {"type":"set_range", "yMax":float("inf")},
+    {"type":"set_mode", "mode":"surface"},
+    *[{"type":"set_parameter_range", "name":name, "value":1, "min":0, "max":2}
+      for name in ("x", "y", "e", "A", "aa")],
+    {"type":"set_surface_expression", "expression":"s"*301},
+    {"type":"set_surface_view", "zoom":1},
+])
+def test_companion_discards_only_the_invalid_action(invalid):
+    action = {"type":"set_curve", "expression":"x"}
+    answer = parse_answer(json.dumps({"display_markdown":"讲解", "actions":[invalid,action]}))
+    assert answer == {"display_markdown":"讲解", "spoken_text":"讲解", "actions":[action]}

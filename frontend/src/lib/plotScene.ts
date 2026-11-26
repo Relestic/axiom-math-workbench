@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseFormula } from "./functionEngine.js";
+import { hasMinimumSpan } from "./interval.js";
 const number = z.number().finite().min(-10000).max(10000);
 const curve = z
   .object({
@@ -77,7 +78,7 @@ export function validateScene(input: unknown): Scene {
   if (!parsed.success)
     throw new Error("函数配置格式不完整，或参数超出支持范围");
   const s = parsed.data;
-  if (s.xMax - s.xMin < 0.01 || s.yMax - s.yMin < 0.01)
+  if (!hasMinimumSpan(s.xMin, s.xMax, 0.01) || !hasMinimumSpan(s.yMin, s.yMax, 0.01))
     throw new Error("坐标范围上限必须大于下限，跨度至少为 0.01");
   if (s.integralStart >= s.integralEnd) throw new Error("积分起点必须小于终点");
   if (

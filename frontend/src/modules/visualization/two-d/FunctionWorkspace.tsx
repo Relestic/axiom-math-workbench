@@ -8,10 +8,8 @@ import {
   useFunctionWorkspace,
   type FunctionWorkspaceProps,
 } from "../hooks/useFunctionWorkspace";
-import { AIChatPanel } from "../components/AIChatPanel";
 import { FunctionChart } from "../components/FunctionChart";
 import { FunctionEditor } from "../components/FunctionEditor";
-import { ModelSettings } from "../components/ModelSettings";
 import { NextStep } from "../components/NextStep";
 import { WorkspaceHeader } from "../components/WorkspaceHeader";
 import "./function-workspace.css";
@@ -28,7 +26,7 @@ export default function FunctionWorkspace(props: FunctionWorkspaceProps) {
           ← 返回自由函数工作区
         </button>
         <Suspense fallback={<p>载入经典示例…</p>}>
-          <Classic {...props} />
+          <Classic {...props} onBoardActions={state.onBoardActions} />
         </Suspense>
       </>
     );
@@ -37,14 +35,13 @@ export default function FunctionWorkspace(props: FunctionWorkspaceProps) {
   return (
     <div className="function-workspace">
       <WorkspaceHeader state={state} onNavigate={props.onNavigate} />
-      {state.settings && <ModelSettings state={state} />}
       <div className="fw-modebar" role="tablist" aria-label="函数分析工具">
         {FUNCTION_MODES.map(([id, label]) => (
           <button
             role="tab"
             aria-selected={state.scene.mode === id}
             className={state.scene.mode === id ? "active" : ""}
-            disabled={state.busy || state.dirty}
+            disabled={state.dirty}
             key={id}
             onClick={() => state.patch({ mode: id as Scene["mode"] })}
           >
@@ -68,7 +65,6 @@ export default function FunctionWorkspace(props: FunctionWorkspaceProps) {
         <FunctionEditor state={state} />
         <div className="fw-main">
           <FunctionChart state={state} />
-          <AIChatPanel state={state} />
         </div>
       </div>
       <NextStep onNavigate={props.onNavigate} />

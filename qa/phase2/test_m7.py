@@ -8,7 +8,8 @@ LEGACY = {
     "dashboard": "dashboard",
     "textbook": "desk/textbook",
     "explore": "desk/explore",
-    "examples": "desk/examples",
+    "examples": "desk/textbook",
+    "desk/examples": "desk/textbook",
     "proof": "desk/proof",
     "exercises": "desk/exercises",
     "review": "desk/review",
@@ -62,7 +63,8 @@ def test_old_hash_back_forward_and_cold_start(page, server, old, destination):
     page.evaluate("old => { location.hash = old }", old)
     expect_route(page, destination)
     if old != destination:
-        assert any(url.endswith("#" + destination) for url in page.evaluate("window.replaced"))
+        replacements = page.evaluate("window.replaced")
+        assert sum(url.endswith("#" + destination) for url in replacements) == 1, replacements
     page.go_back()
     expect_route(page, before)
     page.go_forward()
@@ -78,7 +80,7 @@ def test_old_hash_back_forward_and_cold_start(page, server, old, destination):
         expect_route(page, destination)
 
 
-LEFT = [("正反例", "examples"), ("证明思路", "proof"), ("练习与复盘", "exercises"),
+LEFT = [("证明思路", "proof"), ("练习与复盘", "exercises"),
         ("讲义定义", "textbook")]
 
 
@@ -201,6 +203,8 @@ def test_active_pane_prompts_context_and_queued_actions(page, server):
     expect(page.locator('[aria-current="step"]')).to_have_attribute("data-proof-step-ref", proof_ref)
     ask("解释这一步", "proof")
     assert contexts[-1]["proof"]["current_step"]["ref"] == proof_ref
+    assert "steps" not in contexts[-1]["proof"]
+    assert contexts[-1]["function_scene"]["mode"]
 
     choose(page, "练习与复盘")
     draft = page.locator("#desk-pane-exercises textarea").first

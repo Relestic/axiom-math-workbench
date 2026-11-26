@@ -61,7 +61,7 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
   return (
     <div className="learning-page review-page">
       <Heading
-        step="第 6 步 / 共 6 步"
+        step="第 3 步 / 共 3 步"
         title="完整解答与复盘"
         description="保留自己的推理过程，对照参考解答，把这一次学习变成下一次的进步。"
       >

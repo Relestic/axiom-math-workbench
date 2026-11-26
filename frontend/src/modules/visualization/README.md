@@ -6,11 +6,11 @@
 
 ```text
 visualization/
-  components/        公式编辑器、参数面板、图表、AI 对话、模型设置
+  components/        公式编辑器、参数面板、图表、观察记录入口
   two-d/             二维函数工作区页面（组合组件与 hook）
   three-d/           三维曲面、SVG 投影、视角、人工/AI 修改
   scene/             场景类型、加载、统一校验入口
-  hooks/             页面状态、撤销、AI 请求、localStorage 恢复
+  hooks/             页面状态、伴学动作执行、撤销、localStorage 恢复
   api.ts             可视化相关 AI 请求
   README.md          本文件
 ```
@@ -22,6 +22,7 @@ visualization/
 | `two-d/FunctionWorkspace` | `onNavigate`、`onSaveNote`、`notify` | 页面 | 现有 `/explore` 页面入口；`pages/FunctionWorkspace.tsx` 仅重新导出 |
 | `three-d/SurfaceWorkspace` | 无 | 页面 | 现有 `/surface` 页面入口 |
 | `scene/functionScene` | `unknown` | 已校验的 `Scene` | `applyFunctionScene` 是唯一写入口 |
+| `applyFunctionActions` / `applySurfaceActions` | 当前场景、Hiyori 局部动作、提交回调 | 成功、无变化或中文拒绝原因 | 在临时场景上依次校验，一组动作只提交一次 |
 | `api.requestPlotChange` | 消息、当前 `Scene`、历史、`AbortSignal` | `{message, scene}` | 调 `/api/ai/plot` |
 | `api.requestSurfaceChange` | 消息、当前 `SurfaceScene`、历史 | `{message, scene}` | 调 `/api/v1/ai/surface` |
 | `api.fetchAIStatus` / `testAIConnection` | — | 状态/延迟 | `/api/ai/status`、`/api/v1/ai/test` |
@@ -31,8 +32,8 @@ visualization/
 
 ## 数据归属
 
-- **可写**：本模块在浏览器 `localStorage` 中保存当前函数场景、三维场景和最近对话；
-  撤销栈只存在于当前页面会话。
+- **可写**：本模块在浏览器 `localStorage` 中保存二维与三维场景。撤销栈只存在于当前页面会话。
+  两个黑板的对话均由右侧 Hiyori 接收。旧版黑板对话键保留用于存档兼容。
 - **只读**：模型状态、模型用量由共享 AI 适配器读取；可视化模块不能修改用户、练习
   或学习进度数据。
 - **跨模块**：`onSaveNote` 交给个人记录模块；`onNavigate` 只做导航；AI 改图的结果
@@ -76,6 +77,6 @@ AI 返回  ─┼─> applyFunctionScene / normalizeSurfaceScene ─> React 状�
 
 ## 后续拆分
 
-`components/` 目前按“编辑器 / 图表 / AI / 设置 / 下一步”拆分；`two-d/` 页面只负责组合。
+`components/` 目前按“编辑器 / 图表 / 导航”拆分；`two-d/` 页面只负责组合。
 下一步可以把三维 `SurfacePlot3D` 的投影计算抽到纯函数，并为二/三维场景增加同一套
 `SceneAdapter` 契约测试。

@@ -10,3 +10,11 @@ test("a saved variant selection and stepwise review survive browser archive vali
  const input = {"axiom-exercise-variant-uniform":selected,"axiom-offline-attempts":JSON.stringify([attempt])};
  assert.deepEqual(validateLearningStorage(input),input);
 });
+
+test("archived examples resume the lecture and preserve both board conversations", () => {
+  const chat = JSON.stringify([{role: "user", content: "看一下导数"}]);
+  for (const oldPage of ["examples", "desk/examples"]) {
+    const snapshot = {"axiom-last-page": oldPage, "axiom-function-chat": chat, "axiom-surface-chat": chat};
+    assert.deepEqual(validateLearningStorage(snapshot), {...snapshot, "axiom-last-page": "desk/textbook"});
+  }
+});
