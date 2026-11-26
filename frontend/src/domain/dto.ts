@@ -1,3 +1,4 @@
+import type { AiReview } from "../modules/practice/review";
 // Raw backend DTOs. Keep snake_case here; pages never see these shapes.
 export type ServerUserDto = {
   id: string;
@@ -85,6 +86,7 @@ export type ExerciseDto = {
 };
 
 export type AttemptDto = {
+  ai_review?: AiReview | null;
   id: string;
   exercise_id: string;
   answer_text: string;
@@ -95,6 +97,7 @@ export type AttemptDto = {
   self_rating?: "pending" | "understood" | "revisit";
   status?: string;
   feedback?: {
+    ai_review_notice?: string;
     status?: string;
     summary?: string;
     observations?: { type?: string; message?: string }[];

@@ -1,3 +1,4 @@
+import type { AiReview } from "../modules/practice/review";
 export type LocalBook = {
   id: string;
   title: string;
@@ -40,6 +41,7 @@ export type Exercise = {
 };
 
 export type AttemptFeedback = {
+  ai_review_notice?: string;
   status?: string;
   summary?: string;
   observations?: { type?: string; message?: string }[];
@@ -68,6 +70,7 @@ export type Attempt = {
   status?: string;
   score?: number | null;
   feedback?: AttemptFeedback;
+  aiReview?: AiReview | null;
 };
 
 export type Note = {

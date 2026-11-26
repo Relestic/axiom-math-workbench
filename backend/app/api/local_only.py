@@ -4,7 +4,10 @@ from urllib.parse import urlsplit
 
 from flask import current_app, request
 
+from sqlalchemy import select
+
 from ..errors import ApiError
+from ..models import User
 
 
 def _loopback_origin(origin: str) -> bool:
@@ -42,3 +45,10 @@ def require_local() -> None:
         or (origin is None and request.headers.get("Sec-Fetch-Site") == "cross-site")
     ):
         raise ApiError("forbidden", "仅允许本机工作台访问")
+
+
+def local_learner(session):
+    learner = session.scalar(select(User).where(User.email == "demo@axiom.local", User.is_active.is_(True)))
+    if learner is None:
+        raise ApiError("service_unavailable", "本机学习者尚未初始化，请通过启动工作台打开")
+    return learner

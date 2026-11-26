@@ -127,24 +127,7 @@ def update_attempt(attempt_id: str):
     if attempt is None or attempt.user_id != current_user().id:
         raise ApiError("not_found", "作答记录不存在")
     if payload.self_rating is not None:
-        attempt.self_rating = payload.self_rating
-        session.add(
-            AttemptEvent(
-                attempt_id=attempt.id,
-                user_id=attempt.user_id,
-                exercise_id=attempt.exercise_id,
-                type="self_rating",
-                payload={"self_rating": payload.self_rating},
-            )
-        )
-        session.add(
-            StudyEvent(
-                user_id=attempt.user_id,
-                kind="self_rating",
-                concept_id=attempt.exercise.topic_id if attempt.exercise else None,
-                payload={"attempt_id": attempt.id, "self_rating": payload.self_rating},
-            )
-        )
+        exercise_service.rate_attempt(session, attempt, payload.self_rating)
     session.commit()
     return attempt_out(attempt, exercise=attempt.exercise, include_events=True)
 

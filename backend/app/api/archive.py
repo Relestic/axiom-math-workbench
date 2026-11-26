@@ -14,6 +14,10 @@ from contextlib import closing
 from pathlib import Path
 
 from flask import Blueprint, Request, current_app, request, send_file
+from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
+
+from migrations.runner import migrate
 
 from ..db import get_engine
 from ..errors import ApiError
@@ -64,11 +68,50 @@ def copy_database(source, destination):
     source.backup(destination, pages=128, progress=progress, sleep=0.05)
 
 
-def schema(conn):
-    return conn.execute(
+def schema(conn, *, before_review=False):
+    rows = conn.execute(
         "SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' "
         "ORDER BY type,name"
     ).fetchall()
+    canonical = []
+    for kind, name, table, sql in rows:
+        if kind == "table" and name == "attempts":
+            # SQLite appends ALTERed columns before table constraints. Fresh metadata
+            # places the same column beside feedback. Accept only this exact declaration.
+            sql, present = re.subn(r"(?<=,)\s*ai_review JSON\s*,", "", sql, count=1)
+            if present and not before_review:
+                sql += " + ai_review JSON"
+        if kind == "table" and name == "textbooks":
+            # 0003 used a server default for pre-existing rows when adding version.
+            sql, present = re.subn(r"(?<=,)\s*version INTEGER NOT NULL(?: DEFAULT 1)?\s*,", "", sql, count=1)
+            if present:
+                sql += " + version INTEGER NOT NULL"
+        canonical.append((kind, name, table, sql))
+    return canonical
+
+
+def upgrade_snapshot(path, snap, live):
+    def revisions(conn):
+        return [row[0] for row in conn.execute("SELECT revision FROM schema_migrations ORDER BY revision")]
+
+    latest = revisions(live)
+    incoming = revisions(snap)
+    old = latest[-1:] == ["0004_attempt_ai_review"] and incoming == latest[:-1]
+    if not old and incoming != latest:
+        raise invalid("存档迁移版本不兼容")
+    if old and schema(snap) != schema(live, before_review=True):
+        raise invalid("旧存档数据库结构与已知版本不匹配")
+    if (snap.execute("PRAGMA integrity_check").fetchone() != ("ok",)
+            or snap.execute("PRAGMA foreign_key_check").fetchone()):
+        raise invalid("存档数据库损坏，原有记录已保留")
+    if old:
+        engine = create_engine(URL.create("sqlite", database=str(path)))
+        try:
+            migrate(engine)
+        finally:
+            engine.dispose()
+    if schema(snap) != schema(live) or revisions(snap) != latest:
+        raise invalid("存档数据库版本或结构与当前工作台不匹配")
 
 
 def upload_root():
@@ -179,14 +222,7 @@ def restore(pack, folder, preview):
     with closing(sqlite3.connect(path)) as snap, closing(get_engine().raw_connection()) as db:
         snap.execute("PRAGMA trusted_schema=OFF")
         live = db.driver_connection
-        if schema(snap) != schema(live):
-            raise invalid("存档数据库版本或结构与当前工作台不匹配")
-        if (snap.execute("SELECT revision FROM schema_migrations ORDER BY revision").fetchall()
-                != live.execute("SELECT revision FROM schema_migrations ORDER BY revision").fetchall()):
-            raise invalid("存档迁移版本不兼容")
-        if (snap.execute("PRAGMA integrity_check").fetchone() != ("ok",)
-                or snap.execute("PRAGMA foreign_key_check").fetchone()):
-            raise invalid("存档数据库损坏，原有记录已保留")
+        upgrade_snapshot(path, snap, live)
         files = attachments(snap)
         if names != {f"files/{digest}.pdf" for _, digest, _ in files}:
             raise invalid("存档缺少教材附件")

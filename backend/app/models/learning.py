@@ -85,6 +85,7 @@ class Attempt(Base, IdMixin, TimestampMixin):
     self_rating = Column(String(20), nullable=False, default="pending")
     status = Column(String(30), nullable=False, default="submitted")
     feedback = Column(JSON, nullable=False, default=dict)
+    ai_review = Column(JSON(none_as_null=True), nullable=True)
     score = Column(Integer, nullable=True)
     error_types = Column(JSON, nullable=False, default=list)
     idempotency_key = Column(String(120), nullable=True)

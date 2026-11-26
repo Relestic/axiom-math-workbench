@@ -23,8 +23,13 @@ export function WorkbenchShell({ page, rail, children, collapsed }: {
   useEffect(() => {
     const narrow = window.matchMedia("(max-width: 1023px)");
     const onResize = () => setDockCollapsed(narrow.matches);
+    const openForReview = () => setDockCollapsed(false);
     narrow.addEventListener("change", onResize);
-    return () => narrow.removeEventListener("change", onResize);
+    window.addEventListener("axiom:explain-attempt", openForReview);
+    return () => {
+      narrow.removeEventListener("change", onResize);
+      window.removeEventListener("axiom:explain-attempt", openForReview);
+    };
   }, []);
   return <div className="workbench-shell" data-rail={collapsed ? "closed" : "open"} data-dock={dockCollapsed ? "closed" : "open"}>
     {rail}

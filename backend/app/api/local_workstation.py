@@ -11,12 +11,17 @@ from sqlalchemy.exc import IntegrityError
 from ..adapters.files import read_pdf_upload
 from ..db import get_session
 from ..errors import ApiError, parse_json
-from ..models import Asset, User
+from ..models import Asset
 from ..modules import local_textbooks as shelf
-from .local_only import require_local
+from ..modules.local_practice import practice_attempts
+from .local_only import local_learner, require_local
+from .local_practice import bp as practice_bp
+from .local_counterexamples import bp as counterexamples_bp
 
 bp = Blueprint("local_workstation", __name__, url_prefix="/api/v1/local")
 bp.before_request(require_local)
+bp.register_blueprint(practice_bp)
+bp.register_blueprint(counterexamples_bp)
 # Keep a concurrent upload from reusing a file between deletion's commit and unlink.
 _shelf_write = RLock()
 
@@ -26,17 +31,11 @@ class BookTitle(BaseModel):
     title: str = Field(min_length=1, max_length=200)
 
 
-def local_learner(session):
-    learner = session.scalar(select(User).where(User.email == "demo@axiom.local", User.is_active.is_(True)))
-    if learner is None:
-        raise ApiError("service_unavailable", "本机学习者尚未初始化，请通过启动工作台打开")
-    return learner
-
-
 @bp.get("/bootstrap-extras")
 def bootstrap_extras():
     session = get_session()
-    return shelf.bootstrap(session, local_learner(session))
+    user = local_learner(session)
+    return {**shelf.bootstrap(session, user), "attempts": practice_attempts(session, user)}
 
 
 @bp.post("/textbooks")

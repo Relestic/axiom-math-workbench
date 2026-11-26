@@ -1,3 +1,5 @@
+import { AttemptInsights } from "../../modules/practice/AttemptInsights";
+import { selectExercise } from "../../modules/practice/selection";
 import { MathText } from "../../components/Math";
 import {
   ArrowRight,
@@ -35,7 +37,7 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
   );
   const selected = attempts.find((a) => a.id === active);
   const solutionFor = (a: Attempt) =>
-    app.getExercise(a.topicId, a.coefficient)?.solution || [];
+    (app.data.exercises.find(item => item.id === a.exerciseId) || app.getExercise(a.topicId, a.coefficient))?.solution || [];
   const rate = async (id: string, rating: Attempt["selfRating"]) => {
     try {
       await app.rateAttempt(id, rating);
@@ -204,10 +206,7 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
                   onClick={() => {
                     try {
                       app.selectConcept(a.topicId);
-                      localStorage.setItem(
-                        `axiom-exercise-variant-${a.topicId}`,
-                        String(a.coefficient === 5 ? 2 : a.coefficient + 1),
-                      );
+                      selectExercise(a.topicId, String(a.coefficient >= 2 && a.coefficient < 5 ? a.coefficient + 1 : 2));
                     } catch {}
                     onNavigate("exercises");
                   }}
@@ -215,6 +214,7 @@ export function Review({ onNavigate, onSaveNote, notify }: Props) {
                   再练一道 <ArrowRight size={14} />
                 </button>
               </div>
+              {app.data.source === "offline" && <AttemptInsights attempt={a} navigate={onNavigate}/>}
               {selected?.id === a.id && (
                 <div className="solution-panel">
                   <h4>参考解答</h4>

@@ -1,3 +1,4 @@
+import { reviewSchema, variantCode } from "../practice/review";
 import { z } from "zod";
 import { validateScene } from "../../lib/plotScene";
 import { validRoutes, normalizeRoute } from "../../navigation";
@@ -15,6 +16,7 @@ const note = z.strictObject({
   conceptId: id.nullish(),
 });
 const feedback = z.strictObject({
+  ai_review_notice: z.string().optional(),
   status: z.string().optional(),
   summary: z.string().optional(),
   observations: z
@@ -58,6 +60,7 @@ const attempt = z.strictObject({
   status: z.string().optional(),
   score: number.nullish(),
   feedback: feedback.optional(),
+  aiReview: reviewSchema.nullish(),
 });
 const diagnostic = z.strictObject({
   answers: z.record(z.string().regex(/^\d+$/), index),
@@ -182,7 +185,7 @@ const prefixes: [string, ValidateEntry][] = [
     (value) =>
       z
         .string()
-        .regex(/^[2-5]$/)
+        .refine(value => /^[2-5]$/.test(value) || variantCode.test(value))
         .parse(value),
   ],
 ];

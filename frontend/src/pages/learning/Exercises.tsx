@@ -1,3 +1,6 @@
+import { AttemptInsights } from "../../modules/practice/AttemptInsights";
+import { selectExercise, useExerciseSelection } from "../../modules/practice/selection";
+import { variantCode } from "../../modules/practice/review";
 import {
   ArrowRight,
   Bookmark,
@@ -27,11 +30,6 @@ import type { Attempt } from "../../domain/types";
 import "../grading.css";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
-function savedVariant(id: string) {
-  const n = Number(localStorage.getItem(`axiom-exercise-variant-${id}`));
-  return Number.isInteger(n) && n >= 2 && n <= 5 ? n : 2;
-}
-
 export function Exercises(props: Props) {
   const app = useAppData();
   const {unit} = useUnit();
@@ -45,11 +43,17 @@ export function Exercises(props: Props) {
 function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
   const { unit, select } = useUnit();
-  const [coefficient, setCoefficient] = useState(() => savedVariant(unit.id));
-  useEffect(() => setCoefficient(savedVariant(unit.id)), [unit.id]);
-  const exercise = (app.getExercise(unit.id, coefficient) ||
-    app.data.exercises.find((item) => item.topicId === unit.id) ||
-    app.data.exercises[0]) as (typeof app.data.exercises)[number];
+  const selection = useExerciseSelection(unit.id);
+  const choices = app.data.exercises.filter(item => item.topicId === unit.id);
+  const exercise = (variantCode.test(selection) ? choices.find(item => item.id === selection)
+    : choices.find(item => item.coefficient === Number(selection))) || choices[0];
+  const coefficient = exercise.coefficient;
+  const [submittedId,setSubmittedId] = useState("");
+  const requestKey = useRef("");
+  const submission = useRef(false);
+  const currentExercise = useRef(exercise.id);
+  currentExercise.current = exercise.id;
+  const lastAttempt = app.data.attempts.find(item => item.id === submittedId && item.exerciseId === exercise.id);
   const [answer, setAnswer] = useState("");
   const answerInput = useRef<HTMLTextAreaElement>(null);
   const [hint, setHint] = useState(false);
@@ -72,6 +76,8 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
     setSolution(false);
     setSaved(false);
     setSaving(false);
+    setSubmittedId("");
+    requestKey.current = "";
     setHintText(exercise.hint);
     setServerSolution(null);
     setFeedback(null);
@@ -124,7 +130,11 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
     } catch {}
   };
   const updateAnswer = (value: string) => {
+    if (saving) return;
     setAnswer(value);
+    setSubmittedId("");
+    setFeedback(null);
+    requestKey.current = "";
     setSaved(false);
     try {
       localStorage.setItem(`axiom-draft-${exercise.id}`, value);
@@ -135,14 +145,20 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
       notify("请先写下你的思路或证明，再保存作答");
       return;
     }
+    if (submission.current) return;
+    submission.current = true;
+    const key = requestKey.current ||= crypto.randomUUID();
     setSaving(true);
     try {
       const attempt = await app.submitAttempt({
         exerciseId: exercise.id,
+        idempotencyKey: key,
         answer: answer.trim(),
         hintsUsed: usedHint ? 1 : 0,
         solutionViewed: seenSolution,
       });
+      if (currentExercise.current !== exercise.id || requestKey.current !== key) return;
+      setSubmittedId(attempt.id);
       setFeedback(attempt.feedback || null);
       setSaved(true);
       notify(
@@ -161,13 +177,13 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
           : "保存失败，请先复制你的作答",
       );
     } finally {
+      submission.current = false;
       setSaving(false);
     }
   };
   const generate = () => {
-    const next = coefficient === 5 ? 2 : coefficient + 1;
-    setCoefficient(next);
-    localStorage.setItem(`axiom-exercise-variant-${unit.id}`, String(next));
+    const next = coefficient >= 2 && coefficient < 5 ? coefficient + 1 : 2;
+    selectExercise(unit.id, String(next));
     notify("已切换到本地模板的下一道参数变式");
   };
   return (
@@ -188,28 +204,34 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
           <span className="badge purple">基础证明与条件辨析</span>
           <small>
             {app.data.source === "server"
-              ? "服务端已审核模板 · 作答写入学习记录"
-              : "本地模板练习 · 未连接后端"}
+              ? "已审核模板 · 作答写入学习记录"
+              : "本地题库 · 可独立作答"}
           </small>
         </div>
         <button className="btn primary" onClick={generate}>
           <RefreshCw size={15} />
-          生成一道变式
+          切换参数题
         </button>
       </div>
       <div className="exercise-layout">
         <section className="card exercise-main">
           <div className="section-title">
-            <span className="badge purple">练习 {coefficient - 1} / 4</span>
+            <span className="badge purple">{exercise.source === "ai-variant" ? "错因变式" : `练习 ${coefficient - 1} / 4`}</span>
             <h3>{unit.title}</h3>
-            <span className="badge">模板 {exercise.id}</span>
+            {exercise.source !== "ai-variant" && <span className="badge">模板 {exercise.id}</span>}
           </div>
+          {choices.some(item => item.source === "ai-variant") && <label className="field-label">选择练习题
+            <select value={exercise.id} onChange={event => {
+              const target = choices.find(item => item.id === event.target.value);
+              if (target) selectExercise(unit.id,target.source === "ai-variant" ? target.id : String(target.coefficient));
+            }}>{choices.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}
+          {exercise.provenance?.target_error && <p className="info-strip">本题针对你在上题中的「{exercise.provenance.target_error}」薄弱点生成。</p>}
           <h2 className="exercise-question">
             <MathText>{exercise.title}</MathText>
           </h2>
           <div className="allowed-tools">
             <span>可使用</span>
-            {unit.tools.map((x) => (
+            {(exercise.allowedRefs?.length ? exercise.allowedRefs : unit.tools).map((x) => (
               <span className="badge green" key={x}>
                 {x}
               </span>
@@ -230,6 +252,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
             ref={answerInput}
             id="exercise-answer"
             value={answer}
+            readOnly={saving}
             onChange={(e) => updateAnswer(e.target.value)}
             placeholder={
               exercise.type === "computation"
@@ -414,6 +437,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
               </div>
             </div>
           )}
+          {lastAttempt && app.data.source === "offline" && <AttemptInsights attempt={lastAttempt} navigate={onNavigate}/>}
           {hint && (
             <div className="learning-callout exercise-hint">
               <Lightbulb size={18} />
@@ -426,7 +450,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
                 <CheckCircle2 size={18} />
                 <h3>完整解答</h3>
                 <span className="badge green">
-                  {app.data.source === "server" ? "服务端已审核解答" : "本地示例内容"}
+                  {exercise.source === "ai-variant" ? "AI 生成参考解答" : "参考解答"}
                 </span>
               </div>
               <ol>

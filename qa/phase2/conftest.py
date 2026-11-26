@@ -1,4 +1,5 @@
 """Run the portable entry point with a private SQLite database and headless Chrome."""
+import io
 import json
 import os
 from pathlib import Path
@@ -42,16 +43,16 @@ runpy.run_path(str(server), run_name='__main__')
 
 
 class PortableServer:
-    def __init__(self, root, web, python):
+    def __init__(self, root, web, python, source=REPO / "backend"):
         self.root = root
         self.python = python
         self.process = None
         backend = root / "backend"
         backend.mkdir()
         for folder in ("app", "migrations"):
-            shutil.copytree(REPO / "backend" / folder, backend / folder,
+            shutil.copytree(source / folder, backend / folder,
                             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        shutil.copy2(REPO / "backend" / "portable_server.py", backend)
+        shutil.copy2(source / "portable_server.py", backend)
         if not (web / "index.html").is_file():
             raise ValueError(f"Build frontend/dist-portable first. Missing {web / 'index.html'}")
         shutil.copytree(web, root / "web")
@@ -156,3 +157,28 @@ def page(browser, server):
         assert not errors, errors
     finally:
         context.close()
+
+
+@pytest.fixture
+def sample_pdf():
+    from workstation import SOURCE_A, SOURCE_B
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+    writer = PdfWriter()
+    font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                             NameObject("/Subtype"): NameObject("/Type1"),
+                             NameObject("/BaseFont"): NameObject("/Helvetica")})
+    for text in (SOURCE_A, SOURCE_B, None):
+        page = writer.add_blank_page(width=560, height=780)
+        if text:
+            page[NameObject("/Resources")] = DictionaryObject({
+                NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
+            stream = DecodedStreamObject()
+            stream.set_data(f"BT /F1 12 Tf 36 700 Td ({text}) Tj ET".encode("ascii"))
+            page.replace_contents(stream)
+    data = io.BytesIO()
+    writer.write(data)
+    reader = PdfReader(io.BytesIO(data.getvalue()))
+    assert [p.extract_text().strip() for p in reader.pages] == [SOURCE_A, SOURCE_B, ""]
+    return data.getvalue()

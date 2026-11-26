@@ -23,132 +23,10 @@ import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useAppData } from "../../app/DataProvider";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
-import type { ClassicKind } from "../../domain/types";
-import { Heading, useUnit, type Props } from "./shared";
+import { ClassicChart } from "./ClassicChart";
+import { CounterexampleChecker } from "./CounterexampleChecker";
+import { Heading, type Props } from "./shared";
 
-export function MiniChart({
-  kind,
-  color,
-}: {
-  kind: "line" | "reciprocal" | "absolute" | "square" | "step" | "dirichlet";
-  color: string;
-}) {
-  const path =
-    kind === "line"
-      ? "M40,205 L400,51"
-      : kind === "reciprocal"
-        ? "M66,24 C77,145 96,166 150,180 C230,190 320,195 400,196"
-        : kind === "absolute"
-          ? "M40,48 L220,205 L400,48"
-          : kind === "square"
-            ? "M40,43 Q220,367 400,43"
-            : kind === "step"
-              ? "M40,205 L220,205 M220,70 L400,70"
-              : "";
-  return (
-    <svg
-      className="mini-chart"
-      viewBox="0 0 440 238"
-      role="img"
-      aria-label={`${kind} 函数示意图`}
-    >
-      <rect width="440" height="238" fill="var(--plot-bg)" />
-      <path
-        d={
-          kind === "absolute" || kind === "square"
-            ? "M220 20V205 M40 205H416"
-            : "M40 20V205H416"
-        }
-        fill="none"
-        stroke="var(--plot-axis)"
-      />
-      <text
-        x={kind === "absolute" || kind === "square" ? 208 : 28}
-        y="219"
-        fill="var(--muted)"
-        fontSize="11"
-      >
-        0
-      </text>
-      <text x="403" y="221" fill="var(--muted)" fontSize="11">
-        x
-      </text>
-      {kind === "dirichlet" ? (
-        <>
-          {Array.from({ length: 35 }, (_, i) => (
-            <g key={i}>
-              <circle cx={48 + i * 10.3} cy="65" r="1.7" fill={color} />
-              <circle cx={53 + i * 10.3} cy="205" r="1.7" fill={color} />
-            </g>
-          ))}
-          <text x="145" y="43" fill={color} fontSize="12">
-            有理点 1 / 无理点 0 · 稠密性示意
-          </text>
-        </>
-      ) : (
-        <path d={path} fill="none" stroke={color} strokeWidth="2.5" />
-      )}
-      {kind === "line" && (
-        <>
-          <rect
-            x="135"
-            y="130"
-            width="105"
-            height="36"
-            fill="var(--accent-soft)"
-          />
-          <path
-            d="M135 130H240 M135 166H240"
-            stroke="var(--plot-purple)"
-            strokeDasharray="4 3"
-          />
-          <path
-            d="M175 205V147.25"
-            stroke="var(--plot-amber)"
-            strokeDasharray="4 3"
-          />
-          <circle cx="175" cy="147.25" r="4" fill={color} />
-          <text x="290" y="84" fill={color} fontSize="12">
-            y = x
-          </text>
-        </>
-      )}
-      {kind === "reciprocal" && (
-        <>
-          <rect
-            x="76"
-            y="25"
-            width="28"
-            height="176"
-            fill="var(--rose-soft)"
-            opacity=".8"
-          />
-          <circle cx="78" cy="92" r="3" fill={color} />
-          <text x="245" y="158" fill={color} fontSize="12">
-            y = 1/x
-          </text>
-        </>
-      )}
-      {kind === "absolute" && (
-        <text x="250" y="104" fill={color} fontSize="12">
-          y = |x|
-        </text>
-      )}
-      {kind === "step" && (
-        <>
-          <circle
-            cx="220"
-            cy="205"
-            r="4"
-            fill="var(--plot-bg)"
-            stroke={color}
-          />
-          <circle cx="220" cy="70" r="4" fill={color} />
-        </>
-      )}
-    </svg>
-  );
-}
 export function Examples({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
   const classicSets = app.data.classics;
@@ -166,11 +44,13 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
         }}>{item.label}</button>
     ))}
   </div>;
+  const checker = <CounterexampleChecker key={app.selectedConceptId} conceptId={app.selectedConceptId} save={onSaveNote} />;
   if (!c) {
     return <div className="learning-page examples-page">
       <Heading step="第 3 步 / 共 6 步" title="正反例实验室"
         description={classicSets.length ? "当前知识点尚未收录正反例，可选择下方已有案例。" : "当前教材尚未收录正反例。"} />
       {caseTabs}
+      {checker}
     </div>;
   }
   const sourceFor = (id: string) =>
@@ -204,6 +84,7 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
         </button>
       </Heading>
       {caseTabs}
+      {checker}
       <section className="card proposition">
         <div className="section-title">
           <span className="badge">待判定命题</span>
@@ -258,7 +139,7 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
                 经典例子
               </span>
             </div>
-            <MiniChart
+            <ClassicChart
               kind={positive ? c.positiveKind : c.negativeKind}
               color={positive ? "var(--green)" : "var(--rose)"}
             />

@@ -1,3 +1,5 @@
+import type { LocalCatalog } from "../../teaching/localCatalog";
+import { ApiError } from "../../../lib/api";
 import { useCallback, useMemo, useState } from "react";
 import {
   makeOfflineExercise,
@@ -15,11 +17,12 @@ import {
   fetchExerciseHint,
   fetchExerciseSolution,
   rateAttemptTyped,
-  submitAttemptTyped,
+  submitAttemptTyped, submitLocalAttempt, rateLocalAttempt,
 } from "../api";
 
 type AttemptInput = {
   exerciseId: string;
+  idempotencyKey?: string;
   answer: string;
   hintsUsed: number;
   solutionViewed: boolean;
@@ -29,13 +32,19 @@ type AttemptInput = {
 const offlineExercises = offlineExerciseCatalog();
 const emptyAttempts: Attempt[] = [];
 
-export function useExercises(source: DataSource, extraExercises: Exercise[]) {
+export function useExercises(source: DataSource, catalog: LocalCatalog, localAvailable: boolean,
+  acceptLocalAttempt: (attempt: Attempt) => void) {
   const offline = useLocalData("axiom-offline-attempts", emptyAttempts);
   const [serverExercises, setServerExercises] = useState<Exercise[]>([]);
   const [serverAttempts, setServerAttempts] = useState<Attempt[]>([]);
-  const exercises = useMemo(() => source === "server" ? serverExercises : [...offlineExercises, ...extraExercises],
-    [source, serverExercises, extraExercises]);
-  const attempts = source === "server" ? serverAttempts : offline.value;
+  const exercises = useMemo(() => source === "server" ? serverExercises : [...offlineExercises, ...catalog.exercises],
+    [source, serverExercises, catalog.exercises]);
+  const attempts = useMemo(() => {
+    if (source === "server") return serverAttempts;
+    const storedIds = new Set(catalog.attempts.map(item => item.id));
+    return [...catalog.attempts, ...offline.value.filter(item => !storedIds.has(item.id))]
+      .sort((a,b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  },[source,serverAttempts,catalog.attempts,offline.value]);
 
   const loadServer = useCallback(
     (bundle: Pick<DataBundleDto, "exercises" | "attempts">) => {
@@ -73,6 +82,17 @@ export function useExercises(source: DataSource, extraExercises: Exercise[]) {
           return attempt;
         }
 
+        try {
+          const dto = await submitLocalAttempt(input);
+          if (!dto?.exercise_id) throw new TypeError("本机工作台未启动");
+          const attempt = mapAttempt(dto);
+          acceptLocalAttempt(attempt);
+          return attempt;
+        } catch (cause) {
+          const missingLocalServer = cause instanceof TypeError || (cause instanceof ApiError && [404,405].includes(cause.status));
+          if (localAvailable || !missingLocalServer) throw cause;
+        }
+
         const exercise = exercises.find((item) => item.id === input.exerciseId);
         const attempt: Attempt = {
           id: crypto.randomUUID(),
@@ -95,6 +115,10 @@ export function useExercises(source: DataSource, extraExercises: Exercise[]) {
           setServerAttempts((current) =>
             current.map((attempt) => (attempt.id === id ? updated : attempt)),
           );
+          return;
+        }
+        if (catalog.attempts.some(attempt => attempt.id === id)) {
+          acceptLocalAttempt(mapAttempt(await rateLocalAttempt(id, rating)));
           return;
         }
         offline.write((current) =>
@@ -125,7 +149,7 @@ export function useExercises(source: DataSource, extraExercises: Exercise[]) {
           .filter(Boolean);
       },
     }),
-    [exercises, offline.write, source],
+    [exercises, offline.write, source, localAvailable, acceptLocalAttempt, catalog.attempts],
   );
 
   return {

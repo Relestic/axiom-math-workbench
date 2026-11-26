@@ -78,7 +78,7 @@ def test_shelf_file_metadata_dedup_and_deletion(local):
     assert local.get(url + "/file", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
     assert local.delete(url).status_code == 204
     assert local.get(url + "/file").status_code == 404
-    assert local.get(ROOT + "/bootstrap-extras").json == {"textbooks": [], "cards": [], "exercises": []}
+    assert local.get(ROOT + "/bootstrap-extras").json == {"textbooks": [], "cards": [], "exercises": [], "attempts": []}
 
 
 def test_books_reject_invalid_files_and_protect_nonlocal_owners(app, client, local, monkeypatch):

@@ -1,5 +1,7 @@
+import { mapAttempt } from "../../domain/mappers";
+import type { AttemptDto } from "../../domain/dto";
 import { z } from "zod";
-import type { CurriculumUnit, Exercise, LocalBook } from "../../domain/types";
+import type { Attempt, CurriculumUnit, Exercise, LocalBook } from "../../domain/types";
 
 const strings = z.array(z.string());
 const page = z.number().int().positive();
@@ -18,10 +20,11 @@ const exercise = z.object({
   provenance:z.object({parent_attempt_id:z.string().optional(), target_error:z.string().optional(), model:z.string().optional()}).default({}),
   solution_steps:z.array(z.union([z.string(),z.object({title:z.string().optional(),text:z.string()})])).default([]),
 });
-const catalog = z.object({textbooks:z.array(book),cards:z.array(card),exercises:z.array(exercise)});
+const catalog = z.object({textbooks:z.array(book),cards:z.array(card),exercises:z.array(exercise),
+  attempts:z.array(z.custom<AttemptDto>(value => !!value && typeof value === "object" && "answer_text" in value && "exercise_id" in value && "created_at" in value)).default([])});
 
-export type LocalCatalog = {books:LocalBook[]; units:CurriculumUnit[]; exercises:Exercise[]};
-export const emptyCatalog: LocalCatalog = {books:[], units:[], exercises:[]};
+export type LocalCatalog = {books:LocalBook[]; units:CurriculumUnit[]; exercises:Exercise[]; attempts:Attempt[]};
+export const emptyCatalog: LocalCatalog = {books:[], units:[], exercises:[], attempts:[]};
 
 export function mapLocalCatalog(input: unknown): LocalCatalog {
   const data = catalog.parse(input);
@@ -38,5 +41,5 @@ export function mapLocalCatalog(input: unknown): LocalCatalog {
     checks:item.checks, allowedRefs:item.allowed_refs, type:item.type, skill:item.skill, difficulty:item.difficulty,
     source:item.source, provenance:item.provenance,
   }));
-  return {books:data.textbooks, units, exercises};
+  return {books:data.textbooks, units, exercises, attempts:data.attempts.map(mapAttempt)};
 }

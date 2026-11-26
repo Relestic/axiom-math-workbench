@@ -1,3 +1,4 @@
+import type { Attempt } from "../domain/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../lib/api";
 import { emptyCatalog, mapLocalCatalog } from "../modules/teaching/localCatalog";
@@ -26,5 +27,9 @@ export function useLocalCatalog(enabled: boolean) {
     void refresh().catch(() => { /* Static preview retains its local lessons. */ });
     return () => pending.current?.abort();
   },[refresh]);
-  return {catalog, available, refresh};
+  const acceptAttempt = useCallback((attempt: Attempt) => {
+    setCatalog(previous => ({...previous, attempts:[attempt, ...previous.attempts.filter(item => item.id !== attempt.id)]}));
+    void refresh().catch(() => undefined);
+  },[refresh]);
+  return {catalog, available, refresh, acceptAttempt};
 }

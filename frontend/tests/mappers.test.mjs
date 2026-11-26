@@ -136,6 +136,8 @@ test("mapAttempt and mapNotes keep server identity and rating", () => {
   });
   assert.equal(attempt.topicId, "uniform");
   assert.equal(attempt.coefficient, 2);
+  const variant = mapAttempt({exercise_id: "variant-0123456789abcdef0123456789abcdef"});
+  assert.equal(variant.coefficient, 0);
   assert.equal(attempt.selfRating, "revisit");
   assert.equal(attempt.feedback.summary, "需要补充条件");
   assert.equal(mapNotes([

@@ -34,7 +34,7 @@ function useWorkspaceData(serverUserId: string | null) {
 
   const identity = useSelectedConcept(source);
   const local = useLocalCatalog(source === "offline");
-  const practice = useExercises(source, local.catalog.exercises);
+  const practice = useExercises(source, local.catalog, local.available, local.acceptAttempt);
   const records = useNotes(source);
   const teaching = useTeachingContent(source, local.catalog.units);
   useEffect(() => {

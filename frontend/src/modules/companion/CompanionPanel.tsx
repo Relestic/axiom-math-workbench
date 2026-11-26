@@ -4,7 +4,7 @@ import { useAppData } from "../../app/DataProvider";
 import { MathText, SymbolBar, MathPreview } from "../../components/Math";
 import { useAIConnection } from "../ai/connection";
 import type { CompanionStage } from "./CompanionStage";
-import { localReply, requestReply, type Message } from "./reply";
+import { localReply, requestReply, spokenMath, type Message } from "./reply";
 import { queryWorkspace } from "./workspace";
 import "./panel.css";
 
@@ -107,6 +107,24 @@ export function CompanionPanel({page, stage, stageView}: {
       if (id === speechId.current) setSpeaking(false);
     }
   }
+
+  useEffect(() => {
+    const explain = (event: Event) => {
+      const item = (event as CustomEvent<{content:string;reviewed:boolean;title:string}>).detail;
+      if (!item || typeof item.content !== "string" || !item.content) return;
+      cancelQuestion();
+      stopVoice();
+      setNotice("");
+      const spoken = spokenMath(item.content);
+      setTurns(current => [...current.slice(-28),
+        {role:"user", content:"讲讲这份作答：" + item.title, scope},
+        {role:"assistant", content:item.content, spoken, local:!item.reviewed, scope}]);
+      if (mutedRef.current) void stage.current?.playMotion("TapBody");
+      else void read(spoken);
+    };
+    window.addEventListener("axiom:explain-attempt", explain);
+    return () => window.removeEventListener("axiom:explain-attempt", explain);
+  }, [scope]);
 
   function toggleMute() {
     const next = !muted;

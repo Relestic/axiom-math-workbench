@@ -385,6 +385,7 @@ def attempt_out(
         "self_rating": attempt.self_rating,
         "status": attempt.status,
         "feedback": attempt.feedback or {},
+        "ai_review": attempt.ai_review,
         "score": attempt.score,
         "error_types": attempt.error_types or [],
         "created_at": isoformat(attempt.created_at),

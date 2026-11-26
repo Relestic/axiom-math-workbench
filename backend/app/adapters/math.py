@@ -9,6 +9,7 @@ differentiability or integrability.
 
 from __future__ import annotations
 
+import ast
 import math
 import re
 from dataclasses import dataclass, field
@@ -308,15 +309,33 @@ class CompiledExpression:
                 real = np.where(imag < 1e-12, real, np.nan)
                 return np.asarray(real, dtype=float)
         except Exception:
-            return np.array([self.evaluate(float(x), parameters) or np.nan for x in xs])
+            values = (self.evaluate(float(x), parameters) for x in xs)
+            return np.array([value if value is not None else np.nan for value in values])
 
 
 def compile_expression(
-    expression: str, parameter_names: Iterable[str] = ()
+    expression: str, parameter_names: Iterable[str] = (), *, for_domain_check: bool = False
 ) -> CompiledExpression:
     names = sorted({name for name in parameter_names if name != "x"})
     prepared = _prepare(expression)
+    if for_domain_check and re.fullmatch(r"dirichlet\s*\(\s*x\s*\)", prepared, re.IGNORECASE):
+        symbol = sp.Symbol("x", real=True)
+        return CompiledExpression(expression, sp.Function("Dirichlet")(symbol), [], ["x"])
     _whitelist_check(prepared, names)
+    if for_domain_check:
+        # Bound exact constant powers before SymPy constructs a numeric object.
+        try:
+            nodes = list(ast.walk(ast.parse(prepared, mode="eval")))
+        except (SyntaxError, RecursionError) as error:
+            raise MathError("表达式语法无法解析") from error
+        for node in nodes:
+            if isinstance(node, ast.Constant) and isinstance(node.value, int) and node.value.bit_length() > 48:
+                raise MathError("常数过大")
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+                for part in ast.walk(node.right):
+                    if (isinstance(part, ast.Pow) or
+                        isinstance(part, ast.Constant) and isinstance(part.value, (int, float)) and abs(part.value) > 1024):
+                        raise MathError("指数过于复杂")
     local = _local_dict(names)
     try:
         parsed = parse_expr(
@@ -331,9 +350,11 @@ def compile_expression(
                 "Add": sp.Add,
                 "Mul": sp.Mul,
                 "Pow": sp.Pow,
+                "Lt": sp.Lt, "Le": sp.Le, "Gt": sp.Gt, "Ge": sp.Ge,
             },
             transformations=TRANSFORMATIONS,
-            evaluate=True,
+            # Retain original denominators: cancelling x/x loses its hole at zero.
+            evaluate=not for_domain_check,
         )
     except MathError:
         raise
@@ -343,6 +364,11 @@ def compile_expression(
         raise MathError("表达式必须是实值一元函数")
     if parsed.has(sp.I) or parsed.has(sp.zoo) or parsed.has(sp.nan):
         raise MathError("暂不支持复值或非有限表达式")
+    if for_domain_check and any(
+        term.is_number and (term.is_real is False or term.is_finite is False)
+        for term in sp.preorder_traversal(parsed) if isinstance(term, sp.Expr)
+    ):
+        raise MathError("暂不支持复值或非有限表达式")
     operations = sp.count_ops(parsed)
     if operations > MAX_OPERATIONS:
         raise MathError("表达式过于复杂")
@@ -351,6 +377,8 @@ def compile_expression(
     if unknown:
         raise MathError(f"表达式使用了未声明的参数：{', '.join(unknown)}")
     warnings: list[str] = []
+    if for_domain_check:
+        return CompiledExpression(expression, parsed, names, free)
     try:
         singular = sp.singularities(parsed, sp.Symbol("x", real=True))
         if singular:

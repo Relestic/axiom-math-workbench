@@ -173,7 +173,25 @@ def _require_exercise(session: Session, user: User, exercise_id: str) -> Exercis
     )
     if exercise is None or not _visible_exercise(exercise, user):
         raise ApiError("not_found", "练习不存在或尚未发布")
+    if exercise.source == "ai-variant":
+        parent_id = (exercise.provenance or {}).get("parent_attempt_id")
+        owner = session.scalar(select(Attempt.user_id).where(Attempt.id == parent_id))
+        if owner != user.id:
+            raise ApiError("not_found", "练习不存在或尚未发布")
     return exercise
+
+
+def rate_attempt(session: Session, attempt: Attempt, rating: str):
+    attempt.self_rating = rating
+    session.add(AttemptEvent(
+        attempt_id=attempt.id, user_id=attempt.user_id, exercise_id=attempt.exercise_id,
+        type="self_rating", payload={"self_rating": rating},
+    ))
+    session.add(StudyEvent(
+        user_id=attempt.user_id, kind="self_rating",
+        concept_id=attempt.exercise.topic_id if attempt.exercise else None,
+        payload={"attempt_id": attempt.id, "self_rating": rating},
+    ))
 
 
 def _record_view(session: Session, user: User, exercise: Exercise, kind: str) -> None:
@@ -709,7 +727,10 @@ def _rubric_feedback(
     text = answer.strip()
     word_count = len(re.sub(r"\s+", "", text))
     normalized = _normalized_answer(text)
-    rubric = PROOF_RUBRICS.get(exercise.topic_id, GENERIC_PROOF_RUBRIC)
+    # A generated problem may change the proposition itself (e.g. x² on [0,1] to 4x on R).
+    # Seed-specific constructions and conclusions would misgrade its proof.
+    rubric = (GENERIC_PROOF_RUBRIC if exercise.source == "ai-variant"
+              else PROOF_RUBRICS.get(exercise.topic_id, GENERIC_PROOF_RUBRIC))
     criteria = []
     observations = []
     error_types = []
