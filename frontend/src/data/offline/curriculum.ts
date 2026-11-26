@@ -245,7 +245,7 @@ export const offlineCurriculum: CurriculumUnit[] = [
     tools: ["积分可加性", "连续性", "中值定理"],
     source: "https://www.math.ucdavis.edu/~hunter/intro_analysis_pdf/ch12.pdf",
   },
-];
+].map(unit => ({ ...unit, prerequisites: [] }));
 
 export function makeOfflineExercise(topicId: string, coefficient = 2): Exercise {
   const u = offlineCurriculum.find((item) => item.id === topicId) || offlineCurriculum[1];

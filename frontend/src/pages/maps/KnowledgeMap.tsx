@@ -35,40 +35,26 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
   const edges = app.data.graph.edges;
   const nodeById = (id: string): GraphNode =>
     nodes.find((node) => node.id === id) || nodes[0];
-  const [selected, setSelected] = useState("一致连续"),
+  const [selected, setSelected] = useState("uniform"),
     [onlyUnlocked, setOnlyUnlocked] = useState(false),
     [showExamples, setShowExamples] = useState(true),
     [highlightGaps, setHighlightGaps] = useState(true),
     [relationsOnly, setRelationsOnly] = useState(false);
-  const current = nodes.find((n) => n.name === selected) || nodeById("uniform");
+  const current = nodes.find((n) => n.id === selected) || nodeById("uniform");
   const openCurrent = (page: string) => {
-    const map: Record<string, string> = {
-      real: "continuous",
-      sequence: "continuous",
-      limit: "continuous",
-      continuity: "continuous",
-      compact: "uniform",
-      uniform: "uniform",
-      mvt: "mean-value",
-      bounded: "mean-value",
-      lipschitz: "uniform",
-      abs: "derivative",
-      reciprocal: "uniform",
-      ftc: "integral",
-    };
-    app.selectConcept(map[current.id] || current.id);
+    if (current.conceptId) app.selectConcept(current.conceptId);
     onNavigate(page);
   };
   const dependencies = edges
     .filter(
-      ([a, b, k]) => b === current.id && k !== "case" && k !== "extension",
+      ([a, b, k]) => b === current.id && k !== "case" && k !== "extension" && k !== "sequence",
     )
     .map(([a, , k]) => ({ node: nodeById(a), type: k }));
   const supported = edges
-    .filter(([a, , k]) => a === current.id && k !== "case" && k !== "extension")
+    .filter(([a, , k]) => a === current.id && k !== "case" && k !== "extension" && k !== "sequence")
     .map(([, b, k]) => ({ node: nodeById(b), type: k }));
   const gaps = nodes.filter(
-    (n) => n.progress > 0 && n.progress < 50 && n.kind !== "case",
+    (n) => n.progress != null && n.progress > 0 && n.progress < 50 && n.kind !== "case",
   );
   return (
     <div className="maps-page knowledge-page">
@@ -82,7 +68,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
         <button
           className="btn primary"
           onClick={() => {
-            setSelected("一致连续");
+            setSelected("uniform");
             setOnlyUnlocked(false);
             setRelationsOnly(false);
             notify("已定位到当前学习：一致连续");
@@ -113,7 +99,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
             aria-pressed={onlyUnlocked}
             onClick={() => {
               setOnlyUnlocked((v) => !v);
-              if (current.kind === "extension") setSelected("一致连续");
+              if (current.kind === "extension") setSelected("uniform");
             }}
           >
             <Filter size={14} />
@@ -131,7 +117,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
             aria-pressed={showExamples}
             onClick={() => {
               setShowExamples((v) => !v);
-              if (current.kind === "case") setSelected("一致连续");
+              if (current.kind === "case") setSelected("uniform");
             }}
           >
             <CircleHelp size={14} />
@@ -162,8 +148,8 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
                 (name, i) => (
                   <div className="path-step-wrap" key={name}>
                     <button
-                      className={`path-step ${selected === name ? "active" : ""}`}
-                      onClick={() => setSelected(name)}
+                      className={`path-step ${current.name === name ? "active" : ""}`}
+                      onClick={() => setSelected(nodes.find(node => node.name === name)?.id ?? selected)}
                     >
                       <strong>{name}</strong>
                       <small>
@@ -203,12 +189,12 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
             </div>
             <h2>{current.name}</h2>
             <p className="muted">{current.description}</p>
-            <div className="map-progress">
-              <div>
-                <i style={{ width: `${current.progress}%` }} />
-              </div>
-              <span>{current.progress}%</span>
-            </div>
+            {current.state === "unpracticed" ? <span className="badge">未练习</span> :
+              current.progress == null ? <span className="badge">已作答 · 待评分</span> :
+              <div className="map-progress">
+                <div><i style={{ width: `${current.progress}%` }} /></div>
+                <span>{current.progress}%</span>
+              </div>}
             <small className="map-demo-caption">
               掌握度由学习记录估算，不是能力标签
             </small>
@@ -222,7 +208,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
                 dependencies.map(({ node, type }) => (
                   <button
                     key={node.id}
-                    onClick={() => setSelected(node.name)}
+                    onClick={() => setSelected(node.id)}
                     title={
                       type === "implication"
                         ? "在所述条件下蕴含"
@@ -244,7 +230,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
             <div className="relation-tags purple">
               {supported.length ? (
                 supported.map(({ node, type }) => (
-                  <button key={node.id} onClick={() => setSelected(node.name)}>
+                  <button key={node.id} onClick={() => setSelected(node.id)}>
                     {type === "implication" ? "⇒ " : ""}
                     {node.name}
                   </button>
@@ -281,7 +267,7 @@ export function KnowledgeMap({ onNavigate, notify }: MapProps) {
           {gaps.length > 0 && (
             <button
               className="map-gap-strip"
-              onClick={() => setSelected(gaps[0].name)}
+              onClick={() => setSelected(gaps[0].id)}
             >
               <span className="map-gap-dot" />
               <span>待复习 {gaps.length} 个节点</span>

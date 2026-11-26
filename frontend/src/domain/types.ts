@@ -18,6 +18,7 @@ export type CurriculumUnit = {
   solution: string[];
   hint: string;
   conditions: string[];
+  prerequisites: string[];
   tools: string[];
   source: string;
   textbookSource?: {textbookId: string; pageStart: number; pageEnd: number; theorem: string};
@@ -80,17 +81,21 @@ export type Note = {
   conceptId?: string | null;
 };
 
-export type GraphRelation = "prerequisite" | "implication" | "case" | "extension";
+export type GraphRelation = "prerequisite" | "sequence" | "implication" | "case" | "extension";
 
 export type GraphNode = {
   id: string;
+  conceptId?: string;
+  textbookId?: string;
+  textbookTitle?: string;
+  pageStart?: number;
   name: string;
   x: number;
   y: number;
   color: string;
   size?: number;
   kind?: "case" | "extension";
-  progress: number;
+  progress: number | null;
   description: string;
   prerequisites: string[];
   connections: string[];

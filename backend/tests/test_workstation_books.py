@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.adapters import llm
 from app.db import session_scope
 from app.models import Asset, Concept, Proof, Textbook, User
+from app.modules.local_textbooks import normalize_title
 
 ROOT = "/api/v1/local"
 
@@ -174,7 +175,7 @@ def test_card_generation_is_grounded_persistent_and_private(local, second_header
     assert result.status_code == 201, result.json
     assert len(calls) == 1 and "Uniform continuity" in calls[0]
     saved = result.json["cards"][0]
-    assert saved == {**card, "id": saved["id"], "textbook_id": book["id"], "formula": ""}
+    assert saved == {**card, "id": saved["id"], "textbook_id": book["id"], "formula": "", "prerequisites": []}
     assert local.get(ROOT + "/bootstrap-extras").json["cards"] == [saved]
     with session_scope() as session:
         item = session.get(Concept, saved["id"])
@@ -189,3 +190,87 @@ def test_card_generation_is_grounded_persistent_and_private(local, second_header
     assert local.get(ROOT + "/bootstrap-extras").json["cards"] == [saved]
     assert local.delete(url).status_code == 204
     assert local.get(ROOT + "/bootstrap-extras").json["cards"] == []
+
+
+def test_definition_cards_and_direct_prerequisites_across_batches(local, monkeypatch):
+    book = upload(local).json["id"]
+    other_book = upload(local, textbook_pdf(b"A different book on sequences and other topics.")).json["id"]
+    with session_scope() as session:
+        owned = session.get(Textbook, book)
+        other = session.get(Textbook, other_book)
+        owner_id = owned.parse_meta["owner_id"]
+        foreign_user = session.scalar(select(User).where(User.email == "second@axiom.test")).id
+        foreign_cards = [
+            Concept(chapter_id=owned.chapters[0].id, name="未发布标题", status="draft", created_by_id=owner_id),
+            Concept(chapter_id=owned.chapters[0].id, name="他人私有标题", status="published", created_by_id=foreign_user),
+            Concept(chapter_id=other.chapters[0].id, name="跨书标题", status="published", created_by_id=owner_id),
+        ]
+        for item in foreign_cards:
+            item.data_origin = "user"
+            session.add(item)
+        session.flush()
+        excluded_ids = [item.id for item in foreign_cards]
+
+    pages = {"page_start": 1, "page_end": 1}
+    def definition(title, **override):
+        return {**pages, "title": title, "definition": "在指定区间中的每个点满足局部条件。", **override}
+
+    local.put("/api/v1/ai/key", json={"api_key": "sk-fixture-graph", "model": "deepseek-chat"})
+    replies, prompts = [], []
+    def provider(url, **kwargs):
+        prompts.append(kwargs["json"]["messages"][0]["content"])
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"cards": replies})}}]})
+    monkeypatch.setattr(llm.httpx, "post", provider)
+    url = ROOT + "/textbooks/" + book + "/extract-cards"
+
+    replies[:] = [
+        definition("连续", prerequisites=["一致连续"]),
+        definition("Ｌｉｍｉｔ（Ａ）", theorem="", proof=[]),
+        definition("区间", theorem=None, proof=""),
+        definition("界"),
+        definition("同名"),
+        definition("同-名"),
+    ]
+    response = local.post(url, json=pages)
+    assert response.status_code == 201, response.json
+    prior = response.json["cards"]
+    assert all(item["proof"] == [] and item["theorem"] == "" and item["prerequisites"] == [] for item in prior)
+    with session_scope() as session:
+        assert not session.scalars(select(Proof).where(Proof.concept_id.in_([item["id"] for item in prior]))).all()
+
+    replies[:] = [
+        definition("一致连续", prerequisites=[
+            0, {}, None, "", "!", "长" * 161, "同 名", "未发布标题", "他人私有标题", "跨书标题", "一-致-连-续",
+            "以后才有", "连， 续", "连续", "LiMit a", "区间", "界",
+        ]),
+        definition("局部估计", prerequisites=["一致连续", "以后才有", "局部估计"]),
+        definition("以后才有", prerequisites=["局部估计"]),
+        definition("未给出精确引用", prerequisites=["续", "一致", "连续性"]),
+        definition("错误的可选字段", prerequisites={"name": "连续"}),
+    ]
+    response = local.post(url, json=pages)
+    assert response.status_code == 201, response.json
+    current = response.json["cards"]
+    assert [item["prerequisites"] for item in current] == [
+        [item["id"] for item in prior[:3]], [current[0]["id"]], [current[1]["id"]], [], [],
+    ]
+    assert all(title not in prompts[-1] for title in ["他人私有标题", "未发布标题", "跨书标题"])
+    assert '{"title":"连续","page_start":1}' in prompts[-1]
+    assert '"proof":[]' in prompts[-1] and "只有定义" in prompts[-1]
+    with session_scope() as session:
+        assert session.get(Concept, current[1]["id"]).prerequisites == [current[0]["id"]]
+        # Archives created before validation can contain dangling, duplicate or foreign IDs.
+        item = session.get(Concept, current[2]["id"])
+        item.prerequisites = [*excluded_ids, "missing-id", item.id, current[1]["id"], current[1]["id"]]
+    stored = {item["id"]: item for item in local.get(ROOT + "/bootstrap-extras").json["cards"]}
+    assert stored[current[2]["id"]]["prerequisites"] == [current[1]["id"]]
+    assert stored[current[0]["id"]]["prerequisites"] == [item["id"] for item in prior[:3]]
+
+    replies[:] = [definition("不可是一张空卡", definition=" ")]
+    assert local.post(url, json=pages).status_code == 502
+    assert len(local.get(ROOT + "/bootstrap-extras").json["cards"]) == len(stored)
+
+
+def test_title_matching_preserves_case_sensitive_mathematical_symbols():
+    assert normalize_title(" Ｌｉｍｉｔ（Ａ），Σ ") == "limitaΣ"
+    assert normalize_title("方差 σ") != normalize_title("方差 Σ")

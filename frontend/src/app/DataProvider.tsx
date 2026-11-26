@@ -47,6 +47,7 @@ function useWorkspaceData(serverUserId: string | null) {
     source,
     practice.attempts,
     teaching.units,
+    local.catalog.books,
     serverUserId,
   );
 

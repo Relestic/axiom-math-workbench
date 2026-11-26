@@ -38,6 +38,7 @@ export type CatalogDto = {
 };
 
 export type ConceptDetailDto = {
+  prerequisites?: string[];
   id: string;
   name: string;
   short_name: string;
@@ -138,6 +139,7 @@ export type BookmarkDto = {
 export type GraphDto = {
   nodes: {
     id: string;
+    concept_id?: string | null;
     name: string;
     kind: string;
     x: number;

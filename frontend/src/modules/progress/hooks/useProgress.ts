@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { offlineDiagnosticQuestions } from "../../../data/offline/diagnostic";
-import { offlineEdges, offlineNodes } from "../../../data/offline/graph";
 import type { DataBundleDto } from "../../../domain/dto";
 import {
   mapDashboard,
@@ -15,15 +14,13 @@ import type {
   CurriculumUnit,
   DataSource,
   DiagnosticResult,
+  LocalBook,
 } from "../../../domain/types";
 import { useLocalData } from "../../../lib/localData";
 import { fetchDashboardBundle, submitDiagnosticTyped } from "../api";
 import { deriveOfflineProgress } from "../offline";
+import { deriveOfflineGraph } from "../offlineGraph";
 
-const offlineGraph: AppData["graph"] = {
-  nodes: offlineNodes,
-  edges: offlineEdges,
-};
 const emptyRun: Pick<AppData["diagnostic"], "answers" | "result"> = {
   answers: {},
   result: null,
@@ -45,12 +42,13 @@ export function useProgress(
   source: DataSource,
   attempts: readonly Attempt[],
   units: readonly CurriculumUnit[],
+  books: readonly LocalBook[],
   serverUserId: string | null,
 ) {
   const localRun = useLocalData("axiom-offline-diagnostic", emptyRun);
   const [serverProgress, setServerProgress] = useState(() => ({
     ...emptyProgress,
-    graph: offlineGraph,
+    graph: deriveOfflineGraph([], [], []),
   }));
   const [serverDiagnostic, setServerDiagnostic] = useState(emptyDiagnostic);
   const requestId = useRef(0);
@@ -76,16 +74,18 @@ export function useProgress(
     [localRun.value, serverDiagnostic, source],
   );
 
-  const progress = useMemo(
-    () =>
-      source === "server"
-        ? serverProgress
-        : {
-            ...deriveOfflineProgress(attempts),
-            graph: offlineGraph,
-          },
-    [attempts, serverProgress, source],
-  );
+  const progress = useMemo(() => {
+    if (source === "server") return serverProgress;
+    const graph = deriveOfflineGraph(units, books, attempts);
+    const { dashboard, practice } = deriveOfflineProgress(attempts);
+    return {
+      graph, practice,
+      dashboard: {
+        ...dashboard,
+        graphStats: { ...dashboard.graphStats, nodes: graph.nodes.length, edges: graph.edges.length },
+      },
+    };
+  }, [source, units, books, attempts, serverProgress]);
 
   const loadServer = useCallback(
     (bundle: ProgressBundle & Pick<DataBundleDto, "diagnostic">) => {

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import zipfile
 from urllib.error import URLError
 from urllib.parse import urlsplit
 from urllib.request import urlopen
@@ -18,6 +19,16 @@ from playwright.sync_api import sync_playwright
 
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def backend_snapshot(revision, destination):
+    """Extract current test fixtures' pinned historical backends, without checking out a revision."""
+    entries = ["backend/app", "backend/migrations", "backend/portable_server.py"]
+    packed = subprocess.run(["git", "archive", "--format=zip", revision, *entries], cwd=REPO,
+                            capture_output=True, check=True).stdout
+    with zipfile.ZipFile(io.BytesIO(packed)) as snapshot:
+        snapshot.extractall(destination)
+    return destination / "backend"
 
 
 def workstation_env(port):
@@ -182,25 +193,32 @@ def page(browser, server):
 
 
 @pytest.fixture
-def sample_pdf():
-    from workstation import SOURCE_A, SOURCE_B
+def make_pdf():
     from pypdf import PdfReader, PdfWriter
     from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-    writer = PdfWriter()
-    font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
-                             NameObject("/Subtype"): NameObject("/Type1"),
-                             NameObject("/BaseFont"): NameObject("/Helvetica")})
-    for text in (SOURCE_A, SOURCE_B, None):
-        page = writer.add_blank_page(width=560, height=780)
-        if text:
-            page[NameObject("/Resources")] = DictionaryObject({
-                NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
-            stream = DecodedStreamObject()
-            stream.set_data(f"BT /F1 12 Tf 36 700 Td ({text}) Tj ET".encode("ascii"))
-            page.replace_contents(stream)
-    data = io.BytesIO()
-    writer.write(data)
-    reader = PdfReader(io.BytesIO(data.getvalue()))
-    assert [p.extract_text().strip() for p in reader.pages] == [SOURCE_A, SOURCE_B, ""]
-    return data.getvalue()
+    def make(pages):
+        writer = PdfWriter()
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                                 NameObject("/Subtype"): NameObject("/Type1"),
+                                 NameObject("/BaseFont"): NameObject("/Helvetica")})
+        for text in pages:
+            page = writer.add_blank_page(width=560, height=780)
+            if text:
+                page[NameObject("/Resources")] = DictionaryObject({
+                    NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
+                stream = DecodedStreamObject()
+                stream.set_data(f"BT /F1 12 Tf 36 700 Td <{text.encode('ascii').hex()}> Tj ET".encode("ascii"))
+                page.replace_contents(stream)
+        data = io.BytesIO()
+        writer.write(data)
+        reader = PdfReader(io.BytesIO(data.getvalue()))
+        assert [p.extract_text().strip() for p in reader.pages] == [text or "" for text in pages]
+        return data.getvalue()
+    return make
+
+
+@pytest.fixture
+def sample_pdf(make_pdf):
+    from workstation import SOURCE_A, SOURCE_B
+    return make_pdf([SOURCE_A, SOURCE_B, None])

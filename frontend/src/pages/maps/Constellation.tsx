@@ -31,14 +31,14 @@ import type { GraphNode } from "../../domain/types";
 export function Constellation({
   mini = false,
   onSelect,
-  selected = "一致连续",
+  selected = "uniform",
   onlyUnlocked = false,
   showExamples = true,
   highlightGaps = true,
   relationsOnly = false,
 }: {
   mini?: boolean;
-  onSelect?: (name: string) => void;
+  onSelect?: (id: string) => void;
   selected?: string;
   onlyUnlocked?: boolean;
   showExamples?: boolean;
@@ -70,9 +70,9 @@ export function Constellation({
       ids.has(b) &&
       (!relationsOnly || k === "implication" || k === "case"),
   );
-  const active = nodes.find((n) => n.name === selected);
+  const active = nodes.find((n) => n.id === selected);
   const pick = (n: GraphNode) => {
-    onSelect?.(n.name);
+    onSelect?.(n.id);
   };
   const reset = () => {
     setZoom(1);
@@ -225,7 +225,7 @@ export function Constellation({
             const isActive = active && (active.id === a || active.id === b);
             return (
               <path
-                key={a + b}
+                key={JSON.stringify([a,b,k])} data-edge-type={k} data-from={a} data-to={b}
                 d={`M${n1.x} ${n1.y} Q${(n1.x + n2.x) / 2 + (n1.y - n2.y) * 0.15} ${(n1.y + n2.y) / 2 - 28} ${n2.x} ${n2.y}`}
                 fill="none"
                 stroke={
@@ -234,22 +234,22 @@ export function Constellation({
                 strokeWidth={isActive ? 1.8 : 1.1}
                 opacity={k === "extension" ? 0.18 : isActive ? 0.8 : 0.32}
                 strokeDasharray={
-                  k === "case" ? "6 5" : k === "extension" ? "3 5" : undefined
+                  k === "sequence" ? "4 5" : k === "case" ? "6 5" : k === "extension" ? "3 5" : undefined
                 }
                 markerEnd={!mini ? `url(#${uid}-arrow)` : undefined}
               />
             );
           })}
           {visible.map((n, i) => {
-            const isActive = n.name === selected;
+            const isActive = n.id === selected;
             const gap =
               highlightGaps &&
-              n.progress > 0 &&
+              n.progress != null && n.progress > 0 &&
               n.progress < 50 &&
               n.kind !== "case";
             return (
               <g
-                key={n.id}
+                key={n.id} data-node-id={n.id}
                 className={`map-node ${n.kind === "extension" ? "is-extension" : ""}`}
                 role={onSelect ? "button" : undefined}
                 tabIndex={onSelect ? 0 : -1}
@@ -258,7 +258,7 @@ export function Constellation({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    onSelect?.(n.name);
+                    onSelect?.(n.id);
                   }
                 }}
               >
@@ -344,7 +344,7 @@ export function Constellation({
       {!mini && (
         <div className="constellation-bottom">
           <span>
-            <Info size={13} /> 拖动平移 · 点击节点查看关系 · 虚线连接反例或拓展
+            <Info size={13} /> 拖动平移 · 点击节点查看关系 · 教材页序用虚线标记
           </span>
           <span>
             {visible.length} 节点 · {visibleEdges.length} 条关系

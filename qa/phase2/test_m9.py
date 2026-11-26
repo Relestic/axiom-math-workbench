@@ -1,14 +1,11 @@
-import io
 import json
 import re
 import sqlite3
-import subprocess
-import zipfile
 from contextlib import closing
 
 from playwright.sync_api import expect
 
-from conftest import PortableServer, REPO
+from conftest import PortableServer, backend_snapshot
 from fake_deepseek import DUMMY_KEY
 from workstation import check_speech, observe_speech
 from workstation import SOURCE_B, bootstrap, drag_pdf, export_zip, restore_into_clean_workstation
@@ -148,14 +145,10 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
 
 def test_browser_imports_genuine_phase1_export(page, server, tmp_path):
     revision = "76330def51cedd1e0131330d476d47feb0670ad5"
-    entries = ["backend/app", "backend/migrations", "backend/portable_server.py"]
-    packed = subprocess.run(["git", "archive", "--format=zip", revision, *entries], cwd=REPO,
-                            capture_output=True, check=True).stdout
-    with zipfile.ZipFile(io.BytesIO(packed)) as snapshot:
-        snapshot.extractall(tmp_path / "phase1-source")
+    old_backend = backend_snapshot(revision, tmp_path / "phase1-source")
     old_root = tmp_path / "phase1-workstation"
     old_root.mkdir()
-    old = PortableServer(old_root, server.root / "web", server.python, tmp_path / "phase1-source" / "backend")
+    old = PortableServer(old_root, server.root / "web", server.python, old_backend)
     try:
         old.start()
         exported = page.request.post(old.url + "/api/v1/archive/export",

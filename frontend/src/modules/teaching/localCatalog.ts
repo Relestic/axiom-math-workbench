@@ -12,6 +12,7 @@ const book = z.object({
 const card = z.object({
   id:z.string(), title:z.string(), definition:z.string(), formula:z.string().default(""),
   conditions:strings, theorem:z.string(), proof:strings, textbook_id:z.string(), page_start:page, page_end:page,
+  prerequisites: strings.default([]),
 });
 const exercise = z.object({
   id:z.string(), code:z.string(), topic_id:z.string(), title:z.string(), statement:z.string().optional(),
@@ -32,6 +33,7 @@ export function mapLocalCatalog(input: unknown): LocalCatalog {
   const units = data.cards.map((item): CurriculumUnit => ({
     id:item.id, title:item.title, short:item.title, chapter:titles.get(item.textbook_id) || "本地教材",
     definition:item.definition, formula:item.formula, conditions:item.conditions, proof:item.proof,
+    prerequisites:item.prerequisites,
     example:"", exercise:"", solution:[], hint:item.proof[0] || "", tools:[], source:"",
     textbookSource:{textbookId:item.textbook_id,pageStart:item.page_start,pageEnd:item.page_end,theorem:item.theorem},
   }));

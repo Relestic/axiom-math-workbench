@@ -154,7 +154,8 @@ test("mapGraph and mapPractice normalize backend field names", () => {
   const graph = mapGraph({
     nodes: [
       {
-        id: "uniform",
+        id: "lecture-node",
+        concept_id: "uniform",
         name: "一致连续",
         kind: "concept",
         x: 1,
@@ -166,8 +167,8 @@ test("mapGraph and mapPractice normalize backend field names", () => {
         state: "current",
       },
       {
-        id: "riemann",
-        name: "Riemann 可积",
+        id: "mvt",
+        name: "中值定理",
         kind: "concept",
         x: 3,
         y: 4,
@@ -178,12 +179,13 @@ test("mapGraph and mapPractice normalize backend field names", () => {
         state: "locked",
       },
     ],
-    edges: [{ from: "uniform", to: "riemann", relation: "prerequisite_for" }],
+    edges: [{ from: "lecture-node", to: "mvt", relation: "prerequisite_for" }],
     stats: { nodes: 2, edges: 1, mastered: 0, gaps: 1 },
   });
   assert.equal(graph.edges[0][2], "prerequisite");
   assert.equal(graph.nodes[0].progress, 62);
-  assert.deepEqual(graph.nodes[0].connections, ["Riemann 可积"]);
+  assert.deepEqual(graph.nodes.map(node => node.conceptId), ["uniform", "mean-value"]);
+  assert.deepEqual(graph.nodes[0].connections, ["中值定理"]);
 
   const practice = mapPractice({
     rows: [

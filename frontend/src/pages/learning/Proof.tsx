@@ -71,6 +71,13 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
       return true;
     },
   });
+  if (!steps.length && unit.textbookSource) {
+    return <article className="learning-page card local-lecture-card">
+      <h1>{unit.title}</h1>
+      <p>这张教材卡片没有收录证明步骤，可回到原页研读。</p>
+      <SourcePageButton source={unit.textbookSource} read={onReadSource} />
+    </article>;
+  }
   return (
     <div className="learning-page proof-page">
       <Heading

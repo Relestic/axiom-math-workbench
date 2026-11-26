@@ -1,3 +1,4 @@
+import { conceptIdForGraphNode } from "./graphConcept.js";
 import type {
   Attempt,
   ClassicSet,
@@ -74,6 +75,7 @@ export function buildUnits(
           ? `${condition.text}（p.${condition.source_page}）`
           : condition.text,
       ),
+      prerequisites: detail?.prerequisites ?? [],
       tools: toolChips.length ? toolChips : ["ε–δ 语言", "定义"],
       symbols: (detail?.symbols || []).map((symbol) => ({
         symbol: symbol.symbol,
@@ -181,6 +183,7 @@ export function mapGraph(dto: GraphDto): {
   const names = new Map(dto.nodes.map((node) => [node.id, node.name]));
   const nodes: GraphNode[] = dto.nodes.map((node) => ({
     id: node.id,
+    conceptId: node.concept_id ?? conceptIdForGraphNode(node.id),
     name: node.name,
     x: node.x,
     y: node.y,
