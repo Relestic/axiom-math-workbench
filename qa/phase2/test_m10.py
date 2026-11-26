@@ -60,26 +60,53 @@ def run_batch(root, filename, port, private_data, *arguments):
                 assert probe.connect_ex(("127.0.0.1", port)) != 0, "The test's server still holds its port"
 
 
-def inspect_launched_app(browser, url, sample_pdf, private_data):
+def inspect_launched_app(browser, url, sample_pdf, private_data, existing_book=None):
     context = browser.new_context(viewport={"width": 1440, "height": 900}, service_workers="block")
     context.route("**/*", lambda route: route.continue_()
                   if route.request.url.startswith(url + "/") else route.abort("blockedbyclient"))
     try:
         page = context.new_page()
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(url + "/#proof")
         expect(page).to_have_url(re.compile("#desk/proof$"))
+        page.goto(url + "/#examples")
+        expect(page).to_have_url(re.compile("#desk/textbook$"))
+        expect(page.get_by_role("tablist", name="学习步骤").get_by_role("tab")).to_have_text(
+            ["讲义定义", "证明思路", "练习与复盘"])
+        board = page.locator("#desk-board")
+        expect(board.locator(".fw-plot-canvas .plot-container")).to_be_visible(timeout=15000)
+        expect(board.locator("textarea")).to_have_count(0)
+        board.get_by_role("tab", name="3D 曲面").click()
+        expect(board.locator("#surface-expression")).to_be_visible()
+        expect(board.locator("textarea")).to_have_count(1)
         nav = page.get_by_role("navigation", name="主导航")
         expect(nav.get_by_role("button")).to_have_count(4)
+        nav.get_by_role("button", name="知识星图").click()
+        expect(page.locator("[data-graph-viewport]")).to_be_visible()
+        page.get_by_role("textbox", name="搜索节点").fill("中值定理")
+        expect(page.locator('[data-node-id="mvt"]')).to_have_attribute("aria-pressed", "true")
+        page.get_by_role("button", name="定位当前学习").click()
+        expect(page.locator('[data-node-id="uniform"]')).to_have_attribute("aria-pressed", "true")
         nav.get_by_role("button", name="书架与笔记").click()
         expect(page).to_have_url(re.compile("#shelf/books$"))
-        book = drag_pdf(page, sample_pdf)
+        if existing_book is None:
+            book = drag_pdf(page, sample_pdf)
+        else:
+            book = existing_book
+            expect(page.get_by_role("article", name=book["title"], exact=True)).to_be_visible()
+            records = page.request.get(url + "/api/v1/local/bootstrap-extras")
+            assert records.ok and book in records.json()["textbooks"]
+        pdf = page.request.get(f"{url}/api/v1/local/textbooks/{book['id']}/file")
+        assert pdf.ok and pdf.body() == sample_pdf
         assert [row["needs_ocr"] for row in book["pages"]] == [False, False, True]
         evidence = private_data / "axiom.db"
         assert evidence.is_file(), "The launcher ignored AXIOM_DATA_DIR"
         with closing(sqlite3.connect(evidence)) as db:
             assert db.execute("SELECT title FROM textbooks WHERE id=?", (book["id"],)).fetchone() == (book["title"],)
             assert "ai_review" in {row[1] for row in db.execute("PRAGMA table_info(attempts)")}
-        return book["id"]
+        assert not errors, errors
+        return book
     finally:
         context.close()
 
@@ -127,20 +154,22 @@ def test_stale_bundle_and_explicit_rebuild_keep_learning_data(browser, sample_pd
                 _winapi.CreateJunction(str(package), str(link))
                 linked.append(link)
         dist = frontend / "dist-portable"
-        marker = dist / "phase2.ready"
+        marker = dist / "phase3.ready"
         assert marker.is_file(), "Build the current portable frontend before launcher QA"
-        marker.unlink()
         private = tmp_path / "rebuild-data"
-        ids = []
+        with run_batch(root, script, port, private) as url:
+            original = inspect_launched_app(browser, url, sample_pdf, private)
+        marker.unlink()
+        obsolete = dist / "phase2.ready"
+        obsolete.write_text("Phase 2\n", encoding="utf-8")
         for arguments in ((), ("--rebuild",)):
-            (dist / "index.html").write_text("<html>旧的十二项导航</html>", encoding="utf-8")
+            (dist / "index.html").write_text("<html>旧版书桌：正反例</html>", encoding="utf-8")
             stale_asset = dist / "old-workbench-only.js"
             stale_asset.write_text("/* obsolete chunk */", encoding="ascii")
             with run_batch(root, script, port, private, *arguments) as url:
-                assert marker.read_text(encoding="utf-8").strip() == "Phase 2"
-                assert not stale_asset.exists()
-                ids.append(inspect_launched_app(browser, url, sample_pdf, private))
-        assert ids[0] == ids[1], "Rebuilding the frontend replaced the user's existing book"
+                assert marker.read_text(encoding="utf-8").strip() == "Phase 3"
+                assert not obsolete.exists() and not stale_asset.exists()
+                inspect_launched_app(browser, url, sample_pdf, private, existing_book=original)
         assert not (root / "data").exists()
     finally:
         # Remove junctions themselves without traversing a shared dependency.

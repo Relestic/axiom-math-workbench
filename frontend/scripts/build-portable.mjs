@@ -11,4 +11,4 @@ process.env.VITE_API_BASE='__SAME_ORIGIN__';
 execFileSync(process.execPath,['node_modules/typescript/bin/tsc','-b'],{cwd:frontend,stdio:'inherit',windowsHide:true});
 const {build}=await import('vite');
 await build({root:frontend,build:{outDir:'dist-portable',emptyOutDir:true}});
-await writeFile(resolve(frontend,'dist-portable/phase2.ready'),'Phase 2\n');
+await writeFile(resolve(frontend,'dist-portable/phase3.ready'),'Phase 3\n');

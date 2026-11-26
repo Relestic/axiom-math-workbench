@@ -1,6 +1,6 @@
 # Phase 3 验收记录
 
-项目基线为 `3805b01`。除特别注明，命令从 `axiom-deploy` 运行。浏览器用例使用独立的临时资料目录、本机 Flask 与无头 Chrome。涉及模型的功能使用模拟上游验收，无需个人 Key 或付费调用。
+验收日期为 2026-11-26，分支为 `phase3`，项目基线为 `3805b01`。除特别注明，命令从 `axiom-deploy` 运行。浏览器用例使用独立的临时资料目录、本机 Flask 与无头 Chrome。涉及模型的功能使用模拟上游验收，无需个人 Key 或付费调用。
 
 ## M11 · 书桌与黑板控图
 
@@ -10,9 +10,9 @@ Hiyori 按当前知识点保留书桌会话。提问同时采集左栏学习内�
 
 Chrome 实测从收起的 PDF 黑板发出指令，先高亮证明步骤，再切回二维函数并修改表达式、区间和导数模式。另一条指令打开三维黑板，同时修改曲面和视角。两处分别一次撤销即可还原；无效表达式与第五条曲线返回中文原因并保留原图。用例同时覆盖手动编辑、无 Key 讲义与经典案例回答、历史存档的 ZIP/JSON 导入。见[二维联动截图](qa/phase3/screenshots/m11-2d.png)和[三维联动截图](qa/phase3/screenshots/m11-3d.png)。
 
-在 `frontend` 下执行 `npm test`、`tsc -b` 与 Vite 同源构建，在 `backend` 下执行 `python -m pytest -q`。后端 183 项通过。使用阶段预览运行 `python -m pytest -q qa/phase3/test_m11.py --portable-web .portable-cache/phase3-preview`，7 项通过（40.79 秒），包括经典教学视图回到自由黑板改图与撤销。Phase 2 的导航、书架、练习和离线朗读 24 项功能回归也通过（162.70 秒）。
+在 `frontend` 下执行 `npm test`、`tsc -b` 与 Vite 同源构建，在 `backend` 下执行 `python -m pytest -q`。前端 54 项、后端 183 项通过。使用阶段预览运行 `python -m pytest -q qa/phase3/test_m11.py --portable-web .portable-cache/phase3-preview`，7 项通过（40.79 秒），包括经典教学视图回到自由黑板改图与撤销。Phase 2 的导航、书架、练习和离线朗读 24 项功能回归也通过（162.70 秒）。
 
-最终前端 54 项通过。另测了恰好达到 0.01 或 0.2 的十进制区间与略小于下限的拒绝路径。
+另测了恰好达到 0.01 或 0.2 的十进制区间与略小于下限的拒绝路径。
 
 ## M12 · 教材卡片与知识关系
 
@@ -28,3 +28,27 @@ Chrome 实测从收起的 PDF 黑板发出指令，先高亮证明步骤，再�
 前端全量 62 项与后端全量 185 项通过，TypeScript 与同源构建通过。历史抽卡升级用例在新星图上再次通过（17.11 秒）。桌面 Chrome 实测导入两本 PDF 共 10 张卡，再写入一条历史回边。删除测试 Key 后，内置课程与教材的卡片边界零重叠；筛选、搜索居中、待复习开关、0.4–2 倍缩放、拖拽、适屏与一跳高亮均通过。中值定理正确映射到内置对应讲义；另一本地长标题卡打开书桌左侧定义，右侧阅读器实际请求对应 PDF 并停在第 3 页。390 × 844 窄屏通过教材筛选、搜索、定位与回到讲义检查。见[浅色截图](qa/phase3/screenshots/m13-light.png)与[深色截图](qa/phase3/screenshots/m13-dark.png)。
 
 最终两项 Chrome 实测均通过（18.55 秒）。沿三条内置跨层长边及一条教材回边逐个 SVG 单位采样，线段均避开中间卡片内部。两种主题均已目视核对长标题、公式、连线与详情。
+
+## M14 · Windows 便携交付
+
+在 `frontend` 运行 `npm test`（62 项通过）、`node scripts/build-portable.mjs` 与 `npm run package:windows`，两次构建均执行 TypeScript 全项目编译。后端运行 `python -m pytest -q`（185 项通过，45.69 秒）。同源前端位于 `frontend/dist-portable`，启动标记为 `phase3.ready`。
+
+| 交付物 | 实测结果 |
+| --- | --- |
+| Windows x64 ZIP | [Axiom-Windows-Full-20261126T055004Z.zip](releases/Axiom-Windows-Full-20261126T055004Z.zip)，47,284,573 字节 |
+| ZIP SHA-256 | `ede985f3ec3b99b4b472ec56bca3944e8284d1765f3be525bcb96bac2d265ead`，经 Python 与 PowerShell 两次核对 |
+| 包内文件 | 解压后逐一核对清单所列 4,429 个文件的 SHA-256；随包 web 资源与本次 dist-portable 逐字节一致 |
+| 运行环境 | 内置 CPython 3.12.7 x64、pypdf 7.1.1 及其许可证。分发包不含个人数据库、Key 文件或 Python 字节码缓存 |
+| 实现提交 | M11 `b9f0811`、M12 `2dc677a`、M13 `1241f2f`。本记录与启动标记修改由 M14 提交 |
+
+最终从新 ZIP 解压运行全部 37 项验收，零失败、零跳过。两组并行执行，Phase 2 导航、书架、练习、存档与语音回归 24 项通过（192.72 秒），Windows 启动与 Phase 3 新流程 13 项通过（188.39 秒）。
+
+通过真实 `cmd.exe` 调用源码的 `启动工作台.cmd` 和解压包的 `启动 Axiom.cmd`，再于无头 Chrome 检查同源服务。两处都显示三步书桌和新星图，能打开真实 PDF。模拟仅留旧版 `phase2.ready` 时，源码启动器自动重建；另测 `--rebuild`，原教材 ID、元数据与 PDF 原始字节均保留。解压包还验证了 Hiyori 二维与三维指令、一次撤销、抽卡与前置关系、双主题星图和回到 PDF 原页。
+
+本阶段未更改依赖锁文件、数据库结构或迁移脚本。内置 classics、数值检验核心与图关系枚举均保留。ZIP 与 `frontend/dist-portable` 按仓库约定留在本地交付，截图与验收用例随相应里程碑提交。
+
+复验时先完整解压新 ZIP，在项目根目录将 `$release` 设为含 `web`、`runtime` 和 `backend` 的解压目录，再运行以下命令。用例通过项目的便携入口启动 Flask，并使用独立学习资料目录。浏览器禁用外网，模型回复来自本机测试用模拟上游。
+
+```powershell
+python -m pytest -q qa --portable-backend "$release/backend" --portable-python "$release/runtime/python.exe" --portable-web "$release/web" --release-root "$release"
+```
