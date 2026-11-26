@@ -19,19 +19,20 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
 
-export function Proof({ onNavigate, onSaveNote, notify }: Props) {
+export function Proof(props: Props) {
+  const { unit } = useUnit();
+  return <ProofSteps key={unit.id} {...props} />;
+}
+
+function ProofSteps({ onNavigate, onSaveNote, notify }: Props) {
   const { unit, select } = useUnit();
   const [step, setStep] = useState(0);
   const [checked, setChecked] = useState<number[]>([]);
-  useEffect(() => {
-    setStep(0);
-    setChecked([]);
-  }, [unit.id]);
   const titles =
     unit.id === "uniform"
       ? [
@@ -60,12 +61,12 @@ export function Proof({ onNavigate, onSaveNote, notify }: Props) {
     command: (actions) => {
       let targetIndex = step;
       for (const action of actions) {
-        if (action.type === "highlight_proof_step") {
-          targetIndex =
-            steps.find((item) => item.ref === action.ref)?.index ?? targetIndex;
-        }
+        if (action.type !== "highlight_proof_step") return false;
+        const target = steps.find(item => item.ref === action.ref);
+        if (!target) return false;
+        targetIndex = target.index;
       }
-      if (targetIndex === step) return false;
+      if (targetIndex === step) return "unchanged";
       setStep(targetIndex);
       return true;
     },

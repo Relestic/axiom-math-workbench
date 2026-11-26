@@ -37,9 +37,9 @@ export function Dashboard({
   const [compact, setCompact] = useState(false);
   const { data } = useAppData();
   const dashboard = data.dashboard;
-  const last = localStorage.getItem("axiom-last-page") || "explore";
+  const last = window.history.state?.resume || localStorage.getItem("axiom-last-page") || "desk/textbook";
   const resume =
-    validRoutes.includes(last) && last !== "dashboard" ? last : "explore";
+    validRoutes.includes(last) && last !== "dashboard" ? last : "desk/textbook";
   const summary = dashboard.summary;
   const count = summary.practice.attemptsTotal;
   const mastery = Math.round(summary.mastery.overall);
@@ -189,7 +189,7 @@ export function Dashboard({
         </div>
         <div className="daily-metrics">
           <div>
-            <span>服务端作答</span>
+            <span>累计作答</span>
             <strong>
               {count}
               <small>次作答</small>
@@ -216,7 +216,7 @@ export function Dashboard({
           </div>
         </div>
         <div className="daily-progress">
-          <span>服务端掌握度</span>
+          <span>当前掌握度</span>
           <div className="progress-track">
             <i style={{ width: `${mastery}%` }} />
           </div>
@@ -233,7 +233,7 @@ export function Dashboard({
             [
               "review",
               `待复习队列 · ${reviewCount} 项`,
-              "按服务端记录继续复盘",
+              "按作答记录继续复盘",
               Clock3,
             ],
             [
@@ -260,8 +260,8 @@ export function Dashboard({
         <div className="today-foot">
           <small>
             {count
-              ? "作答、提示使用和掌握度来自你的服务端学习记录。"
-              : "还没有服务端作答记录；完成一次练习后会在这里汇总。"}
+              ? "作答、提示使用和掌握度来自你的学习记录。"
+              : "还没有作答记录；完成一次练习后会在这里汇总。"}
           </small>
           <button className="text-button" onClick={() => onNavigate("review")}>
             查看全部练习记录 →

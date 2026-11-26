@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAppData } from "../../app/DataProvider";
+import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
 import { DefinitionTokens, Heading, ModuleSelect, useUnit, type Props } from "./shared";
@@ -28,6 +29,13 @@ import { DefinitionTokens, Heading, ModuleSelect, useUnit, type Props } from "./
 export function Textbook({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
   const { unit, select } = useUnit();
+  const lecture = {
+    conditions: unit.conditions,
+    proof_steps: unit.proof.map((text, index) => ({ ref: `${unit.id}:${index}`, text })),
+  };
+  useWorkspaceEndpoint("textbook", JSON.stringify([unit.id, lecture]), {
+    query: () => ({ lecture }),
+  });
   const bookmarked = app.data.bookmarks;
   const units = app.data.units;
   const [large, setLarge] = useState(false);

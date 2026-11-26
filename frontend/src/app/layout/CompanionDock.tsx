@@ -34,10 +34,11 @@ export function CompanionDock({ page, collapsed, onToggle }: { page: string; col
       </button>
     </header>
     <div className="dock-body" hidden={collapsed}>
-      <div ref={element} className="companion-stage" aria-label="Hiyori 舞台">
+      <CompanionPanel page={page} stage={stage} stageView={
+        <div ref={element} className="companion-stage" aria-label="Hiyori 舞台">
         {unavailable && <p role="status">此设备无法显示 WebGL 舞台。</p>}
-      </div>
-      <CompanionPanel page={page} stage={stage} />
+        </div>
+      } />
     </div>
   </aside>;
 }

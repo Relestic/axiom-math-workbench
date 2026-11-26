@@ -1,6 +1,6 @@
 import { WorkbenchShell, ThemeSwitch } from "./app/layout/WorkbenchShell";
 import { NavRail } from "./app/layout/NavRail";
-import { MainSplit } from "./app/layout/MainSplit";
+import { DeskWorkbench } from "./app/layout/DeskWorkbench";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   StickyNote,
@@ -9,7 +9,6 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
-  Upload,
   ArrowRight,
   X,
   Menu,
@@ -56,7 +55,7 @@ const LocalTextbook = lazy(() =>
 const SurfaceWorkspace = lazy(
   () => import("./modules/visualization/three-d/SurfaceWorkspace"),
 );
-import { navigation, pageFromHash, validRoutes } from "./navigation";
+import { navigation, pageFromHash, normalizeRoute, subpages } from "./navigation";
 import { useAppData } from "./app/DataProvider";
 import { searchRequest } from "./lib/api";
 import { useSession } from "./lib/session";
@@ -71,7 +70,10 @@ export default function App() {
   const app = useAppData();
   const ai = useAIConnection();
   const aiState = ai.failed ? "error" : ai.status?.state || (ai.effective?.configured ? "ready" : "unset");
-  const [page, setPage] = useState(pageFromHash);
+  const [route, setRoute] = useState(() => pageFromHash());
+  const [section, subpage] = route.split("/");
+  const page = subpage || section;
+  const [activePane, setActivePane] = useState(page);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [toast, setToast] = useState("");
@@ -85,16 +87,18 @@ export default function App() {
   const [name, setName] = useState(
     () => session.user?.display_name || localStorage.getItem("axiom-name") || "林越",
   );
-  const notes = app.data.notes;  const title =
-    navigation.flatMap((g) => g.items).find((i) => i[0] === page)?.[1] ||
-    "学习工作台";
+  const notes = app.data.notes;
+  const sectionTitle = navigation.find(([id]) => id === section)?.[1] || "学习主页";
+  const children: Readonly<Record<string,string>> = section in subpages ? subpages[section as keyof typeof subpages] : {};
+  const title = Object.entries(children).find(([key]) => key === page)?.[1] || sectionTitle;
   const notify = (text: string) => {
     setToast(text);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setToast(""), 3500);
   };
   function navigate(id: string) {
-    if (!validRoutes.includes(id)) {
+    const next = normalizeRoute(id);
+    if (!next) {
       notify("请从左侧选择学习模块");
       return;
     }
@@ -105,12 +109,13 @@ export default function App() {
       )
     )
       localStorage.setItem("axiom-explore-request", app.selectedConceptId);
-    location.hash = id;
-    setPage(id);
+    if (location.hash !== '#' + next) location.hash = next;
+    setRoute(next);
+    setActivePane(next.split('/')[1] || next);
     setSidebar(false);
     setSearchOpen(false);
     window.scrollTo({ top: 0 });
-    if (id !== "dashboard") localStorage.setItem("axiom-last-page", id);
+
   }
   async function saveNote(text: string, conceptId?: string) {
     try {
@@ -168,7 +173,9 @@ export default function App() {
   }, [query, session.serverMode]);
   useEffect(() => {
     const hash = () => {
-      setPage(pageFromHash());
+      const next = pageFromHash();
+      setRoute(next);
+      setActivePane(next.split('/')[1] || next);
       setSidebar(false);
       setSearchOpen(false);
       window.scrollTo(0, 0);
@@ -180,9 +187,18 @@ export default function App() {
         setSidebar(false);
       }
     };
+    const reveal = (event: Event) => {
+      const pane = (event as CustomEvent<{pane:string}>).detail?.pane;
+      if (pane && Object.hasOwn(subpages.desk, pane)) {
+        if (location.hash !== "#desk/" + pane) location.hash = "desk/" + pane;
+        setActivePane(pane);
+      }
+    };
+    window.addEventListener("axiom:reveal-pane", reveal);
     window.addEventListener("hashchange", hash);
     window.addEventListener("keydown", key);
     return () => {
+      window.removeEventListener("axiom:reveal-pane", reveal);
       window.removeEventListener("hashchange", hash);
       window.removeEventListener("keydown", key);
       clearTimeout(timer.current);
@@ -191,6 +207,13 @@ export default function App() {
   useEffect(() => {
     document.title = `${title} · Axiom 公理`;
   }, [title]);
+  useEffect(() => {
+    const previous = normalizeRoute(localStorage.getItem("axiom-last-page") || "");
+    if (route === "dashboard" && previous && previous !== route && !history.state?.resume) {
+      history.replaceState({...history.state, resume:previous}, "");
+    }
+    localStorage.setItem("axiom-last-page", route);
+  }, [route]);
   const common = { onNavigate: navigate, onSaveNote: saveNote, notify };
   const localSearchResults = [
     ...app.data.units.map((unit) => ({
@@ -199,18 +222,14 @@ export default function App() {
       page: "textbook",
       type: "知识点",
     })),
-    ...navigation
-      .flatMap((g) => g.items)
-      .map(([id, label]) => ({ id, label, page: id, type: "工作区" })),
+    ...navigation.map(([id, label]) => ({ id, label, page: id, type: "工作区" })),
   ].filter((x) => x.label.toLowerCase().includes(query.toLowerCase()));
   const searchResults = remoteResults.length
     ? remoteResults
     : localSearchResults;
   return (
-    <WorkbenchShell page={page} collapsed={railCollapsed} rail={<NavRail page={page} sidebar={sidebar} collapsed={railCollapsed}
-      name={name} mastery={app.data.dashboard.summary.mastery.overall} serverMode={session.serverMode}
-      role={session.user?.role} onToggle={() => setRailCollapsed(!railCollapsed)}
-      closeMobile={() => setSidebar(false)} navigate={navigate} openProfile={() => setModal("profile")} />}>
+    <WorkbenchShell page={section === "desk" ? activePane : page} collapsed={railCollapsed} rail={<NavRail page={section} sidebar={sidebar} collapsed={railCollapsed}
+      onToggle={() => setRailCollapsed(!railCollapsed)} closeMobile={() => setSidebar(false)} navigate={navigate} />}>
       <div className="main-shell">
         <header className="topbar">
           <button
@@ -221,7 +240,7 @@ export default function App() {
             <Menu size={21} />
           </button>
           <div className="breadcrumbs">
-            <span>{page.includes("map") ? "可视化视图" : "数学分析"}</span>
+            <span>{sectionTitle}</span>
             <ChevronRight size={14} />
             <strong>{title}</strong>
           </div>
@@ -295,7 +314,7 @@ export default function App() {
               <i />
             </button>
             <div className="top-divider" />
-            <button className="top-profile" onClick={() => setModal("profile")}>
+            <button aria-label="个人设置" className="top-profile" onClick={() => setModal("profile")}>
               <span className="avatar pale">{name.slice(0, 1)}</span>
               <span>{name}</span>
               <ChevronDown size={13} />
@@ -308,32 +327,33 @@ export default function App() {
             <Dashboard
               name={name}
               onNavigate={navigate}
-              onUpload={() => setModal("upload")}
+              onUpload={() => navigate("books")}
             />
           )}
-          {(page === "textbook" || page === "explore") && (
-            <MainSplit page={page} navigate={navigate} graph={<Exploration {...common} />} lecture={<>
-              <div className="page-tools">
-                <span className="badge">示例讲义 · 非已解析教材</span>
-                <button className="btn" onClick={() => setModal("upload")}>
-                  <Upload size={15} />
-                  打开本地教材
-                </button>
-              </div>
-              <Textbook {...common} />
-            </>} />
-          )}
-          {page === "examples" && <Examples {...common} />}
-          {page === "proof" && <Proof {...common} />}
-          {page === "exercises" && <Exercises {...common} />}
-          {page === "review" && <Review {...common} />}
+          {section === "desk" && <DeskWorkbench pane={page} navigate={navigate} onActivePane={setActivePane} renderPane={id => {
+            switch (id) {
+              case "textbook": return <Textbook {...common}/>;
+              case "examples": return <Examples {...common}/>;
+              case "proof": return <Proof {...common}/>;
+              case "exercises": return <Exercises {...common}/>;
+              case "review": return <Review {...common}/>;
+              case "explore": return <Exploration {...common}/>;
+              case "surface": return <SurfaceWorkspace onOpenSettings={() => setModal("ai")}/>;
+              case "pdf": return <section className="panel"><p>在书架选择教材后，可在此对照原文。</p><button className="btn" onClick={()=>navigate("books")}>打开教材书架</button></section>;
+            }
+          }}/>}
+          {(section === "atlas" || section === "shelf") && <nav className="section-tabs segmented" aria-label={sectionTitle}>
+            {Object.entries(subpages[section]).map(([id,label]) => <button key={id} className={page === id ? "active" : ""}
+              aria-current={page === id ? "page" : undefined} onClick={()=>navigate(id)}>{label}</button>)}
+          </nav>}
+          {page === "books" && <LocalTextbook notify={notify}/>}
+          {page === "archive" && <LearningArchiveSettings/>}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />
           )}
           {page === "knowledge-map" && (
             <KnowledgeMap onNavigate={navigate} notify={notify} />
           )}
-          {page === "surface" && <SurfaceWorkspace onOpenSettings={() => setModal("ai")} />}
           {page === "notes" && (
             <Notes
               notes={notes}
@@ -365,7 +385,7 @@ export default function App() {
           <span>
             {session.serverMode
               ? `已连接后端 · ${session.user?.email || ""}`
-              : "离线演示 · 未连接后端"}
+              : "本地学习空间"}
           </span>
         </footer>
       </div>
@@ -409,12 +429,12 @@ export default function App() {
                 </span>
                 <h2>从一个问题开始</h2>
                 <p className="muted">
-                  跟随左侧学习流程：阅读定义、操作图像、对比反例、理解证明，再完成练习。
+                  在学习书桌阅读定义、对照图像、比较反例、理解证明，再完成练习。
                 </p>
                 <div className="info-strip">
                   {session.serverMode
                     ? "当前已登录后端：内容、练习、作答、笔记、诊断和学习进度都来自服务端。"
-                    : "当前离线演示：数据保存在浏览器；连接后端后作答与笔记会写入服务端。"}
+                    : "本地学习记录可在「书架与笔记」中导出和恢复。"}
                   可从顶部 AI 徽章打开个人 DeepSeek 接入设置。
                 </div>
                 <p>
@@ -498,7 +518,7 @@ export default function App() {
                   保存设置
                 </button>
                 {!session.serverMode && (
-                  <button className="btn" onClick={session.switchToServer}>切换到服务器模式</button>
+                  <details className="advanced-connection"><summary>高级连接选项</summary><button className="btn" onClick={session.switchToServer}>切换到服务器模式</button></details>
                 )}
                 {session.serverMode && (
                   <button
@@ -510,15 +530,8 @@ export default function App() {
                     退出登录
                   </button>
                 )}
-                <Suspense fallback={<p>正在载入存档设置…</p>}>
-                  <LearningArchiveSettings />
-                </Suspense>
+                <button className="btn" onClick={() => {setModal(""); navigate("archive");}}>管理学习存档</button>
               </>
-            )}
-            {modal === "upload" && (
-              <Suspense fallback={<p>正在载入本地教材…</p>}>
-                <LocalTextbook notify={notify} />
-              </Suspense>
             )}
           </section>
         </div>

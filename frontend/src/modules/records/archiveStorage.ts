@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validateScene } from "../../lib/plotScene";
-import { validRoutes } from "../../navigation";
+import { validRoutes, normalizeRoute } from "../../navigation";
 import { normalizeSurfaceScene } from "../visualization/three-d/engine";
 
 const id = z.string().min(1);
@@ -221,6 +221,7 @@ export function validateLearningStorage(input: unknown): LearningStorage {
     if (!validate) throw new Error("存档包含不支持的浏览器数据项。");
     try {
       validate(value);
+      if (key === "axiom-last-page") result.data[key] = normalizeRoute(value)!;
     } catch {
       throw new Error(
         `学习记录格式无效（${validators.has(key) ? key : "练习草稿或选项"}）。`,

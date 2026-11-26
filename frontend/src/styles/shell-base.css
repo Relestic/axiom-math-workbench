@@ -78,45 +78,6 @@
   color: var(--on-solid);
   font-weight: 600;
 }
-.sidebar-bottom {
-  padding-top: 18px;
-}
-.course-widget {
-  background: var(--inverse-raised);
-  border: 0;
-  border-radius: 14px;
-  padding: 16px 12px;
-  color: var(--on-solid);
-  width: 100%;
-  text-align: left;
-}
-.course-widget > .muted {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--inverse-muted);
-}
-.course-widget strong {
-  display: block;
-  font-size: 13px;
-  margin: 12px 0 4px;
-}
-.course-widget small {
-  color: var(--inverse-muted);
-  font-size: 10px;
-  display: block;
-}
-.course-widget .progress-track {
-  margin: 13px 0 6px;
-  background: var(--inverse-raised);
-  height: 5px;
-}
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin: 14px 4px 0;
-}
 .avatar {
   width: 33px;
   height: 33px;
@@ -133,25 +94,6 @@
 .avatar.pale {
   background: var(--accent-soft);
   color: var(--primary);
-}
-.profile-name {
-  background: none;
-  border: 0;
-  color: var(--inverse-text);
-  text-align: left;
-  flex: 1;
-  padding: 0;
-}
-.profile-name strong {
-  font-size: 12px;
-  display: block;
-}
-.profile-name small {
-  font-size: 10px;
-  color: var(--inverse-muted);
-}
-.dark-icon {
-  color: var(--inverse-muted) !important;
 }
 .main-shell {
   margin-left: 248px;
@@ -487,3 +429,8 @@
     gap: 3px;
   }
 }
+
+.section-tabs { display: inline-flex; flex-wrap: wrap; margin-bottom: 18px; }
+.advanced-connection { margin: 14px 0; }
+.advanced-connection summary { cursor: pointer; }
+.advanced-connection[open] summary { margin-bottom: 8px; }

@@ -6,6 +6,7 @@ const compiled = await build({
   stdin: {
     contents: [
       'export * from "./src/modules/companion/workspace";',
+      'export * from "./src/modules/companion/reply";',
       'export * from "./src/app/workspaceEndpoints";',
       'export * from "./src/modules/visualization/scene/functionScene";',
       'export * from "./src/modules/visualization/scene/parameterBatch";',
@@ -18,9 +19,10 @@ const compiled = await build({
   write: false,
   platform: "node",
   format: "esm",
+  define: { "import.meta.env.VITE_API_BASE": '""' },
 });
 const {
-  queryWorkspace, registerWorkspaceEndpoint, initialScene, applyFunctionScene,
+  queryWorkspace, registerWorkspaceEndpoint, initialScene, applyFunctionScene, localReply,
   functionParameterCandidate, sceneParameterBatch, defaultSurfaceScene, surfaceParameterCandidate,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].contents).toString("base64")}`
@@ -95,6 +97,108 @@ test("an edit invalidates an unconsumed snapshot and exercise context is read-on
   }
 });
 
+test("a lecture reply reveals an unmounted proof and delivers its batch once it registers", async () => {
+  const workspace = queryWorkspace("textbook");
+  const actions = [{ type: "highlight_proof_step", ref: "uniform:2" }];
+  const navigation = new EventTarget();
+  const seen = [];
+  let remove;
+  globalThis.window = navigation;
+  navigation.addEventListener("axiom:reveal-pane", event => {
+    assert.equal(event.detail.pane, "proof");
+    queueMicrotask(() => {
+      remove = registerWorkspaceEndpoint("proof", {
+        query: () => ({}),
+        command: batch => { seen.push(batch); return true; },
+      });
+    });
+  });
+  try {
+    assert.equal(await workspace.dispatchActions(actions, new AbortController().signal), true);
+    assert.deepEqual(seen, [actions]);
+  } finally {
+    remove?.();
+    delete globalThis.window;
+  }
+});
+
+test("leaving a requested target before it mounts cancels delivery", async () => {
+  const controller = new AbortController();
+  let changed = false;
+  globalThis.window = new EventTarget();
+  const delivered = queryWorkspace("textbook").dispatchActions(
+    [{ type: "set_scene_param", name: "zoom", value: 1.3 }], controller.signal,
+  );
+  controller.abort();
+  const remove = registerWorkspaceEndpoint("surface", {
+    query: () => ({}), command: () => { changed = true; return true; },
+  });
+  try {
+    assert.equal(await delivered, false);
+    assert.equal(changed, false);
+  } finally {
+    remove();
+    delete globalThis.window;
+  }
+});
+
+test("a stale target or mixed-target batch never causes a partial edit", async () => {
+  let changed = false;
+  const endpoint = () => ({ query: () => ({}), command: () => { changed = true; return true; } });
+  const remove = registerWorkspaceEndpoint("explore", endpoint());
+  const snapshot = queryWorkspace("textbook");
+  const update = registerWorkspaceEndpoint("explore", endpoint());
+  try {
+    const signal = new AbortController().signal;
+    const sceneAction = { type: "set_scene_param", name: "x0", value: 2 };
+    assert.equal(await snapshot.dispatchActions([sceneAction], signal), false);
+    assert.equal(await queryWorkspace("textbook").dispatchActions([
+      sceneAction, { type: "highlight_proof_step", ref: "uniform:3" },
+    ], signal), false);
+    assert.equal(changed, false);
+  } finally {
+    update(); remove();
+  }
+});
+
+test("an active 2D plot keeps a user parameter whose name matches a surface control", async () => {
+  let opacity = 0.4;
+  const remove = registerWorkspaceEndpoint("explore", {
+    query: () => ({ function_scene: { controls: {x0:0}, parameters:[{ name: "opacity", value: opacity }] } }),
+    command: ([action]) => { opacity = action.value; return true; },
+  });
+  try {
+    const ok = await queryWorkspace("explore").dispatchActions(
+      [{ type: "set_scene_param", name: "opacity", value: 0.7 }], new AbortController().signal,
+    );
+    assert.equal(ok, true);
+    assert.equal(opacity, 0.7);
+  } finally {
+    remove();
+  }
+});
+
+test("offline quick prompts explain the selected example's repair and actual lecture conditions", () => {
+  const unit = { definition: "定义", formula: "f", conditions:["连续", "闭区间"], tools:["列紧性"] };
+  const classic = { repair: "把开区间改为闭区间" };
+  assert.match(localReply("怎样补全条件", unit, classic, {}).display_markdown, /把开区间改为闭区间/);
+  assert.match(localReply("梳理条件", unit, classic, {}).display_markdown, /闭区间/);
+  assert.match(localReply("这一步的依据", unit, classic, {step:"取子列"}).display_markdown, /列紧性/);
+});
+
+test("lecture context advertises only the available sibling plot controls and parameter bounds", () => {
+  const remove = registerWorkspaceEndpoint("explore", {query: () => ({function_scene: {
+    active_expression: "a*x", controls: {x0:2}, parameters: [{ name:"a", value:1, min:-5, max:5 }],
+  }})});
+  try {
+    assert.deepEqual(queryWorkspace("textbook").context.available_scene_controls, {explore:{
+      controls:{x0:2}, parameters:[{name:"a", value:1, min:-5, max:5}],
+    }});
+  } finally {
+    remove();
+  }
+});
+
 test("2D suggestions edit existing parameters and visible analysis controls through validation", () => {
   const scene = applyFunctionScene({
     ...initialScene,
@@ -133,6 +237,12 @@ test("one reply can apply two validated parameters in a single scene update", ()
       { type: "set_scene_param", name: "a", value: 3 },
       { type: "set_scene_param", name: "subdivisions", value: 28 },
       { type: "set_scene_param", name: "subdivisions", value: 3.5 },
+    ]), false);
+    assert.equal(commits, 0);
+    assert.equal(scene.parameters[0].value, 1);
+    assert.equal(workspace.applyActions([
+      { type: "set_scene_param", name: "a", value: 3 },
+      { type: "set_scene_param", name: "subdivisions", value: 28 },
     ]), true);
     assert.equal(scene.parameters[0].value, 3);
     assert.equal(scene.subdivisions, 28);

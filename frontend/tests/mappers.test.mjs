@@ -233,7 +233,7 @@ test("mapDashboard and mapDiagnostic expose stable view-model fields", () => {
         mastery: { overall: 55, concepts_tracked: 4, concept_total: 8 },
         graph: { gaps: 5 },
         review: { count: 4 },
-        current: { page: "exercises", concept: { id: "uniform", name: "一致连续", short_name: "一致连续" } },
+        current: { page: "desk/exercises", concept: { id: "uniform", name: "一致连续", short_name: "一致连续" } },
       },
       catalog: { stats: { concepts: 8 } },
       review_queue: [],
@@ -242,6 +242,7 @@ test("mapDashboard and mapDiagnostic expose stable view-model fields", () => {
     practice,
   );
   assert.equal(dashboard.summary.practice.attemptsTotal, 10);
+  assert.equal(dashboard.summary.current.page, "desk/exercises");
   assert.equal(dashboard.graphStats.edges, 28);
   assert.equal(dashboard.practiceTotals.coveragePercent, 20);
 

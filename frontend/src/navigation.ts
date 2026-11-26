@@ -1,53 +1,33 @@
-import {
-  ChartNoAxesCombined,
-  CircleDot,
-  ClipboardList,
-  Gauge,
-  LayoutGrid,
-  Network,
-  Route,
-  SquareCheck,
-  Stethoscope,
-  StickyNote,
-  BookOpen,
-  Boxes,
-} from "lucide-react";
+import { BookOpen, Gauge, Library, Network } from "lucide-react";
 
-export const navigation: { label: string; items: [string, string, typeof Gauge][] }[] =
-  [
-    {
-      label: "学习流程",
-      items: [
-        ["dashboard", "学习工作台", Gauge],
-        ["textbook", "教材定义与条件", BookOpen],
-        ["explore", "图像探索", ChartNoAxesCombined],
-        ["examples", "正反例实验室", CircleDot],
-        ["proof", "证明思路", Route],
-        ["exercises", "练习题库", ClipboardList],
-        ["review", "完整解答与复盘", SquareCheck],
-      ],
-    },
-    {
-      label: "可视化视图",
-      items: [
-        ["practice-map", "知识点练习可视化", LayoutGrid],
-        ["knowledge-map", "数学总地图", Network],
-        ["surface", "三维曲面实验室", Boxes],
-      ],
-    },
-    {
-      label: "个人",
-      items: [
-        ["diagnostic", "前置知识诊断", Stethoscope],
-        ["notes", "我的笔记", StickyNote],
-      ],
-    },
-  ];
-export const validRoutes = navigation.flatMap((g) =>
-  g.items.map((i) => i[0] as string),
-);
-export const pageFromHash = () =>
-  validRoutes.includes(location.hash.slice(1))
-    ? location.hash.slice(1)
-    : "dashboard";
+export const navigation = [
+  ["dashboard", "学习主页", Gauge],
+  ["desk", "学习书桌", BookOpen],
+  ["atlas", "知识星图", Network],
+  ["shelf", "书架与笔记", Library],
+] as const;
 
+export const subpages = {
+  desk: { textbook:"讲义定义", examples:"正反例", proof:"证明思路", exercises:"练习", review:"复盘", explore:"2D 函数", surface:"3D 曲面", pdf:"课本原文" },
+  atlas: { "knowledge-map":"知识地图", "practice-map":"练习分布", diagnostic:"前置诊断" },
+  shelf: { books:"教材书架", notes:"我的笔记", archive:"学习存档" },
+} as const;
+
+const routes = new Map<string,string>([["dashboard","dashboard"]]);
+for (const [section, children] of Object.entries(subpages)) {
+  const keys = Object.keys(children);
+  routes.set(section, section + "/" + keys[0]);
+  for (const key of keys) {
+    const address = section + "/" + key;
+    routes.set(key,address);
+    routes.set(address,address);
+  }
+}
+export const validRoutes = [...routes.keys()];
+export const normalizeRoute = (route: string) => routes.get(route);
+export function pageFromHash(current = window.location, stack = window.history, storage = window.localStorage): string {
+  const raw = current.hash.slice(1);
+  const target = normalizeRoute(raw || storage.getItem("axiom-last-page") || "dashboard") || "dashboard";
+  if (raw !== target) stack.replaceState(null, "", "#" + target);
+  return target;
+}

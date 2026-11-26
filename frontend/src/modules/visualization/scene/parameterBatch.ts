@@ -7,9 +7,10 @@ export function sceneParameterBatch<Scene>(
 ): Scene | null {
   let next = scene;
   for (const action of actions) {
-    if (action.type === "set_scene_param") {
-      next = validateChange(next, action.name, action.value) ?? next;
-    }
+    if (action.type !== "set_scene_param") return null;
+    const candidate = validateChange(next, action.name, action.value);
+    if (!candidate) return null;
+    next = candidate;
   }
   if (next === scene || JSON.stringify(next) === JSON.stringify(scene))
     return null;

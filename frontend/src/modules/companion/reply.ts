@@ -38,11 +38,17 @@ export async function requestReply(question: string, context: object, history: M
 }
 
 export function localReply(question: string, unit: CurriculumUnit, classic: ClassicSet | undefined,
-  lesson: { step?: string; hint?: string; expression?: string; answer?: string }): Reply {
+  lesson: { step?: string; hint?: string; expression?: string; answer?: string; evidence?: string }): Reply {
   let display: string;
   if (question.includes("反例")) {
     display = classic ? "考察命题「" + classic.statement + "」。\n\n" + classic.negative + "。"
       + classic.negativeCopy : "本单元的条件辨析可以从这个例子入手。\n\n" + unit.example;
+  } else if (question.includes("补全条件") && classic) {
+    display = classic.repair + (lesson.evidence ? "\n\n" + lesson.evidence : "");
+  } else if (question.includes("条件") && unit.conditions.length) {
+    display = unit.conditions.map(condition => "• " + condition).join("\n");
+  } else if (question.includes("依据") && lesson.step) {
+    display = lesson.step + "\n\n本单元可核对的依据：" + unit.tools.join("、") + "。";
   } else if (/提示|怎么做|思路/.test(question)) {
     display = (lesson.answer ? "对照你已写的作答，检查下面的关键条件。\n\n" : "") + (lesson.hint || unit.hint);
   } else if (lesson.step) {

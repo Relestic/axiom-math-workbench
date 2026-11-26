@@ -1,0 +1,150 @@
+.desk-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.2vw, 22px);
+  height: max(360px, calc(100dvh - 68px - clamp(28px, 4vw, 64px)));
+}
+.desk-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+.desk-tools {
+  flex: none;
+  padding: 0 3px 10px;
+}
+.desk-tool-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 39px;
+  margin-bottom: 10px;
+}
+.desk-tool-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+.desk-tool-heading h2 svg { color: var(--teal); }
+.desk-tool-heading .module-select {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.desk-tool-heading .module-select span { flex: none; }
+.desk-tool-heading .module-select select {
+  min-width: 0;
+  padding: 7px 8px;
+  text-overflow: ellipsis;
+}
+.desk-tool-heading .desk-collapse {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.desk-tabs, .desk-mobile-switch, .desk-practice-switch {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+}
+.desk-tabs, .desk-mobile-switch {
+  padding: 3px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  border-radius: 10px;
+}
+.desk-tabs button, .desk-mobile-switch button, .desk-practice-switch button {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+.desk-tabs button[aria-selected="true"], .desk-mobile-switch button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 650;
+  box-shadow: 0 1px 3px #131a3017;
+}
+.desk-board .desk-tabs button[aria-selected="true"] { color: var(--teal); }
+.desk-practice-switch { margin-top: 6px; }
+.desk-practice-switch button { flex: none; padding-inline: 10px; }
+.desk-practice-switch button[aria-pressed="true"] { background: var(--accent-soft); color: var(--primary); }
+.desk-panel {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: 3px;
+}
+.desk-panel:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.desk-panel[hidden], .desk-mobile-switch, .desk-panel .learning-page .module-select { display: none; }
+.desk-workbench[data-board-collapsed="true"] .desk-columns { grid-template-columns: minmax(0, 1fr); }
+.desk-workbench[data-board-collapsed="true"] .desk-board { display: none; }
+.desk-panel .learning-heading .learning-step { display: none; }
+
+/* The original workspaces respond to viewport width. Each half of the desk
+   also needs to respond to its own width, including when the rails resize. */
+@container (max-width: 760px) {
+  .desk-panel :is(.textbook-columns, .proof-layout, .exercise-layout, .example-pair, .classic-grid,
+      .fw-grid, .surface-layout, .ex-workspace, .ex-chat-grid, .ex-proof-grid, .ex-bottom-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desk-panel :is(.page-heading, .book-summary, .exercise-settings, .learning-next,
+      .section-title, .fw-status, .fw-chart-heading, .surface-chart-heading, .surface-chart-foot) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .desk-panel .page-heading { margin: 8px 0 12px; }
+  .desk-panel .page-heading h1 { margin: 0; font-size: 19px; }
+  .desk-panel :is(.textbook-details, .proof-outline, .exercise-main, .fw-main, .surface-main) { min-width: 0; }
+  .desk-panel .book-summary-main { min-width: min(180px, 100%); }
+  .desk-panel .paper-content { columns: auto; }
+  .desk-panel .card { padding: 15px; }
+  .desk-panel .definition-tokens, .desk-panel .answer-label { flex-wrap: wrap; }
+  .desk-panel .token-wrap { min-width: 85px; }
+  .desk-panel .proof-step-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-panel .review-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-panel .exercise-sidebar { grid-template-columns: minmax(0, 1fr); }
+  .desk-panel .learning-tabs { flex-wrap: wrap; }
+  .desk-panel .learning-page .section-title > small { margin-left: 0; }
+  .desk-panel .statement-flow { flex-direction: column; align-items: stretch; }
+  .desk-panel .statement-flow > svg { transform: rotate(90deg); align-self: center; }
+  .desk-panel :is(.function-workspace, .surface-page) > .page-heading > div:first-child { display: none; }
+  .desk-panel .fw-status { justify-content: flex-start; margin: 0 0 12px; }
+  .desk-panel .fw-modebar { margin-bottom: 12px; }
+  .desk-panel .fw-modebar > button { padding: 6px 9px; }
+  .desk-panel .fw-modebar > span { display: none; }
+  .desk-panel .fw-main { display: contents; }
+  .desk-panel .fw-chart-card, .desk-panel .surface-main { grid-row: 1; }
+  .desk-panel .fw-editor, .desk-panel .surface-controls { grid-row: 2; }
+  .desk-panel .fw-chat, .desk-panel .surface-chat { grid-row: 3; }
+  .desk-panel :is(.fw-editor, .surface-chat) { display: block; position: static; }
+  .desk-panel .fw-plot-canvas { height: clamp(225px, 78cqi, 420px); }
+  .desk-panel .fw-plot { min-height: 0; }
+  .desk-panel .surface-canvas { min-height: 0; }
+  .desk-panel .surface-canvas svg { height: auto; }
+}
+@media (max-width: 1023px) {
+  .desk-mobile-switch { display: flex; margin: 0 3px 12px; }
+  .desk-mobile-switch button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+  .desk-columns { display: block; height: auto; }
+  .desk-workbench .desk-collapse { display: none; }
+  .desk-workbench[data-side="study"] .desk-board, .desk-workbench[data-side="board"] .desk-study { display: none; }
+  .desk-workbench[data-side="board"] .desk-board { display: flex; }
+  .desk-panel { flex: none; }
+}

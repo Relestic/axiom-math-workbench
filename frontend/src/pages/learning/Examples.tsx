@@ -22,6 +22,7 @@ import {
 import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useAppData } from "../../app/DataProvider";
+import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import type { ClassicKind } from "../../domain/types";
 import { Heading, useUnit, type Props } from "./shared";
 
@@ -151,14 +152,27 @@ export function MiniChart({
 export function Examples({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
   const classicSets = app.data.classics;
-  const [index, setIndex] = useState(() =>
-    Math.max(
-      0,
-      classicSets.findIndex((item) => item.id === app.selectedConceptId),
-    ),
-  );
+  const c = classicSets.find((item) => item.id === app.selectedConceptId);
   const [evidence, setEvidence] = useState("");
-  const c = classicSets[index] || classicSets[0];
+  useWorkspaceEndpoint("examples", JSON.stringify([c?.id, evidence]), {
+    query: () => ({ example: c ? { statement: c.statement, negative: c.negative, repair: c.repair, evidence } : null }),
+  });
+  const caseTabs = <div className="learning-tabs" role="group" aria-label="经典案例">
+    {classicSets.map((item) => (
+      <button key={item.id} className={c?.id === item.id ? "active" : ""}
+        aria-pressed={c?.id === item.id} onClick={() => {
+          setEvidence("");
+          app.selectConcept(item.id);
+        }}>{item.label}</button>
+    ))}
+  </div>;
+  if (!c) {
+    return <div className="learning-page examples-page">
+      <Heading step="第 3 步 / 共 6 步" title="正反例实验室"
+        description={classicSets.length ? "当前知识点尚未收录正反例，可选择下方已有案例。" : "当前教材尚未收录正反例。"} />
+      {caseTabs}
+    </div>;
+  }
   const sourceFor = (id: string) =>
     app.data.units.find((unit) => unit.id === id)?.source || "";
   const properties = [
@@ -189,21 +203,7 @@ export function Examples({ onNavigate, onSaveNote, notify }: Props) {
           加入反例收藏
         </button>
       </Heading>
-      <div className="learning-tabs">
-        {classicSets.map((s, i) => (
-          <button
-            key={s.id}
-            className={index === i ? "active" : ""}
-            onClick={() => {
-              setIndex(i);
-              setEvidence("");
-              app.selectConcept(s.id);
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {caseTabs}
       <section className="card proposition">
         <div className="section-title">
           <span className="badge">待判定命题</span>

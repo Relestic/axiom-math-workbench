@@ -1,3 +1,4 @@
+import { normalizeRoute } from "../../navigation";
 import { useRef, useState } from "react";
 import {
   ArchiveUnavailable,
@@ -78,6 +79,8 @@ export function LearningArchiveSettings() {
       : "本机数据库和此浏览器中的学习记录";
     if (!window.confirm(`导入会替换${scope}。继续导入？`)) return;
     await restore();
+    const restoredPage = normalizeRoute(localStorage.getItem("axiom-last-page") || "dashboard");
+    if (restoredPage) window.history.replaceState(null, "", "#" + restoredPage);
     window.location.reload();
   }
 

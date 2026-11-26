@@ -296,10 +296,11 @@ export default function FunctionPlot({
   }, [plot]);
   useEffect(() => {
     const el = element.current!;
-    const resize = new ResizeObserver(() => {
+    const resize = new ResizeObserver(([entry]) => {
+      if (!entry.contentRect.width || !entry.contentRect.height) return;
       import("plotly.js-basic-dist-min").then(({ default: p }) => {
-        if (el.isConnected && el.querySelector(".plot-container"))
-          p.Plots.resize(el);
+        if (el.isConnected && el.clientWidth && el.clientHeight && el.querySelector(".plot-container"))
+          void p.Plots.resize(el);
       });
     });
     resize.observe(el);

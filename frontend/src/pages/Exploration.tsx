@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MathPreview, MathText, SymbolBar } from "../components/Math";
+import { useWorkspaceEndpoint } from "../app/useWorkspaceEndpoint";
 import {
   ArrowRight,
   BookmarkPlus,
@@ -744,6 +745,11 @@ function SurfacePlot({ c }: { c: Config }) {
 
 export default function Exploration({ onNavigate, onSaveNote, notify }: Props) {
   const [c, setC] = useState<Config>(readConfig);
+  useWorkspaceEndpoint("explore", JSON.stringify(c), {
+    query: () => ({ function_scene: {
+      mode: labels[c.topic], active_expression: c.dimension === 3 ? "x² + y²" : names[c.fn], controls: {},
+    } }),
+  });
   const [history, setHistory] = useState<Config[]>([]);
   const [messages, setMessages] = useState<Message[]>(() =>
     read("axiom-exploration-chat", [

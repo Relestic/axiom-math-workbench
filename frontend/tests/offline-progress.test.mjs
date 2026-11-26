@@ -37,6 +37,7 @@ test("offline progress derives the same totals and review queue from saved attem
   ]);
   const { dashboard, practice } = deriveOfflineProgress(attempts, now);
 
+  assert.equal(dashboard.summary.current.page, "dashboard");
   assert.equal(dashboard.summary.today.attempts, 1);
   assert.equal(dashboard.summary.today.distinctConcepts, 1);
   assert.equal(dashboard.summary.streakDays, 2);

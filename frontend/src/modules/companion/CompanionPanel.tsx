@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Send, Volume2, VolumeX, Square } from "lucide-react";
 import { useAppData } from "../../app/DataProvider";
 import { MathText, SymbolBar, MathPreview } from "../../components/Math";
@@ -19,12 +19,24 @@ function BubbleText({text}: {text:string}) {
 }
 
 type Turn = Message & { scope: string };
+const quickQuestions: Record<string, string[]> = {
+  textbook: ["解释当前定义", "梳理条件"],
+  proof: ["解释这一步", "这一步的依据"],
+  examples: ["解释这个反例", "怎样补全条件"],
+  exercises: ["给点提示", "检查作答思路"],
+  review: ["梳理易错条件", "给个复习提示"],
+  explore: ["解释当前图像", "怎样观察参数"],
+  surface: ["解释当前曲面", "怎样观察曲面"],
+  pdf: ["回顾当前定义", "梳理条件"],
+};
 function object(value: unknown): Record<string,unknown> {
   return value && typeof value === "object" ? value as Record<string,unknown> : {};
 }
 function string(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
 
-export function CompanionPanel({page, stage}: {page:string; stage:RefObject<CompanionStage | null>}) {
+export function CompanionPanel({page, stage, stageView}: {
+  page:string; stage:RefObject<CompanionStage | null>; stageView: ReactNode;
+}) {
   const {data, selectedConceptId} = useAppData();
   const {status} = useAIConnection();
   const unit = data.units.find(item => item.id === selectedConceptId) ?? data.units[0];
@@ -34,6 +46,7 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
   const [notice,setNotice] = useState("");
   const [muted,setMuted] = useState(() => localStorage.getItem("axiom-companion-muted") === "true");
   const [speaking,setSpeaking] = useState(false);
+  const [symbolsOpen,setSymbolsOpen] = useState(false);
   const mutedRef = useRef(muted);
   const request = useRef<AbortController | null>(null);
   const sequence = useRef(0);
@@ -41,6 +54,8 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
   const field = useRef<HTMLTextAreaElement>(null);
   const transcript = useRef<HTMLDivElement>(null);
   const scope = page + "/" + selectedConceptId;
+  const previousScope = useRef(scope);
+  const requestedScope = useRef<string | null>(null);
 
   function stopVoice() {
     speechId.current++;
@@ -48,15 +63,29 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
     setSpeaking(false);
   }
 
-  useLayoutEffect(() => {
+  function cancelQuestion() {
+    sequence.current++;
+    request.current?.abort();
+    request.current = null;
+    requestedScope.current = null;
     setBusy(false);
+  }
+  useLayoutEffect(() => {
+    if (previousScope.current === scope) return;
+    previousScope.current = scope;
+    if (requestedScope.current === scope) {
+      requestedScope.current = null;
+      return;
+    }
+    cancelQuestion();
+    stopVoice();
     setNotice("");
-    return () => {
-      sequence.current++;
-      request.current?.abort();
-      stopVoice();
-    };
   }, [scope]);
+  useLayoutEffect(() => () => {
+    sequence.current++;
+    request.current?.abort();
+    stopVoice();
+  }, []);
 
   useEffect(() => {
     const box = transcript.current;
@@ -89,19 +118,21 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
 
   async function ask(raw:string) {
     const question = raw.trim();
-    if (!question || busy || !unit) return;
+    if (!question || request.current || !unit) return;
     const workspace = queryWorkspace(page);
-    if (["proof", "exercises", "surface"].includes(page) && !Object.keys(workspace.context).length) {
+    if (["textbook", "examples", "proof", "exercises", "explore", "surface"].includes(page) && !workspace.ready) {
       setNotice("正在加载当前学习内容，请稍后再提问。");
       return;
     }
     const id = ++sequence.current;
+    requestedScope.current = null;
     const controller = new AbortController();
     request.current = controller;
     stopVoice();
     setBusy(true);
     setNotice("");
     setInput("");
+    setSymbolsOpen(false);
     setTurns(items => [...items.slice(-29), {role:"user", content:question, scope}]);
     const local = !status?.configured;
     try {
@@ -112,13 +143,21 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
         ? localReply(question, unit, data.classics.find(c => c.id === unit.id), {
           step: string(object(proof.current_step).text), hint:string(exercise.hint),
           answer:string(exercise.draft_answer), expression,
+          evidence:string(object(details.example).evidence),
         })
         : await requestReply(question, {
           page, concept_id:unit.id, title:unit.title, definition:unit.definition, formula:unit.formula, ...details,
         }, turns.filter(turn => turn.scope === scope), controller.signal);
       if (id !== sequence.current) return;
+      if (!workspace.isCurrent()) {
+        setNotice("学习内容已更新，可按当前步骤重新提问。");
+        return;
+      }
       if (reply.actions.length) {
-        const applied = workspace.isCurrent() && workspace.applyActions(reply.actions);
+        const applied = await workspace.dispatchActions(reply.actions, controller.signal, target => {
+          requestedScope.current = target + "/" + selectedConceptId;
+        });
+        if (id !== sequence.current) return;
         if (!applied) setNotice("当前步骤或参数与建议不符，已保留原内容。");
       }
       setTurns(items => [...items.slice(-29), {role:"assistant",content:reply.display_markdown,
@@ -135,13 +174,20 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
   }
 
   return <section className="companion-panel" aria-label="伴学对话">
-    <div className="companion-topic"><strong>{unit?.short ?? "数学分析"}</strong>
-      <button type="button" className="icon-button" aria-label={muted ? "开启伴学朗读" : "静音只看字幕"}
-        title={muted ? "开启朗读" : "静音只看字幕"} aria-pressed={muted} onClick={toggleMute}>
-        {muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
-      </button>
-    </div>
-    <div className="companion-transcript" aria-live="polite" ref={transcript}>
+    <header className="companion-stage-region">
+      {stageView}
+      <div className="companion-stage-tools">
+        <span className="companion-status" role="status" data-state={busy ? "busy" : speaking ? "speaking" : "idle"}>
+          {busy ? "思考中" : speaking ? "讲解中" : "待命"}
+        </span>
+        <button type="button" className="icon-button" aria-label={muted ? "开启伴学朗读" : "静音只看字幕"}
+          title={muted ? "开启朗读" : "静音只看字幕"} aria-pressed={muted} onClick={toggleMute}>
+          {muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}
+        </button>
+      </div>
+      <div className="companion-topic"><strong>Hiyori</strong><span>{unit?.short ?? "数学分析"}</span></div>
+    </header>
+    <div className="companion-transcript" role="log" aria-label="伴学对话记录" aria-live="polite" ref={transcript}>
       {!turns.length && <p className="companion-intro">{status?.configured
         ? "可以问我当前的证明、图像或作答。" : "选一个问题，从当前知识点的本地讲义开始。"}</p>}
       {turns.map((m,i) => <article key={i} className={"companion-bubble " + m.role}>
@@ -150,21 +196,23 @@ export function CompanionPanel({page, stage}: {page:string; stage:RefObject<Comp
         {m.spoken && !muted && <button type="button" className="read-reply" onClick={() => void read(m.spoken!)}>朗读</button>}
       </article>)}
       {busy && <p role="status" className="companion-intro">正在准备讲解…</p>}
-    </div>
-    <div className="companion-compose">
       {notice && <p className="companion-notice" role="status">{notice}</p>}
+    </div>
+    <div className="companion-compose"
+      onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setSymbolsOpen(false); }}>
       {speaking && <button type="button" className="read-reply" onClick={stopVoice}><Square size={11}/> 停止朗读</button>}
-      <div className="companion-quick">{["解释这一步","举个反例","给点提示"].map(q =>
+      <div className="companion-quick">{(quickQuestions[page] ?? ["解释当前定义", "举个反例"]).map(q =>
         <button className="btn" type="button" key={q} disabled={busy} onClick={() => void ask(q)}>{q}</button>)}</div>
       <form onSubmit={e => { e.preventDefault(); void ask(input); }}>
         <textarea ref={field} rows={2} maxLength={2000} value={input} aria-label="向 Hiyori 提问"
-          placeholder="问问当前的步骤或公式…" onChange={e => setInput(e.target.value)} />
-        <SymbolBar inputRef={field} value={input} onChange={setInput} />
+          placeholder="问问当前的步骤或公式…" onFocus={() => setSymbolsOpen(true)} onChange={e => setInput(e.target.value)} />
+        {symbolsOpen && <SymbolBar inputRef={field} value={input} onChange={setInput} />}
         <MathPreview value={input} />
         <div className="companion-send">
-          {busy ? <button type="button" className="btn" onClick={() => {
-            sequence.current++; request.current?.abort(); setBusy(false);
-          }}>取消提问</button> : <button className="btn primary" type="submit" disabled={!input.trim()}><Send size={13}/>发送</button>}
+          <button className="btn companion-symbol-toggle" type="button" aria-label="数学符号" title="数学符号"
+            aria-expanded={symbolsOpen} onClick={() => setSymbolsOpen(value => !value)}>∑</button>
+          {busy ? <button type="button" className="btn" onClick={cancelQuestion}>取消提问</button>
+            : <button className="btn primary" type="submit" disabled={!input.trim()}><Send size={13}/>发送</button>}
         </div>
       </form>
     </div>
