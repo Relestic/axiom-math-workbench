@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from "react";
 import { variantCode } from "./review";
+import type { Exercise } from "../../domain/types";
+
+export function exerciseSelectionValue(exercise: Exercise) {
+  return exercise.source === "ai-variant" || exercise.source === "textbook-exercise"
+    ? exercise.id : String(exercise.coefficient);
+}
 
 function subscribe(listener: () => void) {
   window.addEventListener("axiom:exercise-selection",listener);

@@ -362,6 +362,8 @@ def exercise_out(
         "hint_available": bool(exercise.hint),
         "solution_available": bool(exercise.solution_steps),
     }
+    if exercise.source == "textbook-exercise":
+        data["exercise_type"] = exercise.exercise_type
     if include_hint:
         data["hint"] = exercise.hint
     if include_solution:

@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from ..adapters.math import MathError, check_answer
@@ -178,7 +178,17 @@ def _require_exercise(session: Session, user: User, exercise_id: str) -> Exercis
         owner = session.scalar(select(Attempt.user_id).where(Attempt.id == parent_id))
         if owner != user.id:
             raise ApiError("not_found", "练习不存在或尚未发布")
+    if exercise.source == "textbook-exercise" and exercise.provenance.get("user_id") != user.id:
+        raise ApiError("not_found", "练习不存在或尚未发布")
     return exercise
+
+
+def remove_textbook_exercises(session: Session, book_id: str) -> None:
+    from_book = Exercise.provenance["textbook_id"].as_string() == book_id
+    attempted = select(Attempt.id).where(Attempt.exercise_id == Exercise.id).exists()
+    session.execute(update(Exercise).where(from_book, attempted).values(status="archived")
+                    .execution_options(synchronize_session=False))
+    session.execute(delete(Exercise).where(from_book, ~attempted).execution_options(synchronize_session=False))
 
 
 def rate_attempt(session: Session, attempt: Attempt, rating: str):
@@ -729,7 +739,7 @@ def _rubric_feedback(
     normalized = _normalized_answer(text)
     # A generated problem may change the proposition itself (e.g. x² on [0,1] to 4x on R).
     # Seed-specific constructions and conclusions would misgrade its proof.
-    rubric = (GENERIC_PROOF_RUBRIC if exercise.source == "ai-variant"
+    rubric = (GENERIC_PROOF_RUBRIC if exercise.source in {"ai-variant", "textbook-exercise"}
               else PROOF_RUBRICS.get(exercise.topic_id, GENERIC_PROOF_RUBRIC))
     criteria = []
     observations = []
@@ -813,6 +823,9 @@ def build_feedback(
     check_spec = exercise.answer_check or {}
     if check_spec and check_spec.get("expected"):
         return _symbolic_feedback(exercise, text, assistance, check_spec)
+    if exercise.source == "textbook-exercise" and exercise.exercise_type == "calculation":
+        return {"status": "needs_review", "needs_review": True, "score": None, "correct": None,
+                "summary": "已保存计算过程，请对照本题参考解答与自查要点复核最终结果。"}
     if exercise.topic_id in PROOF_RUBRICS or exercise.exercise_type in {
         "proof",
         "proof_completion",

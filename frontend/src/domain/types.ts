@@ -13,6 +13,8 @@ export type CurriculumUnit = {
   definition: string;
   formula: string;
   proof: string[];
+  proofSteps?: { n: number; title: string; formula: string; text: string; why: string; uses: string[]; conditions: string[] }[];
+  proofStatus?: string | null;
   example: string;
   exercise: string;
   solution: string[];
@@ -30,6 +32,7 @@ export type Exercise = {
   topicId: string;
   coefficient: number;
   title: string;
+  shortTitle?: string;
   hint: string;
   solution: string[];
   checks: string[];
@@ -38,7 +41,7 @@ export type Exercise = {
   skill?: string;
   type?: string;
   source?: string;
-  provenance?: {parent_attempt_id?: string; target_error?: string; model?: string};
+  provenance?: {parent_attempt_id?: string; target_error?: string; model?: string; user_id?: string; textbook_id?: string | null; card_id?: string};
 };
 
 export type AttemptFeedback = {

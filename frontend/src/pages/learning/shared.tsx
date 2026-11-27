@@ -1,9 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from "react";
-import { ArrowRight, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useAppData } from "../../app/DataProvider";
 import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
 import { pageLabel } from "../../modules/teaching/localTextbooks";
+import { useAIConnection } from "../../modules/ai/connection";
 
 export type Props = {
   onNavigate: (page: string) => void;
@@ -11,6 +12,29 @@ export type Props = {
   notify: (text: string) => void;
 };
 export type SourceProps = Props & { onReadSource: (bookId: string, page: number) => void };
+
+export function CardGenerationButton({ label, generate }: { label: string; generate: () => Promise<void> }) {
+  const { status, available } = useAIConnection();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function run() {
+    setBusy(true);
+    setError("");
+    try {
+      await generate();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "生成失败，请重试。");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <div>
+    <button type="button" className="btn primary" disabled={busy || !status?.configured}
+      onClick={() => void run()}><Sparkles size={15} />{busy ? "正在生成…" : label}</button>
+    {available !== null && !status?.configured && <p className="muted">请先在顶部配置个人 DeepSeek Key</p>}
+    {error && <p role="alert">{error}</p>}
+  </div>;
+}
 
 export function SourcePageButton({ source, read }: {
   source: NonNullable<CurriculumUnit["textbookSource"]>;

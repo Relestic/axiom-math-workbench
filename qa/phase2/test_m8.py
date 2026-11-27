@@ -52,7 +52,7 @@ def test_local_pdf_shelf_persists_without_login(page, server, sample_pdf):
     assert page.request.get(file_url).status == 404
 
 
-def test_real_card_extraction_reader_anchor_and_clean_archive(page, server, sample_pdf, tmp_path):
+def test_real_card_extraction_reader_anchor_and_clean_archive(page, server, sample_pdf, tmp_path, extraction_only):
     result = {"cards": [{"title": TITLE, "definition": "一致连续的尺度适用于区间中任意两点。",
                          "formula": "|x-y|<δ", "conditions": ["区间为紧区间", "函数在区间上连续"],
                          "theorem": "紧区间上的连续函数一致连续。", "proof": ["由紧性取收敛子列。", "在同一点利用连续性。"],

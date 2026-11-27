@@ -132,7 +132,7 @@ export function mapAttempt(dto: AttemptDto): Attempt {
     id: dto.id,
     exerciseId: code,
     topicId: dto.exercise?.topic_id || code.split("-")[0] || "",
-    coefficient: code.startsWith("variant-") ? 0 : (Number.isInteger(suffix) && suffix >= 2 && suffix <= 5 ? suffix : 2),
+    coefficient: code.startsWith("variant-") || code.startsWith("card-ex-") ? 0 : (Number.isInteger(suffix) && suffix >= 2 && suffix <= 5 ? suffix : 2),
     title: dto.exercise?.title || code || "练习作答",
     answer: dto.answer_text,
     hints: Boolean(dto.assistance?.hints_used),

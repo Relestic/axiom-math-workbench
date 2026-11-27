@@ -9,6 +9,8 @@ test("a saved variant selection and stepwise review survive browser archive vali
    aiReview:{summary:"对照量词",steps:[{step:"第一步",assessment:"量词范围未明确",suggestion:"说明取点范围"}],error_focus:"量词"}};
  const input = {"axiom-exercise-variant-uniform":selected,"axiom-offline-attempts":JSON.stringify([attempt])};
  assert.deepEqual(validateLearningStorage(input),input);
+ const cardSelection = {"axiom-exercise-variant-uniform":"card-ex-" + "b".repeat(32)};
+ assert.deepEqual(validateLearningStorage(cardSelection), cardSelection);
 });
 
 test("archived examples resume the lecture and preserve both board conversations", () => {

@@ -4,7 +4,7 @@ import { useAppData } from "../app/DataProvider";
 import type { LocalBook } from "../domain/types";
 import { useAIConnection } from "../modules/ai/connection";
 import {
-  deleteTextbook, extractCards, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
+  completeCards, deleteTextbook, extractCards, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
 } from "../modules/teaching/localTextbooks";
 import "./local-textbooks.css";
 
@@ -32,6 +32,9 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [newCardId, setNewCardId] = useState("");
+  const stop = useRef(false);
+  const [generating, setGenerating] = useState(false);
+  const [failures, setFailures] = useState<string[]>([]);
   const scans = book.pages.filter((item) => item.needs_ocr);
   const cards = data.units.filter((item) => item.textbookSource?.textbookId === book.id);
   const latest = cards.find((item) => item.id === newCardId) || cards[0];
@@ -43,9 +46,9 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
     setBusy(label);
     setError("");
     setStatus("");
+    setFailures([]);
     try {
       await action();
-      await refreshLocal();
       setEditing(null);
     } catch (cause) {
       setError(message(cause));
@@ -66,10 +69,20 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
       return;
     }
     void run("正在生成学习卡片…", async () => {
-      const result = await extractCards(book.id, rangeStart, rangeEnd);
-      if (!result.cards.length) throw new Error("所选页码未生成卡片，请检查原文后重试。");
-      setNewCardId(result.cards[0].id);
-      setStatus(`已生成 ${result.cards.length} 张学习卡片`);
+      stop.current = false;
+      setGenerating(true);
+      try {
+        const { cards } = await extractCards(book.id, rangeStart, rangeEnd);
+        if (!cards.length) throw new Error("所选页码未生成卡片，请检查原文后重试。");
+        setNewCardId(cards[0].id);
+        const failed = (context: string, cause: unknown) =>
+          setFailures(previous => [...previous, context + "：" + message(cause)]);
+        await refreshLocal().catch(cause => failed("刷新书架", cause));
+        await completeCards(cards, { stopped: () => stop.current, progress: setBusy, failed, refresh: refreshLocal });
+        setStatus(`已生成 ${cards.length} 张学习卡片` + (stop.current ? " · 已停止后续生成" : ""));
+      } finally {
+        setGenerating(false);
+      }
     });
   }
 
@@ -87,7 +100,10 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
     </div>
     {editing === "name" && <form className="shelf-inline" onSubmit={(event) => {
       event.preventDefault();
-      if (name.trim()) void run("正在保存名称…", async () => { await renameTextbook(book.id, name.trim()); });
+      if (name.trim()) void run("正在保存名称…", async () => {
+        await renameTextbook(book.id, name.trim());
+        await refreshLocal();
+      });
     }}>
       <label>教材名称<input value={name} maxLength={200} required autoFocus onChange={(event) => setName(event.target.value)} /></label>
       <button className="btn" disabled={!name.trim() || Boolean(busy)}>保存名称</button>
@@ -96,7 +112,10 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
     {editing === "delete" && <div className="shelf-inline" role="group" aria-label="删除教材">
       <p>确认删除《{book.title}》？{cards.length > 0 && `关联的 ${cards.length} 张学习卡片也会删除。`}</p>
       <button type="button" className="btn danger" disabled={Boolean(busy)}
-        onClick={() => void run("正在删除教材…", async () => { await deleteTextbook(book.id); })}>确认删除</button>
+        onClick={() => void run("正在删除教材…", async () => {
+          await deleteTextbook(book.id);
+          await refreshLocal();
+        })}>确认删除</button>
       <button className="btn" disabled={Boolean(busy)} autoFocus onClick={() => setEditing(null)}>取消</button>
     </div>}
     <p className="shelf-meta">共 {book.page_count} 页 · {book.pages.length - scans.length} 个文字页 · {scans.length} 个疑似扫描页</p>
@@ -118,10 +137,17 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
         <label>结束页<input type="number" min={1} max={book.page_count} required value={end}
           onChange={(event) => setEnd(event.target.value)} /></label>
         <button className="btn primary" disabled={Boolean(busy)}><Sparkles size={14} />生成学习卡片</button>
+        {generating && <button type="button" className="btn" disabled={stop.current} onClick={() => {
+          stop.current = true;
+          setBusy("正在等待当前请求结束，随后停止生成…");
+        }}>停止后续生成</button>}
       </div>
       {keyMissing && !error && <p className="muted">{keyMessage}</p>}
     </form>
     {error && <p role="alert" className="shelf-error">{error}</p>}
+    {failures.length > 0 && <ul role="alert" className="shelf-error">
+      {failures.map((item, i) => <li key={i}>{item}</li>)}
+    </ul>}
     {(busy || status) && <p role="status">{busy || status}</p>}
   </article>;
 }

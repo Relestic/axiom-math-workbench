@@ -50,7 +50,8 @@ export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: Sourc
       {unit.conditions.length > 0 && <><h3>条件</h3><ul>{unit.conditions.map((value, index) => <li key={index}><MathText>{value}</MathText></li>)}</ul></>}
       {source.theorem && <><h3>定理</h3><p><MathText>{source.theorem}</MathText></p></>}
       {unit.formula && unit.formula !== source.theorem && <p><MathText>{unit.formula}</MathText></p>}
-      {unit.proof.length > 0 && <><h3>证明思路</h3><ol>{unit.proof.map((value, index) => <li key={index}><MathText>{value}</MathText></li>)}</ol></>}
+      {unit.proof.length > 0 && <><h3>{unit.proofStatus === "ai_elaboration" ? "AI 补充分步推导" : "证明思路"}</h3>
+        <ol>{unit.proof.map((value, index) => <li key={index}><MathText>{value}</MathText></li>)}</ol></>}
       <div className="button-row">
         <button className="btn" onClick={toggle}><Bookmark size={14} />{bookmarked.includes(unit.id) ? "已收藏" : "收藏"}</button>
         <button className="btn" onClick={() => onSaveNote(`${unit.title}：${unit.definition}`, unit.id)}>记入笔记</button>

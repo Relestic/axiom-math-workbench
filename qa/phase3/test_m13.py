@@ -190,7 +190,7 @@ def check_paper(page, dark):
     assert (max(background["rgb"][:3]) < 100 if dark else min(background["rgb"][:3]) > 175), background
 
 
-def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture):
+def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture, extraction_only):
     page.set_viewport_size({"width": 1840, "height": 1010})
     server.use_mock_deepseek([
         {"contains": [PAGES_A[1], PAGES_A[-1]], "reply": {"cards": A}},
@@ -307,7 +307,7 @@ def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture):
     node(page, "mvt").press("Enter")
     label(page, "去学习书桌研读").click()
     expect(page).to_have_url(re.compile("#desk/textbook$"))
-    selector = page.locator("#desk-study .desk-tools select")
+    selector = page.get_by_role("combobox", name="选择章节知识点")
     expect(selector).to_have_value("mean-value")
     atlas = page.get_by_role("navigation", name="主导航").get_by_role("button", name="知识星图")
     atlas.click()
@@ -330,7 +330,7 @@ def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture):
     assert len(server.model_requests()) == 2
 
 
-def test_phone_atlas_controls_details_and_builtin_lecture(page, server, make_pdf):
+def test_phone_atlas_controls_details_and_builtin_lecture(page, server, make_pdf, extraction_only):
     server.use_mock_deepseek([{"contains": PAGES_B[:2], "reply": {"cards": B[:2]}}])
     key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-flash"})
     assert key.ok
@@ -356,5 +356,5 @@ def test_phone_atlas_controls_details_and_builtin_lecture(page, server, make_pdf
     expect(label(page, "内置课程")).to_have_attribute("aria-pressed", "true")
     label(page, "去学习书桌研读").click()
     expect(page).to_have_url(re.compile("#desk/textbook$"))
-    expect(page.locator("#desk-study .desk-tools select")).to_have_value("uniform")
+    expect(page.get_by_role("combobox", name="选择章节知识点")).to_have_value("uniform")
     expect(page.locator("#desk-pane-textbook")).to_be_visible()

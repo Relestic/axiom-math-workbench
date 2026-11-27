@@ -193,6 +193,12 @@ def page(browser, server):
 
 
 @pytest.fixture
+def extraction_only(page):
+    """Older shelf fixtures serve extracted cards but have no per-card AI endpoints."""
+    page.route("**/api/v1/local/cards/*/*", lambda route: route.fulfill(status=404))
+
+
+@pytest.fixture
 def make_pdf():
     from pypdf import PdfReader, PdfWriter
     from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject

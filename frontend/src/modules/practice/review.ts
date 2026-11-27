@@ -6,7 +6,7 @@ export const reviewSchema = z.strictObject({
   error_focus:z.string(),
 });
 export type AiReview = z.infer<typeof reviewSchema>;
-export const variantCode = /^variant-[a-f0-9]{32}$/;
+export const variantCode = /^(?:variant-|card-ex-)[a-f0-9]{32}$/;
 
 export function explainAttempt(attempt: Attempt): string {
   if (attempt.aiReview) {

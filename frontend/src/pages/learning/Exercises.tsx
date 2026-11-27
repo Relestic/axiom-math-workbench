@@ -1,6 +1,6 @@
 import { AttemptInsights } from "../../modules/practice/AttemptInsights";
-import { selectExercise, useExerciseSelection } from "../../modules/practice/selection";
-import { variantCode } from "../../modules/practice/review";
+import { exerciseSelectionValue, selectExercise, useExerciseSelection } from "../../modules/practice/selection";
+import { generateCardExercises } from "../../modules/teaching/localTextbooks";
 import {
   ArrowRight,
   Bookmark,
@@ -22,31 +22,40 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAppData } from "../../app/DataProvider";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { MathPreview, MathText, SymbolBar } from "../../components/Math";
 import type { Attempt } from "../../domain/types";
 import "../grading.css";
-import { Heading, useUnit, type Props } from "./shared";
+import { CardGenerationButton, Heading, useUnit, type Props } from "./shared";
 
 export function Exercises(props: Props) {
   const app = useAppData();
   const {unit} = useUnit();
-  if (!app.data.exercises.some(item => item.topicId === unit.id)) {
+  const hasExercises = app.data.exercises.some(item => item.topicId === unit.id);
+  const generateButton = app.data.source === "offline" && <CardGenerationButton key={unit.id}
+    label={hasExercises ? "+ AI 再出一道题" : "AI 生成本卡配套练习题"} generate={async () => {
+      const { exercises } = await generateCardExercises(unit.id);
+      await app.refreshLocal();
+      selectExercise(unit.id, exercises[0].code);
+    }} />;
+  if (!hasExercises) {
     return <section className="card"><h2>{unit.title}</h2><p>当前知识点还没有练习题。</p>
+      {generateButton}
       <button className="btn" onClick={() => props.onNavigate("textbook")}>阅读这张知识卡片</button></section>;
   }
-  return <ExerciseWorkspace {...props}/>;
+  return <ExerciseWorkspace {...props} generateButton={generateButton}/>;
 }
 
-function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
+function ExerciseWorkspace({ onNavigate, onSaveNote, notify, generateButton }: Props & { generateButton: ReactNode }) {
   const app = useAppData();
   const { unit } = useUnit();
   const selection = useExerciseSelection(unit.id);
   const choices = app.data.exercises.filter(item => item.topicId === unit.id);
-  const exercise = (variantCode.test(selection) ? choices.find(item => item.id === selection)
-    : choices.find(item => item.coefficient === Number(selection))) || choices[0];
+  const exercise = choices.find(item => exerciseSelectionValue(item) === selection) || choices[0];
+  const generated = exercise.source === "textbook-exercise" || exercise.source === "ai-variant";
+  const calculation = exercise.type === "calculation" || exercise.type === "computation";
   const coefficient = exercise.coefficient;
   const [submittedId,setSubmittedId] = useState("");
   const requestKey = useRef("");
@@ -200,30 +209,35 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
       </Heading>
       <div className="exercise-settings card">
         <div className="exercise-mode">
-          <span className="badge purple">基础证明与条件辨析</span>
+          <span className="badge purple">{calculation ? "计算练习" : "基础证明与条件辨析"}</span>
           <small>
             {app.data.source === "server"
               ? "已审核模板 · 作答写入学习记录"
               : "本地题库 · 可独立作答"}
           </small>
         </div>
-        <button className="btn primary" onClick={generate}>
+        {choices.some(item => item.coefficient >= 2) && <button className="btn primary" onClick={generate}>
           <RefreshCw size={15} />
           切换参数题
-        </button>
+        </button>}
       </div>
       <div className="exercise-layout">
         <section className="card exercise-main">
           <div className="section-title">
-            <span className="badge purple">{exercise.source === "ai-variant" ? "错因变式" : `练习 ${coefficient - 1} / 4`}</span>
+            <span className="badge purple">{exercise.source === "textbook-exercise" ? "本卡配套练习" : exercise.source === "ai-variant" ? "错因变式" : `练习 ${coefficient - 1} / 4`}</span>
             <h3>{unit.title}</h3>
-            {exercise.source !== "ai-variant" && <span className="badge">模板 {exercise.id}</span>}
+            {!generated && <span className="badge">模板 {exercise.id}</span>}
           </div>
-          {choices.some(item => item.source === "ai-variant") && <label className="field-label">选择练习题
-            <select value={exercise.id} onChange={event => {
-              const target = choices.find(item => item.id === event.target.value);
-              if (target) selectExercise(unit.id,target.source === "ai-variant" ? target.id : String(target.coefficient));
-            }}>{choices.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}
+          <div className="button-row">
+            {choices.some(item => item.source === "ai-variant" || item.source === "textbook-exercise") &&
+              <label className="field-label">选择练习题
+                <select value={exercise.id} onChange={event => {
+                  const target = choices.find(item => item.id === event.target.value);
+                  if (target) selectExercise(unit.id, exerciseSelectionValue(target));
+                }}>{choices.map(item => <option key={item.id} value={item.id}>{item.shortTitle || item.title}</option>)}</select>
+              </label>}
+            {generateButton}
+          </div>
           {exercise.provenance?.target_error && <p className="info-strip">本题针对你在上题中的「{exercise.provenance.target_error}」薄弱点生成。</p>}
           <h2 className="exercise-question">
             <MathText>{exercise.title}</MathText>
@@ -238,7 +252,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
           </div>
           <label className="answer-label" htmlFor="exercise-answer">
             <FileText size={15} />
-            {exercise.type === "computation"
+            {calculation
               ? "我的解答与最终答案"
               : "我的证明与思路"}{" "}
             <span>
@@ -254,7 +268,8 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
             readOnly={saving}
             onChange={(e) => updateAnswer(e.target.value)}
             placeholder={
-              exercise.type === "computation"
+              exercise.type === "calculation" ? "写出计算步骤，并在最后一行写出最终结果。"
+              : calculation
                 ? "写出关键步骤，并在最后单独一行写最终答案，例如：\nF(x)=2*x^3/3\n\n自动批改会提取这一行做符号检查。"
                 : "从定义和条件出发，写下你的证明……\n例如：任给 ε > 0，我们选择……"
             }
@@ -281,7 +296,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
           </div>
           <div className="grading-guide">
             <Check size={13} />
-            计算题检查最终表达式；证明题按关键步骤给结构分，不代替人工复核。
+            {exercise.type === "calculation" ? "提交后可对照本题解答核对计算步骤与最终结果。" : "计算题检查最终表达式；证明题按关键步骤给结构分，不代替人工复核。"}
           </div>
           <div className="exercise-disclosure">
             <button
@@ -449,7 +464,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
                 <CheckCircle2 size={18} />
                 <h3>完整解答</h3>
                 <span className="badge green">
-                  {exercise.source === "ai-variant" ? "AI 生成参考解答" : "参考解答"}
+                  {generated ? "AI 生成参考解答" : "参考解答"}
                 </span>
               </div>
               <ol>
@@ -458,7 +473,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
                 ))}
               </ol>
               <div className="solution-note">
-                参考解答展示一种完整路径。提交后计算题会做符号检查，证明题按关键步骤给结构分；结构分不能证明推理正确，也不排斥其他有效证明。
+                {exercise.type === "calculation" ? "请逐步对照参考计算，核对条件、运算和最终结果。" : "参考解答展示一种完整路径。提交后计算题会做符号检查，证明题按关键步骤给结构分；结构分不能证明推理正确，也不排斥其他有效证明。"}
               </div>
             </div>
           )}
@@ -467,7 +482,7 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
           <section className="card">
             <div className="section-title">
               <ListChecks size={17} />
-              <h3>证明自查</h3>
+              <h3>{calculation ? "计算自查" : "证明自查"}</h3>
             </div>
             <p className="muted">对照下面的要点，检查自己的论证。</p>
             {exercise.checks.map((c, i) => (
@@ -487,10 +502,10 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
               </label>
             ))}
             <div className="check-progress">
-              <div style={{ width: `${(selfChecks.length / 3) * 100}%` }} />
+              <div style={{ width: `${(selfChecks.length / (exercise.checks.length || 1)) * 100}%` }} />
             </div>
             <small className="muted">
-              已检查 {selfChecks.length} / 3 项 · 自查不等同于证明正确
+              已检查 {selfChecks.length} / {exercise.checks.length} 项
             </small>
           </section>
           <section className="card">

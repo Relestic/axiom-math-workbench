@@ -1,4 +1,5 @@
 import type { LocalBook } from "../../domain/types";
+import type { ExerciseDto } from "../../domain/dto";
 import { apiFetch } from "../../lib/api";
 
 const libraryPath = "/api/v1/local/textbooks";
@@ -20,6 +21,40 @@ export function extractCards(id: string, start: number, end: number) {
   return apiFetch<{ cards: { id: string; title: string }[] }>(`${bookPath(id)}/extract-cards`, {
     method: "POST", body: JSON.stringify({ page_start: start, page_end: end }),
   }, local);
+}
+export function generateCardProof(id: string) {
+  return apiFetch(`/api/v1/local/cards/${encodeURIComponent(id)}/proof`, {method:"POST"}, local);
+}
+export function generateCardExercises(id: string, count: 1 | 2 = 1, focus: "concept" | "proof" | "calculation" = "concept") {
+  return apiFetch<{exercises: ExerciseDto[]}>(`/api/v1/local/cards/${encodeURIComponent(id)}/exercises`, {
+    method:"POST", body:JSON.stringify({count, focus}),
+  }, local);
+}
+
+export async function completeCards(cards: {id:string; title:string}[], options: {
+  stopped: () => boolean;
+  progress: (text:string) => void;
+  failed: (context:string, cause:unknown) => void;
+  refresh: () => Promise<void>;
+}) {
+  for (const [index, card] of cards.entries()) {
+    if (options.stopped()) break;
+    const position = `已提取 ${cards.length} 张卡片 · 正在生成第 ${index + 1} / ${cards.length} 张卡的`;
+    for (const [part, generate] of [["证明拆解", generateCardProof], ["配套练习", generateCardExercises]] as const) {
+      if (options.stopped()) break;
+      options.progress(position + part + "…");
+      try {
+        await generate(card.id);
+      } catch (cause) {
+        options.failed(`《${card.title}》的${part}`, cause);
+      }
+    }
+    try {
+      await options.refresh();
+    } catch (cause) {
+      options.failed("刷新书桌", cause);
+    }
+  }
 }
 export function textbookPageUrl(id: string, page: number) {
   return `${bookPath(id)}/file#page=${page}`;

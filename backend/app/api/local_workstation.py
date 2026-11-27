@@ -13,7 +13,7 @@ from ..db import get_session
 from ..errors import ApiError, parse_json
 from ..models import Asset
 from ..modules import local_textbooks as shelf
-from ..modules.local_practice import practice_attempts
+from ..modules.local_practice import CardExerciseRequest, generate_card_exercises, practice_attempts
 from .local_only import local_learner, require_local
 from .local_practice import bp as practice_bp
 
@@ -114,3 +114,20 @@ def generate_cards(book_id):
     cards = shelf.extract_cards(session, user, book, parse_json(shelf.PageRange))
     session.commit()
     return {"cards": cards}, 201
+
+
+@bp.post("/cards/<card_id>/exercises")
+def card_exercises(card_id):
+    session = get_session()
+    options = parse_json(CardExerciseRequest) if request.get_data() else CardExerciseRequest()
+    exercises = generate_card_exercises(session, local_learner(session), card_id, options)
+    session.commit()
+    return {"exercises": exercises}, 201
+
+
+@bp.post("/cards/<card_id>/proof")
+def card_proof(card_id):
+    session = get_session()
+    result = shelf.generate_card_proof(session, local_learner(session), card_id)
+    session.commit()
+    return result, 200

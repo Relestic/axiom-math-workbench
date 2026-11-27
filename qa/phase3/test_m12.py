@@ -61,7 +61,7 @@ def extract(book, page, first, last):
     return response.json()["cards"]
 
 
-def test_upgraded_cards_cross_batch_graph_restart_and_delete(page, server, make_pdf):
+def test_upgraded_cards_cross_batch_graph_restart_and_delete(page, server, make_pdf, extraction_only):
     server.use_mock_deepseek([
         {"contains": PAGES[:2], "reply": {"cards": CARDS[:2]}},
         {"contains": [PAGES[2]], "reply": {"cards": [CARDS[2]]}},

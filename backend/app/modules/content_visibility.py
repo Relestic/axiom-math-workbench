@@ -21,5 +21,6 @@ def use_shared_catalog(session):
                 with_loader_criteria(
                     Proof, Proof.concept.has(Concept.scope != "local_textbook"), include_aliases=True
                 ),
-                with_loader_criteria(Exercise, Exercise.source != "ai-variant", include_aliases=True),
+                with_loader_criteria(Exercise, Exercise.source.not_in(("ai-variant", "textbook-exercise")),
+                                     include_aliases=True),
             )

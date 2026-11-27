@@ -1,28 +1,10 @@
-import {
-  ArrowRight,
-  Bookmark,
-  BookOpen,
-  Check,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Download,
-  ExternalLink,
-  Eye,
-  FileText,
-  Lightbulb,
-  ListChecks,
-  Lock,
-  RefreshCw,
-  Send,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { ArrowRight, Bookmark, Check, ChevronLeft, ChevronRight, ExternalLink, FileText, Lightbulb, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
-import { Heading, SourcePageButton, useUnit, type SourceProps } from "./shared";
+import { useAppData } from "../../app/DataProvider";
+import { generateCardProof } from "../../modules/teaching/localTextbooks";
+import { CardGenerationButton, Heading, SourcePageButton, useUnit, type SourceProps } from "./shared";
 
 export function Proof(props: SourceProps) {
   const { unit } = useUnit();
@@ -31,7 +13,8 @@ export function Proof(props: SourceProps) {
 
 function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProps) {
   const { unit } = useUnit();
-  const [step, setStep] = useState(0);
+  const { refreshLocal } = useAppData();
+  const [selected, setStep] = useState(0);
   const [checked, setChecked] = useState<number[]>([]);
   const titles =
     unit.id === "uniform"
@@ -49,10 +32,32 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
               i
             ] || "补充说明",
         );
-  const steps = unit.proof.map((text, index) => ({
+  const content = unit.proofSteps?.length ? unit.proofSteps : unit.proof.map((text, i) => ({
+    title: titles[i], text,
+    formula: unit.id === "uniform" ? [
+      "f 在 [a,b] 上连续 ⇒ f 一致连续",
+      "∃ ε₀>0，∀ n，∃ xₙ,yₙ：|xₙ−yₙ|<1/n，|f(xₙ)−f(yₙ)|≥ε₀",
+      "xₙₖ → c ∈ [a,b]",
+      "|yₙₖ−c| ≤ |yₙₖ−xₙₖ| + |xₙₖ−c| → 0",
+      "|f(xₙₖ)−f(yₙₖ)| → 0，与 ≥ε₀ 矛盾",
+      "因此 f 在 [a,b] 上一致连续",
+    ][i] : unit.formula,
+    why: unit.id === "uniform" ? [
+      "想证明所有点对都能统一控制。反证法把这个全局要求转为一个可以构造的失败序列。",
+      "把任意小的距离具体选为 1/n。必须保留同一个 ε₀，它不随 n 改变。",
+      "有界性提供收敛子列，闭性保证极限点仍在原区间中。",
+      "两点之间越来越近，因此一列靠近 c，另一列也只能靠近 c。",
+      "现在可以在同一点使用连续性。这个局部性质与前面的固定误差冲突。",
+      "证明中每个假设都有位置。对照反例检查，能帮助理解哪些条件是充分条件。",
+    ][i] : unit.textbookSource ? "" : unit.hint,
+    uses: unit.tools, conditions: [],
+  }));
+  const step = Math.max(0, Math.min(selected, content.length - 1));
+  const current = content[step];
+  const steps = content.map(({ title, text }, index) => ({
     ref: `${unit.id}:${index}`,
     index,
-    title: titles[index],
+    title,
     text,
   }));
   const proof = { unit_id: unit.id, current_step: steps[step], steps };
@@ -71,11 +76,18 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
       return true;
     },
   });
-  if (!steps.length && unit.textbookSource) {
+  const generateButton = unit.textbookSource && <CardGenerationButton label="AI 生成分步推导思路" generate={async () => {
+    await generateCardProof(unit.id);
+    await refreshLocal();
+    setStep(0);
+    setChecked([]);
+  }} />;
+  if (!current) {
     return <article className="learning-page card local-lecture-card">
       <h1>{unit.title}</h1>
       <p>这张教材卡片没有收录证明步骤，可回到原页研读。</p>
-      <SourcePageButton source={unit.textbookSource} read={onReadSource} />
+      {generateButton}
+      {unit.textbookSource && <SourcePageButton source={unit.textbookSource} read={onReadSource} />}
     </article>;
   }
   return (
@@ -84,11 +96,12 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
         step="第 2 步 / 共 3 步"
         title="证明思路 · 让直觉成为论证"
         description="把每一步为什么成立、条件用在哪里，写成可以检查的数学语言。"
-      />
+      >{generateButton}</Heading>
+      {unit.proofStatus === "ai_elaboration" && <p className="info-strip">以下分步推导由 AI 根据本卡定义与条件补充拆解，非教材逐字原文</p>}
       <div className="proof-layout">
         <aside className="card proof-outline">
           <h3>{unit.id === "uniform" ? "Heine–Cantor 定理" : unit.title}</h3>
-          <p className="muted">完整证明 · {unit.proof.length} 个步骤</p>
+          <p className="muted">分步推导 · {steps.length} 个步骤</p>
           <div className="proof-step-list">
             {steps.map(({ ref, title, index: i }) => (
               <button
@@ -100,7 +113,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
               >
                 <span>{checked.includes(i) ? <Check size={13} /> : i + 1}</span>
                 <span className="proof-step-copy">
-                  <span>{title}</span>
+                  <span><MathText>{title}</MathText></span>
                   <small>
                     {checked.includes(i) ? "已阅读确认" : "点击查看这一步"}
                   </small>
@@ -117,54 +130,32 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
         <section className="card proof-detail">
           <div className="section-title">
             <span className="badge purple">步骤 {step + 1}</span>
-            <h3>{titles[step]}</h3>
+            <h3><MathText>{current.title}</MathText></h3>
             <span className="muted">
-              {step + 1} / {unit.proof.length}
+              {step + 1} / {steps.length}
             </span>
           </div>
-          <div className="proof-formula">
-            <MathText>{unit.id === "uniform"
-              ? [
-                  "f 在 [a,b] 上连续 ⇒ f 一致连续",
-                  "∃ ε₀>0，∀ n，∃ xₙ,yₙ：|xₙ−yₙ|<1/n，|f(xₙ)−f(yₙ)|≥ε₀",
-                  "xₙₖ → c ∈ [a,b]",
-                  "|yₙₖ−c| ≤ |yₙₖ−xₙₖ| + |xₙₖ−c| → 0",
-                  "|f(xₙₖ)−f(yₙₖ)| → 0，与 ≥ε₀ 矛盾",
-                  "因此 f 在 [a,b] 上一致连续",
-                ][step]
-              : unit.formula}</MathText>
-          </div>
-          <p className="proof-paragraph"><MathText>{unit.proof[step]}</MathText></p>
-          <div className="proof-why">
+          {current.formula && <div className="proof-formula"><MathText>{current.formula}</MathText></div>}
+          <p className="proof-paragraph"><MathText>{current.text}</MathText></p>
+          {current.why && <div className="proof-why">
             <Lightbulb size={20} />
             <div>
               <h4>为什么这样想？</h4>
-              <p>
-                <MathText>{unit.id === "uniform"
-                  ? [
-                      "想证明所有点对都能统一控制。反证法把这个全局要求转为一个可以构造的失败序列。",
-                      "把任意小的距离具体选为 1/n。必须保留同一个 ε₀，它不随 n 改变。",
-                      "有界性提供收敛子列，闭性保证极限点仍在原区间中。",
-                      "两点之间越来越近，因此一列靠近 c，另一列也只能靠近 c。",
-                      "现在可以在同一点使用连续性。这个局部性质与前面的固定误差冲突。",
-                      "证明中每个假设都有位置。对照反例检查，能帮助理解哪些条件是充分条件。",
-                    ][step]
-                  : unit.hint}</MathText>
-              </p>
+              <p><MathText>{current.why}</MathText></p>
             </div>
-          </div>
-          <h4 className="subhead">
+          </div>}
+          {(current.uses.length > 0 || current.conditions.length > 0) && <><h4 className="subhead">
             <ListChecks size={16} />
             可引用的依据
           </h4>
           <div className="property-tags">
-            {unit.tools.map((x) => (
+            {Array.from(new Set([...current.uses, ...current.conditions])).map((x) => (
               <span className="badge green" key={x}>
                 <Check size={11} />
-                {x}
+                <MathText>{x}</MathText>
               </span>
             ))}
-          </div>
+          </div></>}
           <div className="proof-actions">
             <button
               className="btn"
@@ -187,12 +178,12 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
             <button
               className="btn primary"
               onClick={() =>
-                step < unit.proof.length - 1
+                step < steps.length - 1
                   ? setStep(step + 1)
                   : onNavigate("exercises")
               }
             >
-              {step < unit.proof.length - 1 ? "下一步" : "用练习检验理解"}
+              {step < steps.length - 1 ? "下一步" : "用练习检验理解"}
               <ArrowRight size={15} />
             </button>
           </div>
@@ -201,11 +192,11 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
       <section className="card complete-proof">
         <div className="section-title">
           <FileText size={17} />
-          <h3>完整证明 · 连贯阅读</h3>
+          <h3>{unit.proofStatus === "ai_elaboration" ? "分步推导" : "完整证明"} · 连贯阅读</h3>
           <button
             className="btn small"
             onClick={() => {
-              onSaveNote(`${unit.title} · 证明\n${unit.proof.join("\n")}`, unit.id);
+              onSaveNote(`${unit.title} · 证明\n${steps.map(item => item.text).join("\n")}`, unit.id);
               notify("证明已保存到我的笔记");
             }}
           >

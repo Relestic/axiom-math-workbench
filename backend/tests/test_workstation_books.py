@@ -9,9 +9,9 @@ from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from sqlalchemy import select
 
-from app.adapters import llm
+from app.adapters import llm, local_key
 from app.db import session_scope
-from app.models import Asset, Concept, Proof, Textbook, User
+from app.models import Asset, Attempt, Concept, Exercise, ModelCall, Proof, Textbook, User
 from app.modules.local_textbooks import normalize_title
 
 ROOT = "/api/v1/local"
@@ -175,7 +175,8 @@ def test_card_generation_is_grounded_persistent_and_private(local, second_header
     assert result.status_code == 201, result.json
     assert len(calls) == 1 and "Uniform continuity" in calls[0]
     saved = result.json["cards"][0]
-    assert saved == {**card, "id": saved["id"], "textbook_id": book["id"], "formula": "", "prerequisites": []}
+    assert saved == {**card, "id": saved["id"], "textbook_id": book["id"], "formula": "", "prerequisites": [],
+                     "proof_steps": [], "proof_status": "auto_checked"}
     assert local.get(ROOT + "/bootstrap-extras").json["cards"] == [saved]
     with session_scope() as session:
         item = session.get(Concept, saved["id"])
@@ -274,3 +275,144 @@ def test_definition_cards_and_direct_prerequisites_across_batches(local, monkeyp
 def test_title_matching_preserves_case_sensitive_mathematical_symbols():
     assert normalize_title(" Ｌｉｍｉｔ（Ａ），Σ ") == "limitaΣ"
     assert normalize_title("方差 σ") != normalize_title("方差 Σ")
+
+
+@pytest.fixture
+def card_model(local, monkeypatch):
+    reply, prompts = {}, []
+
+    def provider(url, **kwargs):
+        prompts.append(json.loads(kwargs["json"]["messages"][-1]["content"]))
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(reply)}}]})
+    monkeypatch.setattr(llm.httpx, "post", provider)
+    # These route tests use a disposable credential and do not require a Windows user profile.
+    monkeypatch.setattr(local_key, "_windows_dpapi", lambda data, *, protect: data)
+    assert local.put("/api/v1/ai/key", json={"api_key": "sk-card-test", "model": "deepseek-flash"}).status_code == 200
+    return reply, prompts
+
+
+def extract_one(local, book_id, model, proof):
+    pages = {"page_start": 1, "page_end": 1}
+    reply, _ = model
+    reply.clear()
+    reply["cards"] = [{"title": "紧区间", "definition": "闭且有界的区间", "conditions": ["闭区间"],
+                       "theorem": "闭区间上的连续函数有界", "proof": proof, **pages}]
+    response = local.post(f"{ROOT}/textbooks/{book_id}/extract-cards", json=pages)
+    assert response.status_code == 201, response.json
+    reply.clear()
+    return response.json["cards"][0]["id"]
+
+
+EXERCISE = {"title": "区间像的界", "statement": "求 f(x)=2x 在 [0,1] 上的最大值。",
+            "exercise_type": "calculation", "hint": "先判断单调性。", "solution_steps": ["单调递增，在右端点取 2。"],
+            "checks": ["确认端点属于区间", "核对最大值"]}
+STEP = {"n": 1, "title": "固定区间", "formula": "I=[a,b]", "text": "从闭区间任取一点。",
+        "why": "需要让端点也满足假设。", "uses": ["区间定义"], "conditions": ["含两个端点"]}
+
+
+@pytest.mark.parametrize("original,source,status", [
+    ([], "complete", "ai_elaboration"), (["证明略。"], "sketch", "ai_elaboration"),
+    (["取极值点", "由极值给出界"], "complete", "auto_checked"),
+])
+def test_rich_proof_grounding_replacement_and_attribution(local, card_model, original, source, status):
+    book = upload(local).json
+    cid = extract_one(local, book["id"], card_model, original)
+    reply, prompts = card_model
+    url = f"{ROOT}/cards/{cid}/proof"
+    reply.update(source_proof=source, steps=[STEP])
+    first = local.post(url)
+    assert first.status_code == 200, first.json
+    assert first.json["proof_status"] == status and first.json["proof"] == [STEP["text"]]
+    material = prompts[-1]
+    assert material["pages"] == [{"page": 1, "text": "Uniform continuity on compact intervals."}]
+    assert material["definition"] and material["theorem"] and material["conditions"] == ["闭区间"]
+    assert material.get("extracted_proof", []) == original
+    # A later generation must never use its own elaboration as textbook evidence.
+    reply.update(source_proof="complete", steps=[{**STEP, "formula": "", "why": "核对假设。"}])
+    assert local.post(url).json["proof_status"] == status
+    saved = local.get(ROOT + "/bootstrap-extras").json["cards"][0]
+    assert saved["proof_steps"] == reply["steps"] and saved["proof_status"] == status
+    with session_scope() as session:
+        assert session.scalars(select(Proof).where(Proof.concept_id == cid)).one().steps == saved["proof_steps"]
+    for bad in [{**STEP, "n": 2}, {**STEP, "why": "  "}, {**STEP, "uses": "定义"}]:
+        reply["steps"] = [bad]
+        assert local.post(url).status_code == 502
+    assert local.get(ROOT + "/bootstrap-extras").json["cards"] == [saved]
+    assert local.post(ROOT + "/cards/uniform/proof").status_code == 404
+
+
+def test_exercise_generation_and_delete_after_attempt(local, card_model, second_headers):
+    book = upload(local).json
+    cid = extract_one(local, book["id"], card_model, [])
+    reply, prompts = card_model
+    reply["exercises"] = [EXERCISE, {**EXERCISE, "exercise_type": "proof", "statement": "证明连续像有界。"}]
+    response = local.post(f"{ROOT}/cards/{cid}/exercises", json={"count": 2, "focus": "concept"})
+    assert response.status_code == 201, response.json
+    assert prompts[-1]["definition"] and [p["page"] for p in prompts[-1]["pages"]] == [1]
+    first, other = response.json["exercises"]
+    with session_scope() as session:
+        row = session.get(Exercise, first["id"])
+        assert row.topic_id == cid and row.status == "published" and row.code.startswith("card-ex-")
+        assert row.provenance == {"user_id": session.get(Textbook, book["id"]).parse_meta["owner_id"],
+                                  "textbook_id": book["id"], "card_id": cid, "model": "deepseek-flash"}
+    assert first["source"] == "textbook-exercise" and first["type"] == first["exercise_type"] == "calculation"
+    assert first["solution_steps"] == EXERCISE["solution_steps"] and first["hint"] == EXERCISE["hint"]
+    assert local.get("/api/v1/exercises/" + first["code"], headers=second_headers).status_code == 404
+    assert local.get("/api/v1/exercises?topic=" + cid, headers=second_headers).json["items"] == []
+    reply["exercises"] = [EXERCISE]
+    builtin = local.post(f"{ROOT}/cards/mean-value/exercises").json["exercises"][0]
+    assert builtin["topic_id"] == "mean-value" and builtin["provenance"]["textbook_id"] is None
+    assert prompts[-1]["pages"] == [] and prompts[-1]["conditions"]
+    exercises = local.get(ROOT + "/bootstrap-extras").json["exercises"]
+    assert sorted(item["id"] for item in exercises) == sorted([first["id"], other["id"], builtin["id"]])
+    assert exercises[-1] == builtin
+    local.delete("/api/v1/ai/key")
+    attempt = local.post(ROOT + "/attempts", json={"exercise_id": first["code"], "answer_text": "最大值是 2"})
+    assert attempt.status_code == 201 and attempt.json["feedback"]["needs_review"]
+    assert local.delete(f"{ROOT}/textbooks/{book['id']}").status_code == 204
+    extras = local.get(ROOT + "/bootstrap-extras").json
+    assert extras["exercises"] == [builtin] and extras["cards"] == []
+    assert extras["attempts"][0]["exercise"]["code"] == first["code"]
+    with session_scope() as session:
+        assert session.get(Exercise, other["id"]) is None
+        assert session.get(Attempt, attempt.json["id"]).exercise.status == "archived"
+    assert local.post(ROOT + "/attempts", json={"exercise_id": first["code"], "answer_text": "2"}).status_code == 404
+
+
+def test_card_exercises_validation_owner_and_quota(local, app, monkeypatch, card_model):
+    reply, prompts = card_model
+    url = ROOT + "/cards/derivative/exercises"
+    for invalid in [{"count": True}, {"count": 3}, {"count": "1"}, {"focus": "other"}]:
+        assert local.post(url, json=invalid).status_code == 422
+    assert local.post(url, headers={"Origin": "https://example.invalid"}).status_code == 403
+    assert local.post(ROOT + "/cards/nonexistent/exercises").status_code == 404
+    assert prompts == []
+    for bad in [{"title": " "}, {"statement": None}, {"hint": ""}, {"checks": ["一项"]},
+                {"solution_steps": []}, {"solution_steps": [{"text": "正文"}]}, {"exercise_type": "unknown"}]:
+        reply["exercises"] = [EXERCISE, {**EXERCISE, **bad}]
+        assert local.post(url, json={"count": 2}).status_code == 502
+    reply["exercises"] = [EXERCISE]
+    assert local.post(url, json={"count": 2}).status_code == 502
+    assert local.get(ROOT + "/bootstrap-extras").json["exercises"] == []
+    monkeypatch.setattr(app.extensions["axiom_limiters"]["legacy_ai"], "hit", lambda *_: pytest.fail("hourly limiter"))
+    row = local.post(url, json={"focus": "calculation"}).json["exercises"][0]
+    assert prompts[-1]["focus"] == "calculation" and prompts[-1]["count"] == 1
+    with session_scope() as session:
+        item = session.get(Exercise, row["id"])
+        assert session.scalar(select(ModelCall.id).where(ModelCall.purpose == "card_exercises",
+                                                         ModelCall.user_id == item.provenance["user_id"]))
+        other_id = session.scalar(select(User.id).where(User.email == "second@axiom.test"))
+        item.provenance = {**item.provenance, "user_id": other_id}
+    assert local.get(ROOT + "/bootstrap-extras").json["exercises"] == []
+    assert local.post(ROOT + "/attempts", json={"exercise_id": row["code"], "answer_text": "2"}).status_code == 404
+    book = upload(local).json
+    cid = extract_one(local, book["id"], card_model, [])
+    with session_scope() as session:
+        session.get(Concept, cid).created_by_id = other_id
+    for action in ("proof", "exercises"):
+        assert local.post(f"{ROOT}/cards/{cid}/{action}").status_code == 404
+    calls = len(prompts)
+    monkeypatch.setattr(app.config["AXIOM"], "ai_daily_call_limit", 1)
+    assert local.post(url).status_code == 429 and len(prompts) == calls
+    local.delete("/api/v1/ai/key")
+    assert local.post(url).status_code == 503 and len(prompts) == calls
