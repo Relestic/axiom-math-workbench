@@ -1,34 +1,25 @@
 import {
   ArrowRight,
   Bookmark,
-  BookOpen,
   Check,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Download,
   ExternalLink,
   Eye,
   FileText,
   Lightbulb,
   ListChecks,
   Lock,
-  RefreshCw,
-  Send,
   Sparkles,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { useAppData } from "../../app/DataProvider";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { MathText } from "../../components/Math";
-import type { CurriculumUnit } from "../../domain/types";
-import { DefinitionTokens, Heading, ModuleSelect, SourcePageButton, useUnit, type SourceProps } from "./shared";
+import { DefinitionTokens, Heading, SourcePageButton, useUnit, type SourceProps } from "./shared";
 
 export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: SourceProps) {
   const app = useAppData();
-  const { unit, select } = useUnit();
+  const { unit } = useUnit();
   const lecture = {
     conditions: unit.conditions,
     proof_steps: unit.proof.map((text, index) => ({ ref: `${unit.id}:${index}`, text })),
@@ -73,76 +64,19 @@ export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: Sourc
         step="第 1 步 / 共 3 步"
         title="教材定义与条件"
         description="把每一个定义、符号和条件读清楚，让直觉与严谨的论证连接起来。"
-      >
-        <ModuleSelect unit={unit} select={select} />
-      </Heading>
-      <section className="card book-summary">
-        <div className="book-cover">
-          <span>ANALYSIS</span>
-          <div>∫</div>
-          <small>数学分析</small>
-        </div>
-        <div className="book-summary-main">
-          <h3>
-            数学分析 · 连续性至定积分 <span className="badge">示例讲义</span>
-          </h3>
-          <p className="muted">
-            项目原创学习材料 · 8 个 MVP 模块 · 可随时切换知识点
-          </p>
-          <div className="book-meta">
-            <span>
-              <BookOpen size={14} /> 8 个核心单元
-            </span>
-            <span>
-              <Lightbulb size={14} /> 定义与证明
-            </span>
-            <span>
-              <ListChecks size={14} /> 完整解答配套
-            </span>
-          </div>
-        </div>
+      />
+      <div className="book-summary">
+        <span>原创讲义 · 连续性至定积分</span>
         <button className="btn" onClick={() => setLarge(!large)}>
           <Eye size={15} />
           {large ? "恢复阅读" : "放大讲义"}
         </button>
-      </section>
+      </div>
       <div className={"textbook-columns " + (large ? "large-text" : "")}>
         <section className="card manuscript">
           <div className="section-title">
             <FileText size={17} />
             <h3>示例讲义原文</h3>
-            <div className="manuscript-controls">
-              <button
-                className="btn icon"
-                aria-label="上一单元"
-                onClick={() =>
-                  select(
-                    units[
-                      (units.findIndex((u) => u.id === unit.id) + units.length - 1) %
-                        units.length
-                    ].id,
-                  )
-                }
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span>
-                {units.findIndex((u) => u.id === unit.id) + 1} / {units.length}
-              </span>
-              <button
-                className="btn icon"
-                aria-label="下一单元"
-                onClick={() =>
-                  select(
-                    units[
-                      (units.findIndex((u) => u.id === unit.id) + 1) % units.length
-                    ].id,
-                  )
-                }
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
           </div>
           <div className="paper-content">
             <div className="paper-kicker">

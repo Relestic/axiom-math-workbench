@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppData } from "../../app/DataProvider";
 import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
@@ -31,30 +31,63 @@ export function useUnit() {
     select: selectConcept,
   };
 }
-export function ModuleSelect({
-  unit,
-  select,
-}: {
-  unit: CurriculumUnit;
-  select: (id: string) => void;
-}) {
-  const { data } = useAppData();
-  return (
-    <label className="module-select">
-      <span>当前知识点</span>
-      <select
-        aria-label="选择章节知识点"
-        value={unit.id}
-        onChange={(e) => select(e.target.value)}
-      >
-        {data.units.map((item) => (
-          <option value={item.id} key={item.id}>
-            {item.chapter} · {item.title}
-          </option>
-        ))}
+export function DeskCardNavigation() {
+  const { data, localBooks } = useAppData();
+  const { unit, select } = useUnit();
+  const courses = useMemo(() => {
+    const byBook = new Map<string, CurriculumUnit[]>(localBooks.map(book => [book.id, []]));
+    const lectures: CurriculumUnit[] = [];
+    for (const card of data.units) {
+      if (card.textbookSource) byBook.get(card.textbookSource.textbookId)?.push(card);
+      else lectures.push(card);
+    }
+    const lectureTitle = data.source === "offline" ? "示例讲义 · 数学分析" : "课程讲义";
+    return [
+      { id: "", title: `${lectureTitle}（${lectures.length} 讲）`, cards: lectures },
+      ...localBooks.map(book => {
+        // bootstrap supplies creation order, preserved by stable sort for same-page cards.
+        const cards = byBook.get(book.id)!;
+        cards.sort((a, b) => a.textbookSource!.pageStart - b.textbookSource!.pageStart);
+        return { id: book.id, title: `《${book.title}》（${cards.length} 张卡片）`, cards };
+      }),
+    ];
+  }, [data.units, data.source, localBooks]);
+
+  const course = courses.find(item => item.id === (unit.textbookSource?.textbookId ?? "")) ?? courses[0];
+  const index = Math.max(0, course.cards.findIndex(card => card.id === unit.id));
+  const previous = course.cards[index - 1];
+  const next = course.cards[index + 1];
+  useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey || event.defaultPrevented) return;
+      if (event.target instanceof Element && event.target.closest('dialog, [role="dialog"]')) return;
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const target = event.key === "ArrowLeft" ? previous : next;
+      if (target) select(target.id);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previous, next, select]);
+
+  return <div className="desk-card-navigation">
+    <select aria-label="选择课程或教材" value={course.id} onChange={event => {
+      const first = courses.find(item => item.id === event.target.value)?.cards[0];
+      if (first) select(first.id);
+    }}>
+      {courses.map(item => <option key={item.id} value={item.id} disabled={!item.cards.length}>{item.title}</option>)}
+    </select>
+    <div role="group" aria-label="本册卡片" className="desk-card-controls">
+      <button type="button" className="btn" aria-label="上一张卡片" title="上一张卡片（Alt+←）"
+        disabled={!previous} onClick={() => previous && select(previous.id)}><ChevronLeft size={16} /></button>
+      <span>{index + 1} / {course.cards.length}</span>
+      <select aria-label="选择章节知识点" value={unit.id} onChange={event => select(event.target.value)}>
+        {course.cards.map(card => <option key={card.id} value={card.id}>{card.title}</option>)}
       </select>
-    </label>
-  );
+      <button type="button" className="btn" aria-label="下一张卡片" title="下一张卡片（Alt+→）"
+        disabled={!next} onClick={() => next && select(next.id)}><ChevronRight size={16} /></button>
+    </div>
+  </div>;
 }
 export function Heading({
   step,

@@ -34,7 +34,7 @@ export default function FunctionWorkspace(props: FunctionWorkspaceProps) {
 
   return (
     <div className="function-workspace">
-      <WorkspaceHeader state={state} onNavigate={props.onNavigate} />
+      <WorkspaceHeader state={state} />
       <div className="fw-modebar" role="tablist" aria-label="函数分析工具">
         {FUNCTION_MODES.map(([id, label]) => (
           <button

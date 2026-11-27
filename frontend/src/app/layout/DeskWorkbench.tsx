@@ -1,7 +1,7 @@
 import type { DeskPanes } from "../../modules/companion/workspace";
 import { Suspense, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { BookOpen, PanelRightClose, PanelRightOpen, Presentation } from "lucide-react";
-import { ModuleSelect, useUnit } from "../../pages/learning/shared";
+import { DeskCardNavigation } from "../../pages/learning/shared";
 import "./desk.css";
 
 const studyTabs = [
@@ -25,6 +25,7 @@ function DeskTabs({ tabs, active, label, select }: {
   select: (id: string) => void;
 }) {
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (event.altKey) return;
     let next: number;
     switch (event.key) {
       case "ArrowLeft": next = (index + tabs.length - 1) % tabs.length; break;
@@ -73,7 +74,6 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
   onActivePane: (id: string) => void;
   onPanesChange: (panes: DeskPanes) => void;
 }) {
-  const { unit, select } = useUnit();
   const [desk, setDesk] = useState(() => openRoute(pane, undefined, initialBoard));
   const toggleButton = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
@@ -142,7 +142,7 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
         onPointerDownCapture={() => focusPane(desk.study)} onFocusCapture={() => focusPane(desk.study)}>
         <div className="desk-tools">
           <div className="desk-tool-heading">
-            <ModuleSelect unit={unit} select={select} />
+            <DeskCardNavigation />
             {desk.collapsed && <button ref={toggleButton} type="button" className="btn desk-collapse"
               aria-controls="desk-board" aria-expanded={false} onClick={toggleBoard}>
               <PanelRightOpen size={15} />展开黑板</button>}

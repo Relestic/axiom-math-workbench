@@ -42,7 +42,7 @@ def submit(local, exercise="uniform-3", answer=ANSWER, key="proof-a"):
 
 
 def configure(local):
-    local.put("/api/v1/ai/key", json={"api_key": "sk-m9-fixture", "model": "deepseek-chat"})
+    local.put("/api/v1/ai/key", json={"api_key": "sk-m9-fixture", "model": "deepseek-flash"})
 
 
 def test_offline_scoring_rating_retry_and_ownership(local):
@@ -104,7 +104,7 @@ def test_review_and_targeted_variant_persist_with_student_evidence(local, monkey
     assert variant["provenance"]["target_error"] == REVIEW["error_focus"] == prompts[-1]["target_error"]
     assert (
         variant["solution_steps"] == VARIANT["solution_steps"]
-        and variant["provenance"]["model"] == "deepseek-chat"
+        and variant["provenance"]["model"] == "deepseek-flash"
     )
     assert (
         local.post(BASE + "/exercises/variant", json={"attempt_id": attempt["id"]}).json["id"]

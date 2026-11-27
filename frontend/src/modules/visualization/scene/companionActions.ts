@@ -2,6 +2,21 @@ import type { WorkspaceAction } from "../../../app/workspaceEndpoints";
 
 type Bounds = { xMin: number; xMax: number; yMin: number; yMax: number };
 
+const functionAliases = new Map([
+  ["ln", "log"], ["arcsin", "asin"], ["arccos", "acos"], ["arctan", "atan"], ["sgn", "sign"],
+]);
+
+export function normalizeGraphExpression(input: string): string {
+  if (input.length > 300) throw new Error("表达式需为 1–300 个字符");
+  const expression = input.trim()
+    .replaceAll("（", "(").replaceAll("）", ")")
+    .replace(/^(?:[yz]|[fg]\s*\(\s*x\s*\)|f\s*\(\s*x\s*,\s*y\s*\))\s*=(?!=)\s*/, "")
+    .replace(/[−–]/g, "-").replaceAll("·", "*")
+    .replace(/[a-zA-Z_][a-zA-Z_0-9]*(?=\s*\()/g, name => functionAliases.get(name) ?? name);
+  if (!expression || expression.length > 300) throw new Error("表达式需为 1–300 个字符");
+  return expression;
+}
+
 export function sceneRange(scene: Bounds, patch: Partial<Bounds> = {}): Bounds {
   return {
     xMin: patch.xMin ?? scene.xMin,

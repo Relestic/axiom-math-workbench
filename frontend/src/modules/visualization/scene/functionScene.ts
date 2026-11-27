@@ -5,7 +5,7 @@ import {
   type Scene,
 } from "../../../lib/plotScene";
 import type { WorkspaceAction } from "../../../app/workspaceEndpoints";
-import { applySceneActions, sceneRange } from "./companionActions";
+import { applySceneActions, normalizeGraphExpression, sceneRange } from "./companionActions";
 
 export type { Scene };
 export { initialScene, parseAIResult, validateScene };
@@ -107,6 +107,7 @@ function composeFunctionAction(scene: Scene, action: WorkspaceAction): Scene {
     case "set_curve":
     case "add_curve": {
       const { type, id: requestedId, ...patch } = action;
+      patch.expression = normalizeGraphExpression(patch.expression);
       if (patch.expression.includes("?")) {
         throw new Error("分段函数请按定义域拆成多条曲线");
       }

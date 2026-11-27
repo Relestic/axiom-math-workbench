@@ -59,7 +59,7 @@ def test_real_card_extraction_reader_anchor_and_clean_archive(page, server, samp
                          "page_start": 2, "page_end": 2}]}
     server.use_mock_deepseek([{"contains": [SOURCE_B], "reply": result}])
     saved_key = page.request.put(server.url + "/api/v1/ai/key", data={
-        "api_key": DUMMY_KEY, "model": "deepseek-chat"}, headers={"Origin": server.url})
+        "api_key": DUMMY_KEY, "model": "deepseek-flash"}, headers={"Origin": server.url})
     assert saved_key.ok and saved_key.json()["configured"]
     page.goto(server.url + "/#shelf/books")
     summary = drag_pdf(page, sample_pdf)
@@ -72,14 +72,15 @@ def test_real_card_extraction_reader_anchor_and_clean_archive(page, server, samp
     card = event.value.json()["cards"][0]
     assert (card["title"], card["textbook_id"], card["page_start"], card["page_end"]) == (TITLE, summary["id"], 2, 2)
     sent = server.model_requests()
-    assert len(sent) == 1 and sent[0]["model"] == "deepseek-chat"
+    assert len(sent) == 1 and sent[0]["model"] == "deepseek-flash"
     messages = "\n".join(msg["content"] for msg in sent[0]["messages"])
     assert SOURCE_B in messages and SOURCE_A not in messages
 
     server.restart()
     page.goto(server.url + "/#desk/textbook")
     page.reload()
-    selector = page.locator("#desk-study .desk-tools select")
+    page.get_by_role("combobox", name="选择课程或教材").select_option(summary["id"])
+    selector = page.get_by_role("combobox", name="选择章节知识点")
     expect(selector.locator("option").filter(has_text=TITLE)).to_have_count(1)
     selector.select_option(card["id"])
     page.reload()

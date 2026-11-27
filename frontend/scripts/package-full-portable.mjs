@@ -102,7 +102,7 @@ try {
 AXIOM_PORT=5186
 AXIOM_AI_PROVIDER=deepseek
 AI_BASE_URL=https://api.deepseek.com
-AI_MODEL=deepseek-chat
+AI_MODEL=deepseek-flash
 AI_API_KEY=
 AI_JSON_MODE=true
 AXIOM_LEGACY_AI=true

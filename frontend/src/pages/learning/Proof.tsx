@@ -22,7 +22,7 @@ import {
 import { useState } from "react";
 import { MathText } from "../../components/Math";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
-import { Heading, ModuleSelect, SourcePageButton, useUnit, type SourceProps } from "./shared";
+import { Heading, SourcePageButton, useUnit, type SourceProps } from "./shared";
 
 export function Proof(props: SourceProps) {
   const { unit } = useUnit();
@@ -30,7 +30,7 @@ export function Proof(props: SourceProps) {
 }
 
 function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProps) {
-  const { unit, select } = useUnit();
+  const { unit } = useUnit();
   const [step, setStep] = useState(0);
   const [checked, setChecked] = useState<number[]>([]);
   const titles =
@@ -84,9 +84,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
         step="第 2 步 / 共 3 步"
         title="证明思路 · 让直觉成为论证"
         description="把每一步为什么成立、条件用在哪里，写成可以检查的数学语言。"
-      >
-        <ModuleSelect unit={unit} select={select} />
-      </Heading>
+      />
       <div className="proof-layout">
         <aside className="card proof-outline">
           <h3>{unit.id === "uniform" ? "Heine–Cantor 定理" : unit.title}</h3>
@@ -101,12 +99,12 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
                 onClick={() => setStep(i)}
               >
                 <span>{checked.includes(i) ? <Check size={13} /> : i + 1}</span>
-                <div>
-                  {title}
+                <span className="proof-step-copy">
+                  <span>{title}</span>
                   <small>
                     {checked.includes(i) ? "已阅读确认" : "点击查看这一步"}
                   </small>
-                </div>
+                </span>
                 <ChevronRight size={14} />
               </button>
             ))}

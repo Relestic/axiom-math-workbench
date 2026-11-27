@@ -71,7 +71,7 @@ VITE_API_BASE=http://127.0.0.1:8000
 - **正反例实验室**：命题陈述、条件、缺失条件与反例反驳文案由后端覆盖；图形与性质矩阵仍是前端教学示意。
 - **数学总地图/练习热力矩阵**：节点状态、边、练习量与掌握度来自后端；提交作答或自评后自动刷新，不再依赖刷新页面。
 - **AI 改图**：调用后端的 `/api/ai/status` 与 `/api/ai/plot`；模型密钥只保存在 `backend/.env`。
-- **DeepSeek**：后端支持 `AXIOM_AI_PROVIDER=deepseek`（默认 `deepseek-chat`）；配置 `AI_API_KEY` 后可在图像工作区点“测试连接”，无需把密钥放进前端。
+- **DeepSeek** 后端设置 `AXIOM_AI_PROVIDER=deepseek` 后默认使用 `deepseek-flash`。也可选择 `deepseek-v4-pro`。配置 `AI_API_KEY` 后可在图像工作区点“测试连接”。
 
 详细的数据流、目录职责和“新增页面/字段”的步骤见 [前端架构与迭代指南](docs/architecture.md)。
 

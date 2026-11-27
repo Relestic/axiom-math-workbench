@@ -149,7 +149,7 @@ def test_card_generation_is_grounded_persistent_and_private(local, second_header
     assert (
         missing.status_code == 503 and missing.json["error"]["message"] == "请先在顶部配置个人 DeepSeek Key"
     )
-    local.put("/api/v1/ai/key", json={"api_key": "sk-workstation-fixture", "model": "deepseek-chat"})
+    local.put("/api/v1/ai/key", json={"api_key": "sk-workstation-fixture", "model": "deepseek-flash"})
     card = {
         "title": "局部抽卡检验",
         "definition": "一致连续的定义",
@@ -215,7 +215,7 @@ def test_definition_cards_and_direct_prerequisites_across_batches(local, monkeyp
     def definition(title, **override):
         return {**pages, "title": title, "definition": "在指定区间中的每个点满足局部条件。", **override}
 
-    local.put("/api/v1/ai/key", json={"api_key": "sk-fixture-graph", "model": "deepseek-chat"})
+    local.put("/api/v1/ai/key", json={"api_key": "sk-fixture-graph", "model": "deepseek-flash"})
     replies, prompts = [], []
     def provider(url, **kwargs):
         prompts.append(kwargs["json"]["messages"][0]["content"])

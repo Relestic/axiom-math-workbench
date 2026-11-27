@@ -12,15 +12,15 @@
 ```dotenv
 AXIOM_AI_PROVIDER=deepseek
 AI_BASE_URL=https://api.deepseek.com
-AI_MODEL=deepseek-chat
+AI_MODEL=deepseek-flash
 AI_API_KEY=sk-你的密钥
 AI_JSON_MODE=true
 AXIOM_LEGACY_AI=true
 ```
 
-`AI_BASE_URL` 不含 `/chat/completions`，服务端会追加该路径。DeepSeek 官方 base 可写 `https://api.deepseek.com`，也可以写 `https://api.deepseek.com/v1`。`AI_MODEL` 可以换成账户可用的 `deepseek-flash`、`deepseek-reasoner` 等。
+`AI_BASE_URL` 填写基础地址，服务端会追加 `/chat/completions`。DeepSeek 官方地址可写 `https://api.deepseek.com`，也可以写 `https://api.deepseek.com/v1`。`AI_MODEL` 可选 `deepseek-flash` 或 `deepseek-v4-pro`。
 
-DeepSeek 的 JSON Output 要求在系统或用户提示中出现 “json”，并建议给足 `max_tokens`；本项目提示词已包含 JSON 指令，服务端仍会用 Zod/Pydantic 结构校验兜底。`deepseek-reasoner` 不支持 `temperature` 与 `response_format`，适配器会自动跳过这两个参数，但提示词仍要求 JSON。
+改图提示词要求模型返回 JSON，服务端会校验返回结构。改图请求显式关闭思考，将输出预算留给场景数据。
 
 其他 OpenAI 兼容服务也可以继续使用：
 

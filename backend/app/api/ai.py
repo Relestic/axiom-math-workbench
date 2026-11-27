@@ -350,8 +350,8 @@ def legacy_status():
             "provider_label": "DeepSeek",
             "endpoint_host": "api.deepseek.com",
             "mode": "deepseek" if status["configured"] else "none",
-            "reasoner": status["model"] == "deepseek-reasoner",
-            "json_mode": status["model"] != "deepseek-reasoner",
+            "reasoner": False,
+            "json_mode": config.ai_json_mode,
         }
     data = provider_status()
     return {

@@ -196,7 +196,7 @@ def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture):
         {"contains": [PAGES_A[1], PAGES_A[-1]], "reply": {"cards": A}},
         {"contains": [PAGES_B[1], PAGES_B[-1]], "reply": {"cards": B}},
     ])
-    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-chat"})
+    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-flash"})
     assert key.ok and key.json()["configured"]
     page.goto(server.url + "/#shelf/books")
     first_book, a = import_book(page, make_pdf(PAGES_A), BOOK_A, len(A))
@@ -332,7 +332,7 @@ def test_offline_multibook_atlas_and_reader(page, server, make_pdf, capture):
 
 def test_phone_atlas_controls_details_and_builtin_lecture(page, server, make_pdf):
     server.use_mock_deepseek([{"contains": PAGES_B[:2], "reply": {"cards": B[:2]}}])
-    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-chat"})
+    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-flash"})
     assert key.ok
     page.goto(server.url + "/#shelf/books")
     _, ids = import_book(page, make_pdf(PAGES_B[:2]), BOOK_B, 2)

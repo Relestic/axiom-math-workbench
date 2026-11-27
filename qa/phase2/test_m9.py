@@ -39,7 +39,7 @@ def posted(page, path, action):
 
 def submit(page, server, topic, answer):
     page.goto(server.url + "/#desk/exercises")
-    page.locator("#desk-study .desk-tools select").select_option(topic)
+    page.get_by_role("combobox", name="选择章节知识点").select_option(topic)
     exercise = page.locator("#desk-pane-exercises")
     exercise.locator("#exercise-answer").fill(answer)
     return posted(page, "/local/attempts",
@@ -86,7 +86,7 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
         {"contains": ["针对薄弱点生成一道变式题"], "reply": VARIANT},
         {"contains": [SOURCE_B], "reply": {"cards": [card]}},
     ])
-    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-chat"})
+    key = page.request.put(server.url + "/api/v1/ai/key", data={"api_key": DUMMY_KEY, "model": "deepseek-flash"})
     assert key.ok and key.json()["configured"]
     attempt = submit(page, server, "uniform", WRONG)
     assert attempt["feedback"]["needs_review"] and attempt["ai_review"] == REVIEW
@@ -105,7 +105,7 @@ def test_review_voice_variant_and_complete_workstation_archive(page, server, sam
     assert variant["source"] == "ai-variant"
     assert variant["provenance"]["parent_attempt_id"] == attempt["id"]
     assert variant["provenance"]["target_error"] == FOCUS
-    assert variant["provenance"]["model"] == "deepseek-chat"
+    assert variant["provenance"]["model"] == "deepseek-flash"
     generated = variant["statement"]
     expect(exercise.locator(".exercise-question")).to_contain_text(generated)
     expect(exercise).to_contain_text(FOCUS)

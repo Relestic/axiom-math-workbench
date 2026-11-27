@@ -21,7 +21,7 @@ def test_companion_uses_personal_proxy_and_validates_reply(app, client, monkeypa
     app.config["AXIOM"].local_mode = True
     question = {"question":"解释这一步", "context":{"page":"proof","concept_id":"uniform"}}
     assert client.post("/api/v1/ai/companion", json=question).status_code == 503
-    assert client.put("/api/v1/ai/key", json={"api_key":"test-local-companion", "model":"deepseek-chat"}).status_code == 200
+    assert client.put("/api/v1/ai/key", json={"api_key":"test-local-companion", "model":"deepseek-flash"}).status_code == 200
     answer = {"display_markdown":r"固定 $\forall\varepsilon>0$。", "spoken_text":"∀ε>0",
               "actions":[{"type":"highlight_proof_step","ref":"uniform:1"}, {"type":"unsupported"}]}
     captured = []
@@ -33,7 +33,8 @@ def test_companion_uses_personal_proxy_and_validates_reply(app, client, monkeypa
     monkeypatch.setattr(llm.httpx, "post", fixture)
     response = client.post("/api/v1/ai/companion", json=question)
     assert response.status_code == 200
-    assert response.json == {**answer, "spoken_text":"对于任意大于零的伊普西隆","actions":answer["actions"][:1]}
+    assert response.json == {**answer, "spoken_text":"对于任意大于零的伊普西隆","actions":answer["actions"][:1],
+                             "dropped":[{"index":1, "type":"unsupported", "reason":"不支持的操作类型"}]}
     assert captured[0]["response_format"] == {"type":"json_object"}
     assert json.loads(captured[0]["messages"][-1]["content"]) == question
     answer["display_markdown"] = ""
@@ -71,10 +72,9 @@ def test_companion_preserves_valid_partial_action_fields(action):
 
 @pytest.mark.parametrize("invalid", [
     {"type":"set_scene", "scene":{}},
-    {"type":"set_curve", "expression":"x", "id":None},
     {"type":"add_curve", "expression":"x", "rightOpen":1},
     {"type":"clear_comparison_curves", "all":True},
-    {"type":"set_range", "xMin":"-4"},
+    {"type":"set_range", "xMin":"-4px"},
     {"type":"set_range", "yMax":float("inf")},
     {"type":"set_mode", "mode":"surface"},
     *[{"type":"set_parameter_range", "name":name, "value":1, "min":0, "max":2}
@@ -85,4 +85,25 @@ def test_companion_preserves_valid_partial_action_fields(action):
 def test_companion_discards_only_the_invalid_action(invalid):
     action = {"type":"set_curve", "expression":"x"}
     answer = parse_answer(json.dumps({"display_markdown":"讲解", "actions":[invalid,action]}))
-    assert answer == {"display_markdown":"讲解", "spoken_text":"讲解", "actions":[action]}
+    assert answer["actions"] == [action]
+    [drop] = answer["dropped"]
+    assert (drop["index"], drop["type"]) == (0, invalid["type"])
+    assert any("\u4e00" <= char <= "\u9fff" for char in drop["reason"])
+
+
+def test_companion_normalizes_typed_fields_and_reports_empty_patches_in_original_order():
+    inputs = [
+        {"type":"set_range", "xMin":None, "yMax":" +.5e1 "},
+        {"type":"set_surface_range", "yMin":None},
+        {"type":"set_curve", "id":"007", "label":None, "expression":"2", "leftOpen":"true", "rightOpen":"false"},
+        {"type":"set_range"},
+        None,
+    ]
+    reply = parse_answer(json.dumps({"display_markdown":"观察常函数", "actions":inputs}))
+    assert reply["actions"] == [
+        {"type":"set_range", "yMax":5.0},
+        {"type":"set_curve", "id":"007", "expression":"2", "leftOpen":True, "rightOpen":False},
+    ]
+    assert [item["index"] for item in reply["dropped"]] == [1, 3, 4]
+    assert all("边界" in item["reason"] for item in reply["dropped"][:2])
+    assert reply["spoken_text"] == "观察常函数"

@@ -24,7 +24,7 @@ const compiled = await build({
 });
 const {
   queryWorkspace, queryDeskWorkspace, registerWorkspaceEndpoint, initialScene, applyFunctionScene, localReply,
-  actionSchema, fitCompanionContext, requestReply, companionErrorMessage,
+  actionSchema, fitCompanionContext, requestReply, companionErrorMessage, formatActionNotice,
   functionParameterCandidate, sceneParameterBatch, defaultSurfaceScene, surfaceParameterCandidate,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].contents).toString("base64")}`
@@ -237,8 +237,23 @@ test("a board validation refusal reaches the companion with its original Chinese
     const result = await queryWorkspace("explore").dispatchActions([
       {type:"add_curve", expression:"x"},
     ],new AbortController().signal);
-    assert.deepEqual(result, {reason});
+    assert.deepEqual(result, {count: 1, reason});
   } finally { remove(); }
+});
+
+test("a refused board batch counts all rolled-back actions and excludes successful targets", async () => {
+  const reason = "曲面区间跨度太小";
+  const remove2D = registerWorkspaceEndpoint("explore", {query: () => ({}), command: () => true});
+  const remove3D = registerWorkspaceEndpoint("surface", {query: () => ({}), command: () => ({reason})});
+  globalThis.window = new EventTarget();
+  try {
+    const result = await queryWorkspace("explore").dispatchActions([
+      {type:"set_curve", expression:"x"},
+      {type:"set_surface_expression", expression:"x*y"},
+      {type:"set_surface_range", xMin:0, xMax:0},
+    ], new AbortController().signal);
+    assert.deepEqual(result, {count:2, reason});
+  } finally { remove2D(); remove3D(); delete globalThis.window; }
 });
 
 test("long imported passages and escaped text fit the request budget without truncating plot IDs", () => {
@@ -274,6 +289,35 @@ test("the response reader distinguishes malformed explanations from connectivity
     assert.deepEqual((await ask()).actions, [{type:"set_surface_view",elevation:35},{type:"set_curve",expression:"x"}]);
     assert.equal(actionSchema.safeParse({type:"set_parameter_range",name:"e",value:1,min:0,max:2}).success,false);
     assert.equal(actionSchema.safeParse({type:"set_mode",mode:"taylor"}).success,true);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("reply preserves original drop indices and keeps diagnostics out of speech", async () => {
+  const originalFetch = globalThis.fetch;
+  const serverDrop = {index:1, type:"invalid", reason:"不支持的操作类型"};
+  try {
+    globalThis.fetch = async () => Response.json({
+      display_markdown:"观察常函数", spoken_text:"观察常函数", dropped:[serverDrop],
+      actions:[
+        {type:"set_curve", expression:"2", id:"001", domainMin:null, leftOpen:"false"},
+        {type:"set_range", xMax:null},
+        {type:"set_scene_param", name:"x0", value:" -1.2e1 "},
+        {type:"set_surface_range", xMin:"-1px"},
+      ],
+    });
+    const reply = await requestReply("改图", {}, [], new AbortController().signal);
+    assert.deepEqual(reply.actions, [
+      {type:"set_curve", expression:"2", id:"001", leftOpen:false},
+      {type:"set_scene_param", name:"x0", value:-12},
+    ]);
+    assert.deepEqual(reply.dropped.map(d => d.index), [1,2,4]);
+    assert.deepEqual(reply.dropped[0], serverDrop);
+    assert.match(reply.dropped[1].reason, /边界/);
+    assert.match(reply.dropped[2].reason, /xMin/);
+    const notice = formatActionNotice(reply.dropped, {count:2, reason:"曲线数量超限"});
+    assert.match(notice, /^有 5 项黑板操作未执行：/);
+    assert.ok(notice.includes(serverDrop.reason) && notice.includes("曲线数量超限"));
+    assert.equal(reply.spoken_text, "观察常函数");
   } finally { globalThis.fetch = originalFetch; }
 });
 

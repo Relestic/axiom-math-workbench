@@ -32,20 +32,36 @@
   font-size: 16px;
 }
 .desk-tool-heading h2 svg { color: var(--teal); }
-.desk-tool-heading .module-select {
+.desk-card-navigation {
+  flex: 1 1 360px;
   display: flex;
-  flex-direction: row;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
-  max-width: 100%;
 }
-.desk-tool-heading .module-select span { flex: none; }
-.desk-tool-heading .module-select select {
+.desk-card-navigation select {
   min-width: 0;
   padding: 7px 8px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
   text-overflow: ellipsis;
 }
+.desk-card-navigation > select { flex: 1 1 162px; }
+.desk-card-controls {
+  flex: 1.5 1 220px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+}
+.desk-card-controls select { flex: 1; }
+.desk-card-controls span { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+.desk-card-controls .btn { padding: 6px; min-height: 30px; }
+.desk-card-controls .btn:disabled { opacity: 0.45; }
 .desk-tool-heading .desk-collapse {
   min-height: 30px;
   padding: 4px 8px;
@@ -92,7 +108,7 @@
   padding: 3px;
 }
 .desk-panel:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.desk-panel[hidden], .desk-mobile-switch, .desk-panel .learning-page .module-select { display: none; }
+.desk-panel[hidden], .desk-mobile-switch { display: none; }
 .desk-workbench[data-board-collapsed="true"] .desk-columns { grid-template-columns: minmax(0, 1fr); }
 .desk-workbench[data-board-collapsed="true"] .desk-board { display: none; }
 .desk-panel .learning-heading .learning-step { display: none; }
@@ -104,7 +120,7 @@
       .fw-grid, .surface-layout, .ex-workspace, .ex-chat-grid, .ex-proof-grid, .ex-bottom-grid) {
     grid-template-columns: minmax(0, 1fr);
   }
-  .desk-panel :is(.page-heading, .book-summary, .exercise-settings, .learning-next,
+  .desk-panel :is(.page-heading, .exercise-settings, .learning-next,
       .section-title, .fw-status, .fw-chart-heading, .surface-chart-heading, .surface-chart-foot) {
     flex-wrap: wrap;
     gap: 8px;
@@ -112,7 +128,6 @@
   .desk-panel .page-heading { margin: 8px 0 12px; }
   .desk-panel .page-heading h1 { margin: 0; font-size: 19px; }
   .desk-panel :is(.textbook-details, .proof-outline, .exercise-main, .fw-main, .surface-main) { min-width: 0; }
-  .desk-panel .book-summary-main { min-width: min(180px, 100%); }
   .desk-panel .paper-content { columns: auto; }
   .desk-panel .card { padding: 15px; }
   .desk-panel .definition-tokens, .desk-panel .answer-label { flex-wrap: wrap; }

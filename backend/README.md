@@ -97,9 +97,9 @@ python -m pytest -q                   # 102 项测试
 | `AXIOM_SECRET_KEY` | JWT 与邀请码 HMAC 密钥；生产必须随机且保密 |
 | `AXIOM_DB_URL` | 默认 `sqlite:///.../backend/var/axiom.db`；可换 PostgreSQL |
 | `AXIOM_CORS_ORIGINS` | 允许的前端来源，逗号分隔 |
-| `AI_BASE_URL` / `AI_MODEL` / `AI_API_KEY` | 模型服务；HTTPS，本机模型允许 localhost HTTP。DeepSeek 可用 `AXIOM_AI_PROVIDER=deepseek` 并省略 BASE，默认 `https://api.deepseek.com` / `deepseek-chat` |
+| `AI_BASE_URL` / `AI_MODEL` / `AI_API_KEY` | 模型服务使用 HTTPS，本机模型允许 localhost HTTP。设置 `AXIOM_AI_PROVIDER=deepseek` 后默认使用 `https://api.deepseek.com` 和 `deepseek-flash` |
 | `AXIOM_AI_PROVIDER` | `none` / `openai` / `deepseek` / `mock`；mock 明确标记为模拟 |
-| `AI_JSON_MODE` | 请求 JSON 输出；`deepseek-reasoner` 会自动跳过 `response_format` |
+| `AI_JSON_MODE` | 为需要结构化结果的调用启用 JSON 输出 |
 | `AXIOM_AI_DAILY_CALL_LIMIT` | 每用户每日模型调用上限 |
 | `AXIOM_WORKER_ENABLED` | 是否启动单机任务线程 |
 | `AXIOM_WORKER_SYNC` | `true` 时同步执行任务（测试/单步演示） |
@@ -113,13 +113,13 @@ DeepSeek 配置示例：
 ```dotenv
 AXIOM_AI_PROVIDER=deepseek
 AI_BASE_URL=https://api.deepseek.com
-AI_MODEL=deepseek-chat
+AI_MODEL=deepseek-flash
 AI_API_KEY=sk-你的密钥
 AI_JSON_MODE=true
 AXIOM_LEGACY_AI=true
 ```
 
-`AI_MODEL` 可改为 `deepseek-reasoner` 或其他账户可用模型；推理模型会自动跳过 `temperature` 与 `response_format`，仍由提示词和结构校验保证 JSON。配置后可用 `POST /api/v1/ai/test` 做一次最小真实调用，或在前端图像工作区点“测试连接”。
+`AI_MODEL` 可改为 `deepseek-v4-pro`。已有 DeepSeek 配置中的 `deepseek-chat` 与 `deepseek-reasoner` 会分别映射到 `deepseek-flash` 与 `deepseek-v4-pro`。伴学、改图和连接测试会显式关闭思考。配置后可用 `POST /api/v1/ai/test` 做一次最小真实调用，或在前端图像工作区点“测试连接”。
 
 ## 5. 目录结构
 

@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from app import create_app
-from app.adapters import llm
+from app.adapters import llm, local_key
 
 ROOT = "/api/v1/ai/key"
 FIXTURE_KEY = "sk-m4-fixture-sensitive-token"
@@ -32,11 +32,11 @@ def local(tmp_path):
 def test_status_persistence_model_and_clear(local, tmp_path, caplog):
     client = local()
     assert client.get(f"{ROOT}/status").json == {
-        "configured": False, "model": "deepseek-chat", "state": "unset"
+        "configured": False, "model": "deepseek-flash", "state": "unset"
     }
-    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-chat"}).status_code == 200
-    status = client.put(ROOT, json={"model": "deepseek-reasoner"})
-    assert status.json == {"configured": True, "model": "deepseek-reasoner", "state": "ready"}
+    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"}).status_code == 200
+    status = client.put(ROOT, json={"model": "deepseek-v4-pro"})
+    assert status.json == {"configured": True, "model": "deepseek-v4-pro", "state": "ready"}
     saved = next(tmp_path.glob("ai-key.*"))
     if os.name == "nt":
         assert FIXTURE_KEY.encode() not in saved.read_bytes()
@@ -48,6 +48,40 @@ def test_status_persistence_model_and_clear(local, tmp_path, caplog):
     assert not saved.exists()
     assert local().get(f"{ROOT}/status").json["state"] == "unset"
     assert FIXTURE_KEY not in caplog.text
+
+
+@pytest.mark.parametrize("previous,current", [
+    ("deepseek-chat", "deepseek-flash"),
+    ("deepseek-reasoner", "deepseek-v4-pro"),
+])
+def test_saved_legacy_key_is_immediately_usable(local, previous, current, monkeypatch):
+    client = local()
+    store = client.application.extensions["axiom_local_key"]
+    saved = json.dumps({"api_key": FIXTURE_KEY, "model": previous, "revision": "original"}).encode()
+    store.path.write_bytes(saved)
+    if os.name == "nt":
+        # Exercise the persisted JSON contract independently of the Windows profile.
+        monkeypatch.setattr(local_key, "_windows_dpapi", lambda data, *, protect: data)
+    else:
+        store.path.chmod(0o600)
+
+    assert client.get(f"{ROOT}/status").json == {
+        "configured": True, "model": current, "state": "ready", "migrated_from": previous,
+    }
+    assert store.read().revision == "original"
+    assert client.get("/api/ai/status").json["json_mode"] is True
+
+    def post(url, **kwargs):
+        assert kwargs["json"]["model"] == current
+        assert kwargs["headers"]["Authorization"] == f"Bearer {FIXTURE_KEY}"
+        return httpx.Response(200, json={"choices": [{"message": {"content": "OK"}}]})
+
+    monkeypatch.setattr(llm.httpx, "post", post)
+    assert client.post(f"{ROOT}/test").json == {"ok": True}
+    assert client.put(ROOT, json={"model": previous}).status_code == 422
+    assert client.put(ROOT, json={"model": current}).json == {
+        "configured": True, "model": current, "state": "ready",
+    }
 
 
 @pytest.mark.parametrize("environ,headers", [
@@ -91,7 +125,7 @@ def test_safe_provider_failure(local, monkeypatch, caplog, upstream, code, statu
 
     monkeypatch.setattr(llm.httpx, "post", post)
     client = local()
-    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-chat"})
+    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"})
     response = client.post(f"{ROOT}/test")
     assert response.status_code == status
     assert response.json["error"]["code"] == code
@@ -99,15 +133,15 @@ def test_safe_provider_failure(local, monkeypatch, caplog, upstream, code, statu
     assert FIXTURE_KEY not in response.get_data(as_text=True)
     assert FIXTURE_KEY not in caplog.text
     assert client.get(f"{ROOT}/status").json["state"] == "error"
-    assert client.put(ROOT, json={"model": "deepseek-chat"}).json["state"] == "ready"
+    assert client.put(ROOT, json={"model": "deepseek-flash"}).json["state"] == "ready"
 
 
 def test_check_uses_personal_settings_and_returns_only_ok(local, monkeypatch):
     def post(url, **kwargs):
         assert url == "https://api.deepseek.com/chat/completions"
         assert kwargs["headers"]["Authorization"] == f"Bearer {FIXTURE_KEY}"
-        assert kwargs["json"]["model"] == "deepseek-reasoner"
-        assert "temperature" not in kwargs["json"]
+        assert kwargs["json"]["model"] == "deepseek-v4-pro"
+        assert kwargs["json"]["thinking"] == {"type": "disabled"}
         assert "response_format" not in kwargs["json"]
         return httpx.Response(200, json={
             "choices": [{"message": {"content": None, "reasoning_content": "Thinking"}}],
@@ -115,7 +149,7 @@ def test_check_uses_personal_settings_and_returns_only_ok(local, monkeypatch):
 
     monkeypatch.setattr(llm.httpx, "post", post)
     client = local(ai_base_url="https://alternate.test", ai_api_key="environment-fixture")
-    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-reasoner"})
+    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-v4-pro"})
     assert client.post(f"{ROOT}/test").json == {"ok": True}
 
 
@@ -146,6 +180,7 @@ def test_local_plot_uses_personal_key_and_validates_changes(
     def post(url, **kwargs):
         assert kwargs["headers"]["Authorization"] == f"Bearer {FIXTURE_KEY}"
         assert kwargs["trust_env"] is False
+        assert kwargs["json"]["thinking"] == {"type": "disabled"}
         output = {"message": f"已更新曲线 {FIXTURE_KEY}", "scene": {**scene, **candidate}}
         return httpx.Response(200, json={
             "model": FIXTURE_KEY,
@@ -156,7 +191,7 @@ def test_local_plot_uses_personal_key_and_validates_changes(
     client = local(ai_provider="mock")
     payload = {"message": "绘制新的函数", "scene": scene}
     assert client.post(endpoint, json=payload).status_code == 503
-    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-chat"})
+    client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"})
     response = client.post(endpoint, json=payload)
     assert response.status_code == 200, response.json
     updated = response.json["scene"]
@@ -169,20 +204,20 @@ def test_local_plot_uses_personal_key_and_validates_changes(
 
 def test_corrupt_settings_are_recoverable(local, tmp_path):
     client = local()
-    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-chat"}).status_code == 200
+    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"}).status_code == 200
     next(tmp_path.glob("ai-key.*")).write_bytes(b"corrupt")
     assert client.get(f"{ROOT}/status").json["state"] == "error"
     assert client.post(f"{ROOT}/test").status_code == 503
-    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-reasoner"}).status_code == 200
+    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-v4-pro"}).status_code == 200
     assert client.get(f"{ROOT}/status").json["state"] == "ready"
 
 
 def test_stale_check_cannot_mark_replacement_key_failed(local, monkeypatch):
     client = local()
-    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-chat"}).status_code == 200
+    assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"}).status_code == 200
 
     def post(*args, **kwargs):
-        assert client.put(ROOT, json={"api_key": "sk-replacement-key", "model": "deepseek-chat"}).status_code == 200
+        assert client.put(ROOT, json={"api_key": "sk-replacement-key", "model": "deepseek-flash"}).status_code == 200
         return httpx.Response(401)
 
     monkeypatch.setattr(llm.httpx, "post", post)

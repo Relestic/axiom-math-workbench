@@ -28,7 +28,7 @@ import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { MathPreview, MathText, SymbolBar } from "../../components/Math";
 import type { Attempt } from "../../domain/types";
 import "../grading.css";
-import { Heading, ModuleSelect, useUnit, type Props } from "./shared";
+import { Heading, useUnit, type Props } from "./shared";
 
 export function Exercises(props: Props) {
   const app = useAppData();
@@ -42,7 +42,7 @@ export function Exercises(props: Props) {
 
 function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
   const app = useAppData();
-  const { unit, select } = useUnit();
+  const { unit } = useUnit();
   const selection = useExerciseSelection(unit.id);
   const choices = app.data.exercises.filter(item => item.topicId === unit.id);
   const exercise = (variantCode.test(selection) ? choices.find(item => item.id === selection)
@@ -199,7 +199,6 @@ function ExerciseWorkspace({ onNavigate, onSaveNote, notify }: Props) {
         </button>
       </Heading>
       <div className="exercise-settings card">
-        <ModuleSelect unit={unit} select={select} />
         <div className="exercise-mode">
           <span className="badge purple">基础证明与条件辨析</span>
           <small>

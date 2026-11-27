@@ -74,20 +74,26 @@ function workspaceSnapshot(page: string, context: Context, ready: boolean, isCur
         if (targets[target] && targets[target] !== getWorkspaceEndpoint(target)) return false;
       }
       const reasons: string[] = [];
+      let appliedCount = 0;
+      function interrupted() {
+        if (!appliedCount && !reasons.length) return false as const;
+        return {count: actions.length - appliedCount, reason: [...reasons, "目标页面已变化或尚未就绪。"].join(" ")};
+      }
       for (const [target, batch] of groups) {
-        if (signal.aborted) return false;
+        if (signal.aborted) return interrupted();
         if (desk || target !== page || !endpoint) {
           const mounted = waitForWorkspaceEndpoint(target, signal);
           onReveal?.(target);
           window.dispatchEvent(new CustomEvent("axiom:reveal-pane", { detail: { pane: target } }));
-          if (!await mounted || signal.aborted) return false;
+          if (!await mounted || signal.aborted) return interrupted();
         }
         const current = getWorkspaceEndpoint(target);
-        if (targets[target] && targets[target] !== current) return false;
+        if (targets[target] && targets[target] !== current) return interrupted();
         const result = commit(current, batch);
-        if (result !== true) reasons.push(result ? result.reason : "当前步骤或参数已变更，未应用这组操作。");
+        if (result === true) appliedCount += batch.length;
+        else reasons.push(result ? result.reason : "当前步骤或参数已变更，未应用这组操作。");
       }
-      return reasons.length ? { reason: reasons.join(" ") } : true;
+      return reasons.length ? {count: actions.length - appliedCount, reason: reasons.join(" ")} : true;
     },
   };
 }

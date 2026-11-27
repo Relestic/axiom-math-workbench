@@ -176,7 +176,7 @@ def test_active_pane_prompts_context_and_queued_actions(page, server):
     # Only the model transport is replaced. The production workspace registry,
     # request construction, action validator, navigation and UI all stay live.
     page.route("**/api/v1/ai/key/status", lambda route: route.fulfill(json={
-        "configured": True, "state": "ready", "model": "deepseek-chat"}))
+        "configured": True, "state": "ready", "model": "deepseek-flash"}))
     contexts = []
     def model(route):
         context = route.request.post_data_json["context"]

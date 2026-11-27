@@ -168,6 +168,7 @@ test("兼容接口端到端：发送上下文、解析AI场景并校验，不将
     });
     assert.equal(result.scene.curves[0].expression, "sin(a*x)");
     assert.equal(received.response_format.type, "json_object");
+    assert.equal(received.thinking, undefined);
     assert.equal(received.messages[1].content, "保留切线");
     assert.ok(received.messages.at(-1).content.includes("currentScene"));
     const posted = await fetch(app.url + "/api/ai/plot", {
@@ -211,6 +212,22 @@ test("兼容接口端到端：发送上下文、解析AI场景并校验，不将
     app.server.closeAllConnections();
     upstream.server.close();
     app.server.close();
+  }
+});
+test("DeepSeek 改图发送现役模型名并关闭思考", async (t) => {
+  let payload;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "https://api.deepseek.com/v1/chat/completions");
+    payload = JSON.parse(options.body);
+    return Response.json({ choices: [{ message: { content: '{"message":"ok","scene":null}' } }] });
+  });
+  for (const [model, expected] of [
+    ["", "deepseek-flash"], ["deepseek-chat", "deepseek-flash"], ["deepseek-reasoner", "deepseek-v4-pro"],
+  ]) {
+    const config = { baseUrl: "https://api.deepseek.com/v1", model, apiKey: "fixture", jsonMode: true };
+    await requestPlotChange(config, { message: "画图", scene: initialScene });
+    assert.equal(payload.model, expected);
+    assert.deepEqual(payload.thinking, { type: "disabled" });
   }
 });
 test("无模型配置时明确返回未连接，不生成伪AI回答", async () => {

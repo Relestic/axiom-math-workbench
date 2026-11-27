@@ -26,7 +26,7 @@ def configure(page, server, replies):
     } for question, answer, actions in replies]
     server.use_mock_deepseek(rules)
     key = page.request.put(server.url + "/api/v1/ai/key",
-                           data={"api_key": DUMMY_KEY, "model": "deepseek-chat"})
+                           data={"api_key": DUMMY_KEY, "model": "deepseek-flash"})
     assert key.ok and key.json()["configured"]
 
 
@@ -103,8 +103,8 @@ def test_pdf_collapsed_mixed_proof_and_plot_then_one_undo(page, server, capture)
     answer = "一起看证明第二步和正弦函数的切线。"
     configure(page, server, [(question, answer, [
         {"type": "highlight_proof_step", "ref": "uniform:1"},
-        {"type": "set_curve", "expression": "sin(x)"},
-        {"type": "set_range", "xMin": -2, "xMax": 4},
+        {"type": "set_curve", "expression": "f（x）=sin（x）", "id": None},
+        {"type": "set_range", "xMin": "-2", "xMax": "4", "yMax": None},
         {"type": "set_mode", "mode": "derivative"},
     ])])
     page.goto(server.url + "/#desk/textbook")
@@ -201,6 +201,7 @@ def test_invalid_batches_keep_the_drawing_and_explain_the_rejection(page, server
     a, b, c = "先检查公式。", "先检查曲线数量。", "先检查区间宽度。"
     configure(page, server, [
         (invalid, a, [{"type": "set_mode", "mode": "integral"},
+                      {"type": "set_surface_range", "xMax": None},
                       {"type": "set_curve", "expression": "unknownfn(x)"}]),
         (too_many, b, [{"type": "add_curve", "expression": f"x+{i}"} for i in range(1, 5)]),
         (too_narrow, c, [{"type": "set_surface_view", "azimuth": 91},
@@ -211,10 +212,12 @@ def test_invalid_batches_keep_the_drawing_and_explain_the_rejection(page, server
     expect(page.locator(".fw-plot-canvas .plot-container")).to_be_visible(timeout=15000)
     before = saved(page, FUNCTION)
     notice = page.locator(".companion-notice").last
-    for question, answer, reason in [(invalid, a, "表达式|公式"), (too_many, b, "4|四")]:
+    for question, answer, count, reason in [(invalid, a, 3, "表达式|公式"), (too_many, b, 4, "4|四")]:
         ask(page, question, answer)
+        expect(notice).to_contain_text(f"有 {count} 项黑板操作未执行")
         expect(notice).to_contain_text(re.compile(reason))
-        assert re.search(r"[\u4e00-\u9fff]", notice.inner_text())
+        if question == invalid:
+            expect(notice).to_contain_text("第 2 项：至少需要一个范围边界")
         assert saved(page, FUNCTION) == before
         expect(page.get_by_role("button", name="撤销修改", exact=True)).to_be_disabled()
     page.get_by_role("tab", name="3D 曲面").click()
@@ -222,6 +225,7 @@ def test_invalid_batches_keep_the_drawing_and_explain_the_rejection(page, server
     page.get_by_role("button", name="应用曲面").click()
     before = saved(page, SURFACE)
     ask(page, too_narrow, c)
+    expect(notice).to_contain_text("有 2 项黑板操作未执行")
     expect(notice).to_contain_text(re.compile("跨度|区间|范围"))
     assert saved(page, SURFACE) == before
 

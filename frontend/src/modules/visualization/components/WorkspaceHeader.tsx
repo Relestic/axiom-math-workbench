@@ -3,10 +3,8 @@ import type { FunctionWorkspaceState } from "../hooks/useFunctionWorkspace";
 
 export function WorkspaceHeader({
   state,
-  onNavigate,
 }: {
   state: FunctionWorkspaceState;
-  onNavigate: (page: string) => void;
 }) {
   return (
     <>
@@ -24,9 +22,6 @@ export function WorkspaceHeader({
         </div>
       </div>
       <div className="fw-status">
-        <button className="text-button" onClick={() => onNavigate("surface")}>
-          三维曲面实验室 <ArrowRight size={13} />
-        </button>
         <button
           className="text-button"
           onClick={() => state.setClassic(true)}

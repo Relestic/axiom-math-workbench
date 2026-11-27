@@ -36,85 +36,25 @@
   border-radius: 4px;
   margin-bottom: 9px;
 }
-.module-select {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  min-width: 230px;
-}
-.module-select select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 11px 12px;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  max-width: 100%;
-}
 .book-summary {
   display: flex;
-  gap: 24px;
   align-items: center;
-  margin-bottom: 24px;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
-.book-cover {
-  width: 58px;
-  height: 78px;
-  border-radius: 4px 9px 9px 4px;
-  background:
-    repeating-linear-gradient(
-      135deg,
-      transparent 0px,
-      transparent 6px,
-      #fff2 6px,
-      #fff2 7px
-    ),
-    linear-gradient(150deg, #c9c4ad, #666e60);
-  color: #fff7e8;
-  flex-shrink: 0;
-  text-align: center;
-  box-shadow: 3px 3px 0 #d8d3c3;
+.book-summary > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.book-cover > span {
-  font-size: 7px;
-  letter-spacing: 1px;
-  display: block;
-  margin-top: 10px;
-}
-.book-cover > div {
-  font-family: Georgia, serif;
-  font-size: 32px;
-  line-height: 34px;
-}
-.book-cover small {
-  font-size: 8px;
-}
-.book-summary-main {
-  flex: 1;
-}
-.book-summary h3 {
-  margin-bottom: 7px;
-}
-.book-summary p {
-  font-size: 11px;
-  margin-bottom: 12px;
-}
-.book-meta {
-  display: flex;
-  gap: 22px;
-  font-size: 10px;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-.book-meta span {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
-.book-meta svg {
-  color: var(--teal);
+.book-summary .btn {
+  flex: none;
+  min-height: 30px;
+  padding: 5px 9px;
 }
 .textbook-columns {
   display: grid;
@@ -125,15 +65,6 @@
 .manuscript {
   display: flex;
   flex-direction: column;
-}
-.manuscript-controls {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  background: var(--surface-raised);
-  border-radius: 6px;
-  font-size: 10px;
 }
 .learning-page .btn.icon {
   padding: 5px;
@@ -669,6 +600,12 @@
   place-items: center;
   color: var(--primary);
 }
+.proof-step-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
 .proof-step-list button > svg {
   margin-left: auto;
 }
@@ -986,17 +923,11 @@
   .definition-tokens {
     max-width: 700px;
   }
-  .book-meta {
-    gap: 14px;
-  }
   .exercise-layout {
     grid-template-columns: minmax(0, 1fr) 250px;
   }
   .exercise-settings {
     gap: 15px;
-  }
-  .exercise-settings .module-select {
-    min-width: 190px;
   }
   .proof-layout {
     grid-template-columns: 220px 1fr;
@@ -1043,34 +974,11 @@
   .learning-next > div:not(.next-icon) {
     min-width: 200px;
   }
-  .book-summary {
-    gap: 16px;
-  }
   .statement-flow b {
     font-size: 10px;
   }
 }
 @media (max-width: 760px) {
-  .learning-heading > .module-select {
-    width: 100%;
-  }
-  .book-summary {
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-  .book-summary-main {
-    min-width: 190px;
-  }
-  .book-summary h3 {
-    font-size: 13px;
-    line-height: 1.9;
-  }
-  .book-summary > .btn {
-    margin-left: auto;
-  }
-  .book-meta {
-    gap: 10px;
-  }
   .paper-content {
     columns: auto;
     font-size: 14px;
@@ -1158,9 +1066,6 @@
     padding: 18px;
     font-size: 13px;
   }
-  .exercise-settings > .module-select {
-    width: 100%;
-  }
   .exercise-question {
     font-size: 17px;
     margin-top: 20px;
@@ -1201,8 +1106,5 @@
   }
   .learning-page .section-title > small {
     margin-left: 0;
-  }
-  .module-select select {
-    font-size: 11px;
   }
 }

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from flask import Blueprint
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from ..adapters.llm import chat, use_local_ai
 from ..db import get_session
@@ -43,14 +43,6 @@ class Question(BaseModel):
 
 class Action(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
-
-    @model_validator(mode="before")
-    @classmethod
-    def reject_null_patch_fields(cls, values):
-        if isinstance(values, dict) and any(value is None for value in values.values()):
-            raise ValueError("未修改的字段请省略")
-        return values
-
 
 class ProofAction(Action):
     type: Literal["highlight_proof_step"]
@@ -131,18 +123,62 @@ class Answer(BaseModel):
     actions: list = Field(default_factory=list, max_length=6)
 
 
+NUMBER_FIELDS = {"domainMin", "domainMax", "xMin", "xMax", "yMin", "yMax",
+                 "value", "min", "max", "azimuth", "elevation", "heightScale"}
+NUMBER_LITERAL = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+
+
+def normalize_action(action):
+    patch = {}
+    for key, value in action.items():
+        if value is None:
+            continue
+        if isinstance(value, str):
+            literal = value.strip()
+            if key in NUMBER_FIELDS and NUMBER_LITERAL.fullmatch(literal):
+                value = float(literal)
+            elif key in {"leftOpen", "rightOpen"} and literal in {"true", "false"}:
+                value = literal == "true"
+        patch[key] = value
+    return patch
+
+
+def action_error(error):
+    issue = error.errors(include_input=False, include_url=False)[0]
+    if issue["type"] in {"union_tag_invalid", "union_tag_not_found"}:
+        return "不支持的操作类型"
+    field = issue["loc"][-1]
+    if issue["type"] == "missing":
+        return f"缺少必填字段 {field}"
+    if issue["type"] == "extra_forbidden":
+        return f"不支持字段 {field}"
+    return f"字段 {field} 的取值无效"
+
+
 def parse_answer(raw):
     answer = Answer.model_validate_json(raw)
     actions = []
-    for action in answer.actions:
-        try:
-            actions.append(ACTIONS.validate_python(action).model_dump(exclude_unset=True))
-        except ValidationError:
-            continue
+    dropped = []
+    for index, action in enumerate(answer.actions):
+        kind = action.get("type") if isinstance(action, dict) else None
+        if not isinstance(kind, str):
+            reason = "缺少有效的操作类型"
+        else:
+            try:
+                patch = ACTIONS.validate_python(normalize_action(action)).model_dump(exclude_unset=True)
+            except ValidationError as exc:
+                reason = action_error(exc)
+            else:
+                if kind not in {"set_range", "set_surface_range"} or len(patch) > 1:
+                    actions.append(patch)
+                    continue
+                reason = "至少需要一个范围边界（xMin、xMax、yMin 或 yMax）"
+        dropped.append({"index": index, "type": kind if isinstance(kind, str) else "未知操作", "reason": reason})
     return {
         "display_markdown": answer.display_markdown,
         "spoken_text": spoken_math(answer.spoken_text.strip() or answer.display_markdown)[:3400],
         "actions": actions,
+        "dropped": dropped,
     }
 
 

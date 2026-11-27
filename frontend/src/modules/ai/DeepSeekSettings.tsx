@@ -7,6 +7,7 @@ import {
   type DeepSeekModel,
 } from "./api";
 import { useAIConnection } from "./connection";
+import { deepSeekModels } from "./models";
 
 export function aiStatusLabel(state: "ready" | "unset" | "error") {
   return { ready: "已就绪", unset: "未配置", error: "异常" }[state];
@@ -15,7 +16,7 @@ export function aiStatusLabel(state: "ready" | "unset" | "error") {
 export function DeepSeekSettings() {
   const { status, available, failed, setFailed, refresh } = useAIConnection();
   const [model, setModel] = useState<DeepSeekModel>(
-    status?.model || "deepseek-chat",
+    status?.model || deepSeekModels[0],
   );
   const keyInput = useRef<HTMLInputElement>(null);
   const [hasKey, setHasKey] = useState(false);
@@ -24,7 +25,7 @@ export function DeepSeekSettings() {
   );
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean }>();
   useEffect(() => {
-    setModel(status?.model || "deepseek-chat");
+    setModel(status?.model || deepSeekModels[0]);
   }, [status?.model]);
 
   async function run(action: "save" | "test" | "clear") {
@@ -113,10 +114,14 @@ export function DeepSeekSettings() {
                 setModel(event.target.value as DeepSeekModel)
               }
             >
-              <option value="deepseek-chat">deepseek-chat</option>
-              <option value="deepseek-reasoner">deepseek-reasoner</option>
+              {deepSeekModels.map((id) => <option key={id} value={id}>{id}</option>)}
             </select>
           </label>
+          {status?.migrated_from && (
+            <p className="muted">
+              已将 {status.migrated_from} 映射为 {status.model}，可继续使用原有 Key。
+            </p>
+          )}
           <div className="button-row">
             <button
               className="btn primary"

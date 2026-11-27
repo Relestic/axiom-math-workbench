@@ -1,5 +1,6 @@
 import { parse, type MathNode } from "mathjs";
 import { hasMinimumSpan } from "../../../lib/interval";
+import { normalizeGraphExpression } from "../scene/companionActions";
 import { defaultSurfaceScene, type SurfaceScene } from "./types";
 
 const functions = new Set([
@@ -49,14 +50,13 @@ const types = new Set([
 ]);
 
 export type SurfaceFormula = {
+  expression: string;
   tree: MathNode;
   evaluate: (x: number, y: number) => number;
 };
 
-export function parseSurfaceExpression(expression: string): SurfaceFormula {
-  if (!expression.trim() || expression.length > 300) {
-    throw new Error("曲面表达式需为 1–300 个字符");
-  }
+export function parseSurfaceExpression(input: string): SurfaceFormula {
+  const expression = normalizeGraphExpression(input);
   let tree: MathNode;
   try {
     tree = parse(
@@ -102,6 +102,7 @@ export function parseSurfaceExpression(expression: string): SurfaceFormula {
   });
   const compiled = tree.compile();
   return {
+    expression,
     tree,
     evaluate: (x: number, y: number) => {
       try {
@@ -126,11 +127,11 @@ const clamp = (value: number, min: number, max: number) =>
 
 export function normalizeSurfaceScene(input: unknown): SurfaceScene {
   const source = (input || {}) as Partial<SurfaceScene>;
-  const expression =
+  const { expression } = parseSurfaceExpression(
     typeof source.expression === "string" && source.expression.trim()
       ? source.expression.trim()
-      : defaultSurfaceScene.expression;
-  parseSurfaceExpression(expression);
+      : defaultSurfaceScene.expression,
+  );
   let xMin = Number(source.xMin);
   let xMax = Number(source.xMax);
   let yMin = Number(source.yMin);

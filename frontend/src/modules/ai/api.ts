@@ -1,4 +1,6 @@
 import { ApiError, apiFetch, apiUrl } from "../../lib/api";
+import type { DeepSeekModel, LegacyDeepSeekModel } from "./models";
+export type { DeepSeekModel } from "./models";
 
 export type AIStatus = {
   configured: boolean;
@@ -13,12 +15,11 @@ export async function fetchAIStatus(): Promise<AIStatus> {
   return response.json();
 }
 
-export type DeepSeekModel = "deepseek-chat" | "deepseek-reasoner";
-
 export type KeyStatus = {
   configured: boolean;
   model: DeepSeekModel;
   state: "ready" | "unset" | "error";
+  migrated_from?: LegacyDeepSeekModel;
 };
 
 const local = { auth: false };

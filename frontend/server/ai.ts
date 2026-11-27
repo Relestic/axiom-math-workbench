@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { validateScene, parseAIResult } from "../src/lib/plotScene.js";
+import { resolveDeepSeekModel } from "../src/modules/ai/models.js";
 export type AIConfig = {
   baseUrl: string;
   model: string;
@@ -27,12 +28,18 @@ function endpoint(config: AIConfig) {
     throw new Error("AI_BASE_URL 需要 HTTPS；本机模型可使用 localhost HTTP");
   return config.baseUrl.replace(/\/+$/, "") + "/chat/completions";
 }
+
+function isDeepSeek(config: AIConfig) {
+  return URL.canParse(config.baseUrl) && new URL(config.baseUrl).hostname === "api.deepseek.com";
+}
 export async function requestPlotChange(
   config: AIConfig,
   body: any,
   signal?: AbortSignal,
 ) {
-  if (!config.apiKey || !config.model)
+  const deepSeek = isDeepSeek(config);
+  const model = deepSeek ? resolveDeepSeekModel(config.model) : config.model;
+  if (!config.apiKey || !model)
     throw new Error(
       "请先在 .env 中设置 AI_BASE_URL、AI_MODEL 和 AI_API_KEY，并重新启动服务",
     );
@@ -64,7 +71,7 @@ export async function requestPlotChange(
       Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: config.model,
+      model,
       messages: [
         { role: "system", content: system },
         ...history,
@@ -77,6 +84,7 @@ export async function requestPlotChange(
         },
       ],
       ...(config.jsonMode ? { response_format: { type: "json_object" } } : {}),
+      ...(deepSeek ? { thinking: { type: "disabled" } } : {}),
       stream: false,
     }),
   });
@@ -113,6 +121,7 @@ export async function requestPlotChange(
 }
 export function createAIMiddleware(config: AIConfig) {
   let active = 0;
+  const model = isDeepSeek(config) ? resolveDeepSeekModel(config.model) : config.model;
   return async (
     req: IncomingMessage,
     res: ServerResponse,
@@ -140,8 +149,8 @@ export function createAIMiddleware(config: AIConfig) {
     }
     if (path === "/api/ai/status" && req.method === "GET") {
       json(200, {
-        configured: !!(config.apiKey && config.model && config.baseUrl),
-        model: config.model || "",
+        configured: !!(config.apiKey && model && config.baseUrl),
+        model,
         provider: (() => {
           try {
             return new URL(config.baseUrl).hostname;
@@ -156,7 +165,7 @@ export function createAIMiddleware(config: AIConfig) {
       json(405, { error: "不支持的请求方法" });
       return;
     }
-    if (!config.apiKey || !config.model) {
+    if (!config.apiKey || !model) {
       json(503, {
         error:
           "AI 尚未配置。请填写项目 .env 并重启；当前仍可直接编辑任意支持的公式。",

@@ -2,7 +2,7 @@ import { z } from "zod";
 import speech from "../../../../backend/app/modules/spoken_math.json";
 import { ApiError, apiFetch } from "../../lib/api";
 import type { CurriculumUnit, ClassicSet } from "../../domain/types";
-import { actionSchema, type WorkspaceAction } from "./actions";
+import { actionError, actionSchema, type WorkspaceAction } from "./actions";
 import { fitCompanionContext } from "./context";
 export { actionSchema };
 
@@ -16,13 +16,24 @@ export function spokenMath(text: string): string {
   return rules(converted, speech.cleanup).trim();
 }
 export type Action = WorkspaceAction;
+const droppedAction = z.object({index: z.number().int().nonnegative(), type: z.string(), reason: z.string().min(1)});
+type DroppedAction = z.infer<typeof droppedAction>;
 const responseSchema = z.object({
   display_markdown: z.string().min(1).max(6000),
   spoken_text: z.string().max(3400),
   actions: z.array(z.unknown()).max(6).optional(),
+  dropped: z.array(droppedAction).max(6).default([]),
 });
-export type Reply = {display_markdown: string; spoken_text: string; actions: Action[]};
+export type Reply = {display_markdown: string; spoken_text: string; actions: Action[]; dropped: DroppedAction[]};
 export type Message = {role: "user" | "assistant"; content: string; spoken?: string; local?: boolean};
+
+export function formatActionNotice(dropped: DroppedAction[], batch?: {count: number; reason: string}) {
+  const count = dropped.length + (batch?.count ?? 0);
+  if (!count) return undefined;
+  const reasons = dropped.map(item => `第 ${item.index + 1} 项：${item.reason}`);
+  if (batch) reasons.push(batch.reason);
+  return `有 ${count} 项黑板操作未执行：${reasons.join("；")}`;
+}
 
 export function companionErrorMessage(cause: unknown) {
   if (cause instanceof z.ZodError || (cause instanceof ApiError && cause.code === "companion_format")) {
@@ -39,11 +50,23 @@ export async function requestReply(question: string, context: Record<string, unk
       history: history.slice(-6).map(({role,content}) => ({role, content:content.slice(0,1400)}))}),
   }, { auth:false });
   const parsed = responseSchema.parse(raw);
-  const actions = (parsed.actions ?? []).flatMap(input => {
+  const actions: Action[] = [];
+  const dropped = [...parsed.dropped];
+  // The server omits rejected actions from its array. Keep its original numbering.
+  const serverIndices = new Set(dropped.map(item => item.index));
+  let index = 0;
+  for (const input of parsed.actions ?? []) {
+    while (serverIndices.has(index)) index++;
     const result = actionSchema.safeParse(input);
-    return result.success ? [result.data] : [];
-  });
-  return {display_markdown: parsed.display_markdown, spoken_text: spokenMath(parsed.spoken_text || parsed.display_markdown), actions};
+    if (result.success) actions.push(result.data);
+    else {
+      const type = input && typeof input === "object" && "type" in input ? input.type : undefined;
+      dropped.push({index, type: typeof type === "string" ? type : "未知操作", reason: actionError(result.error)});
+    }
+    index++;
+  }
+  dropped.sort((a, b) => a.index - b.index);
+  return {display_markdown: parsed.display_markdown, spoken_text: spokenMath(parsed.spoken_text || parsed.display_markdown), actions, dropped};
 }
 
 export function localReply(question: string, unit: CurriculumUnit, classic: ClassicSet | undefined,
@@ -67,5 +90,5 @@ export function localReply(question: string, unit: CurriculumUnit, classic: Clas
   } else {
     display = unit.definition + "\n\n" + unit.formula;
   }
-  return {display_markdown: display, spoken_text: spokenMath(display), actions: []};
+  return {display_markdown: display, spoken_text: spokenMath(display), actions: [], dropped: []};
 }

@@ -4,7 +4,7 @@ import { useAppData } from "../../app/DataProvider";
 import { MathText, SymbolBar, MathPreview } from "../../components/Math";
 import { useAIConnection } from "../ai/connection";
 import type { CompanionStage } from "./CompanionStage";
-import { companionErrorMessage, localReply, requestReply, spokenMath, type Message } from "./reply";
+import { companionErrorMessage, formatActionNotice, localReply, requestReply, spokenMath, type Message } from "./reply";
 import { queryDeskWorkspace, queryWorkspace, type DeskPanes } from "./workspace";
 import "./panel.css";
 
@@ -178,14 +178,17 @@ export function CompanionPanel({page, desk, stage, stageView}: {
         setNotice("学习内容已更新，可按当前步骤重新提问。");
         return;
       }
-      let actionNotice: string | undefined;
+      let failedBatch: {count: number; reason: string} | undefined;
       if (reply.actions.length) {
         const applied = await workspace.dispatchActions(reply.actions, controller.signal, () => {
           if (!desk) requestedScope.current = "desk/" + selectedConceptId;
         });
         if (id !== sequence.current) return;
-        if (applied !== true) actionNotice = applied ? applied.reason : "学习内容已更新，请按当前步骤重新提问。";
+        if (applied !== true) {
+          failedBatch = applied || {count: reply.actions.length, reason: "目标页面已变化或尚未就绪。"};
+        }
       }
+      const actionNotice = formatActionNotice(reply.dropped, failedBatch);
       setTurns(items => [...items.slice(-29), {role:"assistant",content:reply.display_markdown,
         spoken:reply.spoken_text, local, scope, actionNotice}]);
       if (mutedRef.current) void stage.current?.playMotion("TapBody");

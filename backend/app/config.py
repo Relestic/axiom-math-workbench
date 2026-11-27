@@ -15,6 +15,11 @@ from typing import Any
 from urllib.parse import urlparse
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+DEEPSEEK_MODELS = ("deepseek-flash", "deepseek-v4-pro")
+DEEPSEEK_LEGACY_MODELS = {
+    "deepseek-chat": DEEPSEEK_MODELS[0],
+    "deepseek-reasoner": DEEPSEEK_MODELS[1],
+}
 
 
 def _env(name: str, default: str = "") -> str:
@@ -115,8 +120,7 @@ class Config:
 
     @property
     def ai_json_effective(self) -> bool:
-        # DeepSeek reasoning models do not accept response_format; the prompt
-        # still asks for JSON and the validator enforces the schema.
+        # Keep the existing opt-out for providers with reasoning-only models.
         return bool(self.ai_json_mode and not self.ai_is_reasoner)
 
     @property
@@ -191,16 +195,11 @@ def load_config(overrides: dict[str, Any] | None = None) -> Config:
     ai_model = _env("AI_MODEL", "").strip()
     ai_api_key = _env("AI_API_KEY", "").strip()
 
-    if ai_provider == "deepseek":
-        ai_base_url = ai_base_url or "https://api.deepseek.com"
-        ai_model = ai_model or "deepseek-chat"
-    elif ai_provider == "openai" and not ai_base_url:
+    if ai_provider == "openai" and not ai_base_url:
         ai_base_url = "https://api.openai.com/v1"
     elif ai_provider == "none" and ai_base_url:
         # Preserve existing deployments that only set AI_BASE_URL.
         ai_provider = "deepseek" if "deepseek" in ai_base_url.lower() else "openai"
-        if ai_provider == "deepseek" and not ai_model:
-            ai_model = "deepseek-chat"
 
     config = Config(
         env=_env("AXIOM_ENV", "development"),
@@ -252,6 +251,9 @@ def load_config(overrides: dict[str, Any] | None = None) -> Config:
             setattr(config, key, value)
         if config.database_url.startswith("sqlite"):
             config.data_dir.mkdir(parents=True, exist_ok=True)
+    if config.ai_provider == "deepseek":
+        config.ai_base_url = config.ai_base_url or "https://api.deepseek.com"
+        config.ai_model = DEEPSEEK_LEGACY_MODELS.get(config.ai_model, config.ai_model) or DEEPSEEK_MODELS[0]
     config.validate()
     return config
 

@@ -12,9 +12,8 @@ from tempfile import NamedTemporaryFile
 from threading import RLock
 from uuid import uuid4
 
+from ..config import DEEPSEEK_LEGACY_MODELS, DEEPSEEK_MODELS as MODELS
 from ..errors import ApiError
-
-MODELS = ("deepseek-chat", "deepseek-reasoner")
 
 
 def valid_key(value: object) -> bool:
@@ -57,6 +56,7 @@ class Credentials:
     api_key: str = field(repr=False)
     model: str
     revision: str = field(default_factory=lambda: uuid4().hex)
+    migrated_from: str | None = None
 
 
 class LocalKeyStore:
@@ -79,11 +79,16 @@ class LocalKeyStore:
             if (
                 not isinstance(value, dict)
                 or not valid_key(value.get("api_key"))
-                or value.get("model") not in MODELS
+                or not isinstance(value.get("model"), str)
                 or not isinstance(value.get("revision"), str)
             ):
                 raise ValueError("invalid credential file")
-            return Credentials(value["api_key"], value["model"], value["revision"])
+            saved_model = value["model"]
+            model = DEEPSEEK_LEGACY_MODELS.get(saved_model, saved_model)
+            if model not in MODELS:
+                raise ValueError("invalid credential model")
+            return Credentials(value["api_key"], model, value["revision"],
+                               migrated_from=saved_model if saved_model != model else None)
         except FileNotFoundError:
             return None
         except (ValueError, OSError):
@@ -97,7 +102,7 @@ class LocalKeyStore:
                     raise ApiError("unprocessable", "请先输入个人 DeepSeek API Key")
                 api_key = existing.api_key
             credentials = Credentials(api_key, model)
-            raw = json.dumps(vars(credentials)).encode("utf-8")
+            raw = json.dumps({"api_key": api_key, "model": model, "revision": credentials.revision}).encode("utf-8")
             temporary = None
             try:
                 if os.name == "nt":
@@ -142,4 +147,7 @@ class LocalKeyStore:
             if current is None:
                 return {"configured": False, "model": MODELS[0], "state": "unset"}
             state = "error" if current.revision == self.failed_revision else "ready"
-            return {"configured": True, "model": current.model, "state": state}
+            status = {"configured": True, "model": current.model, "state": state}
+            if current.migrated_from:
+                status["migrated_from"] = current.migrated_from
+            return status

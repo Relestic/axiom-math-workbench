@@ -29,7 +29,7 @@ Windows x64 用户可完整解压最新的 `Axiom-Windows-Full-*.zip`，双击�
 - **在线预览与部署**：临时公网地址、演示账号与隧道重启方式见 [ONLINE_PREVIEW.md](ONLINE_PREVIEW.md)。该地址依赖开发机，不是正式上线；真正部署使用 [`Dockerfile`](Dockerfile)、[`docker-compose.yml`](docker-compose.yml) 和 [部署说明](deploy/README.md)（腾讯云 Lighthouse/CVM、VPS、Render/Railway/Fly.io）。
 - **自由函数与 AI 改图**：新增 Math.js 表达式引擎、Plotly 交互绘图和本地 Node API。支持通过可配置的 OpenAI 兼容接口生成函数、参数、比较曲线与分析配置，经过校验后应用；未填写模型配置时可直接编辑公式。配置方法见 [AI 改图说明](frontend/docs/ai-functions.md)。
 - **三维曲面实验室**：新增 `z=f(x,y)` 的可交互三维曲面，支持拖动旋转、滚轮缩放、范围/网格/高度/透明度/配色控制，并可通过 DeepSeek 对话修改曲面与视角；场景经后端 `SurfaceScene` 与表达式白名单校验。
-- **DeepSeek API**：支持 `AXIOM_AI_PROVIDER=deepseek`，默认 `https://api.deepseek.com` / `deepseek-chat`；在线预览已配置并实测 `/api/v1/ai/test` 与 `/api/ai/plot`。`deepseek-reasoner` 会自动跳过不支持的 `temperature` / `response_format`；未配置密钥时明确显示未连接，不伪造 AI 回答。
+- **DeepSeek API** 支持 `AXIOM_AI_PROVIDER=deepseek`，默认使用 `https://api.deepseek.com` 和 `deepseek-flash`。可切换到 `deepseek-v4-pro`，已有配置会自动映射旧模型名。在线预览已配置并实测 `/api/v1/ai/test` 与 `/api/ai/plot`。未配置密钥时显示未连接。
 - **范围**：8 个代表性学习单元和 32 道参数变式；前后端已完成联调，登录、内容卡片、练习、作答、笔记、收藏、诊断、图谱与热力矩阵默认读取/写入后端。自由函数场景仍保存在浏览器，正反例曲线与性质矩阵仍是前端教学示意；AI 出题的真实模型联调与完整教材解析仍待完成。AI 改图已通过本地模拟服务验证，真实模型仍需用户配置后联调。
 - **完整 MVP 验收**：仍按本文以下范围与标准执行。后端演示不代替全部章节内容建设、数学审核、正式权限与试用验收。
 

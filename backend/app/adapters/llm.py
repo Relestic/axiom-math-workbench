@@ -25,6 +25,9 @@ from .local_key import Credentials, LocalKeyStore
 from ..models import ModelCall
 
 CODE_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+REALTIME_PURPOSES = {
+    "companion", "connection_test", "plot", "plot_change", "surface_plot", "diagram", "card_visual",
+}
 
 
 class LLMError(Exception):
@@ -256,9 +259,8 @@ def _post_chat(
         "stream": False,
         "max_tokens": max_tokens,
     }
-    # DeepSeek thinking/reasoner models do not accept temperature or
-    # response_format. Their prompt still asks for JSON and the schema validator
-    # is the final gate.
+    if config.ai_provider == "deepseek" and purpose in REALTIME_PURPOSES:
+        payload["thinking"] = {"type": "disabled"}
     if not config.ai_is_reasoner:
         payload["temperature"] = 0.2
     if json_mode and config.ai_json_effective:
