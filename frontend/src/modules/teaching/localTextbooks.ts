@@ -1,6 +1,7 @@
 import type { LocalBook } from "../../domain/types";
 import type { ExerciseDto } from "../../domain/dto";
 import { apiFetch } from "../../lib/api";
+import type { CardVisual } from "../visualization/cardVisual";
 
 const libraryPath = "/api/v1/local/textbooks";
 const local = { auth: false };
@@ -25,6 +26,9 @@ export function extractCards(id: string, start: number, end: number) {
 export function generateCardProof(id: string) {
   return apiFetch(`/api/v1/local/cards/${encodeURIComponent(id)}/proof`, {method:"POST"}, local);
 }
+export function generateCardVisual(id: string) {
+  return apiFetch<{visual: CardVisual}>(`/api/v1/local/cards/${encodeURIComponent(id)}/visual`, {method:"POST"}, local);
+}
 export function generateCardExercises(id: string, count: 1 | 2 = 1, focus: "concept" | "proof" | "calculation" = "concept") {
   return apiFetch<{exercises: ExerciseDto[]}>(`/api/v1/local/cards/${encodeURIComponent(id)}/exercises`, {
     method:"POST", body:JSON.stringify({count, focus}),
@@ -40,7 +44,8 @@ export async function completeCards(cards: {id:string; title:string}[], options:
   for (const [index, card] of cards.entries()) {
     if (options.stopped()) break;
     const position = `已提取 ${cards.length} 张卡片 · 正在生成第 ${index + 1} / ${cards.length} 张卡的`;
-    for (const [part, generate] of [["证明拆解", generateCardProof], ["配套练习", generateCardExercises]] as const) {
+    for (const [part, generate] of [["证明拆解", generateCardProof], ["配套练习", generateCardExercises],
+      ["配套图像", generateCardVisual]] as const) {
       if (options.stopped()) break;
       options.progress(position + part + "…");
       try {

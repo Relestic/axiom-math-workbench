@@ -70,7 +70,7 @@ export async function requestReply(question: string, context: Record<string, unk
 }
 
 export function localReply(question: string, unit: CurriculumUnit, classic: ClassicSet | undefined,
-  lesson: { step?: string; hint?: string; expression?: string; answer?: string; evidence?: string }): Reply {
+  lesson: { step?: string; hint?: string; expression?: string; diagram?: string; answer?: string; evidence?: string }): Reply {
   let display: string;
   if (question.includes("反例")) {
     display = classic ? "考察命题「" + classic.statement + "」。\n\n" + classic.negative + "。"
@@ -83,6 +83,8 @@ export function localReply(question: string, unit: CurriculumUnit, classic: Clas
     display = lesson.step + "\n\n本单元可核对的依据：" + unit.tools.join("、") + "。";
   } else if (/提示|怎么做|思路/.test(question)) {
     display = (lesson.answer ? "对照你已写的作答，检查下面的关键条件。\n\n" : "") + (lesson.hint || unit.hint);
+  } else if (lesson.diagram) {
+    display = lesson.diagram;
   } else if (lesson.expression) {
     display = "当前图像的表达式为 $" + lesson.expression + "$。先固定一个点，改变一个参数或显示范围，观察图像如何变化。";
   } else if (lesson.step) {

@@ -20,11 +20,11 @@ test("a failed proof still gets its exercise and the next card is completed in o
   await completeCards(cards, {stopped:() => false, progress:text => progress.push(text),
     failed:label => failures.push(label), refresh:async () => { events.push("refresh"); }});
   assert.deepEqual(events, [
-    "/api/v1/local/cards/first/proof", "/api/v1/local/cards/first/exercises", "refresh",
-    "/api/v1/local/cards/second/proof", "/api/v1/local/cards/second/exercises", "refresh",
+    "/api/v1/local/cards/first/proof", "/api/v1/local/cards/first/exercises", "/api/v1/local/cards/first/visual", "refresh",
+    "/api/v1/local/cards/second/proof", "/api/v1/local/cards/second/exercises", "/api/v1/local/cards/second/visual", "refresh",
   ]);
   assert.deepEqual(failures, ["《连续》的证明拆解"]);
-  assert.match(progress.at(-1), /2 \/ 2.*配套练习/);
+  assert.match(progress.at(-1), /2 \/ 2.*配套图像/);
 });
 
 test("stop during a pending proof finishes that request and schedules no exercises or later cards", async t => {

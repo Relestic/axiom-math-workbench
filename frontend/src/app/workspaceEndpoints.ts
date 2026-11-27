@@ -1,7 +1,7 @@
 import type { WorkspaceAction } from "../modules/companion/actions";
 export type { WorkspaceAction };
 
-export type WorkspacePage = "proof" | "exercises" | "explore" | "surface" | "textbook";
+export type WorkspacePage = "proof" | "exercises" | "explore" | "surface" | "diagram" | "textbook";
 export type WorkspaceCommandResult = boolean | "unchanged" | { reason: string };
 
 export type WorkspaceEndpoint = {

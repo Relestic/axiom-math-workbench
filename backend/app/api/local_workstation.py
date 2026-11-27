@@ -131,3 +131,11 @@ def card_proof(card_id):
     result = shelf.generate_card_proof(session, local_learner(session), card_id)
     session.commit()
     return result, 200
+
+
+@bp.post("/cards/<card_id>/visual")
+def card_visual(card_id):
+    session = get_session()
+    visual = shelf.generate_card_visual(session, local_learner(session), card_id)
+    session.commit()
+    return {"card_id": card_id, "visual": visual}

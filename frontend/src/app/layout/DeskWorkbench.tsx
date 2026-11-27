@@ -1,7 +1,13 @@
 import type { DeskPanes } from "../../modules/companion/workspace";
 import { Suspense, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { BookOpen, PanelRightClose, PanelRightOpen, Presentation } from "lucide-react";
-import { DeskCardNavigation } from "../../pages/learning/shared";
+import { CardGenerationButton, DeskCardNavigation } from "../../pages/learning/shared";
+import { useAppData } from "../DataProvider";
+import { generateCardVisual } from "../../modules/teaching/localTextbooks";
+import { cardVisualSchema, sceneField } from "../../modules/visualization/cardVisual";
+import { MathText } from "../../components/Math";
+import { useCardBoards } from "../../modules/visualization/useCardBoards";
+import { CardBoardContext } from "../../modules/visualization/cardBoardContext";
 import "./desk.css";
 
 const studyTabs = [
@@ -9,7 +15,7 @@ const studyTabs = [
   ["exercises", "练习与复盘"],
 ] as const;
 const boardTabs = [
-  ["explore", "2D 函数"], ["surface", "3D 曲面"], ["pdf", "课本原文"],
+  ["explore", "2D 函数"], ["surface", "3D 曲面"], ["diagram", "文字图解"], ["pdf", "课本原文"],
 ] as const;
 const studyPanes = [...studyTabs, ["review", "作答复盘"]] as const;
 type Tabs = ReadonlyArray<readonly [string, string]>;
@@ -74,10 +80,29 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
   onActivePane: (id: string) => void;
   onPanesChange: (panes: DeskPanes) => void;
 }) {
-  const [desk, setDesk] = useState(() => openRoute(pane, undefined, initialBoard));
+  const { selectedConceptId, data, refreshLocal } = useAppData();
+  const unit = data.units.find(item => item.id === selectedConceptId);
+  const boards = useCardBoards(selectedConceptId, unit);
+  const associated = boards.edits.board ?? boards.visual?.board;
+  const [desk, setDesk] = useState(() => openRoute(pane, undefined,
+    initialBoard === "pdf" ? "pdf" : boards.visual?.board ?? associated ?? initialBoard));
+  const seenCard = useRef(unit?.id);
+  const explicitBoardCard = useRef(isBoard(pane) ? selectedConceptId : "");
+  const selectedId = useRef(selectedConceptId);
+  useLayoutEffect(() => { selectedId.current = selectedConceptId; }, [selectedConceptId]);
+  useLayoutEffect(() => () => { selectedId.current = ""; }, []);
   const toggleButton = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
   if (pane !== desk.route) setDesk(openRoute(pane, desk));
+  // Explicit tabs and Hiyori reveals win until the learner changes cards.
+  useLayoutEffect(() => {
+    if (!unit || unit.id === seenCard.current) return;
+    const initialLoad = !seenCard.current;
+    seenCard.current = unit.id;
+    if (!associated || desk.board === "pdf" || (initialLoad && (isBoard(pane) || explicitBoardCard.current === unit.id))) return;
+    if (isBoard(pane) && pane !== associated) navigate(associated);
+    else showBoard(associated);
+  }, [unit?.id]);
   useLayoutEffect(() => {
     onPanesChange({ study: desk.study, board: desk.board, collapsed: desk.collapsed });
   }, [desk.study, desk.board, desk.collapsed, onPanesChange]);
@@ -86,6 +111,7 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
     function reveal(event: Event) {
       const target = (event as CustomEvent<{pane: string}>).detail?.pane;
       if (!target || !isBoard(target)) return;
+      explicitBoardCard.current = selectedId.current;
       setDesk(current => ({
         ...current, board: target, active: target, collapsed: false,
         visited: current.visited.includes(target) ? current.visited : [...current.visited, target],
@@ -105,8 +131,13 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
   function focusPane(id: string) {
     setDesk((current) => current.active === id ? current : { ...current, active: id });
   }
+  function showBoard(id: string) {
+    setDesk(current => ({ ...current, board: id, active: isBoard(current.active) ? id : current.active,
+      visited: [...new Set([...current.visited, id])] }));
+  }
   function selectPane(id: string) {
     focusPane(id);
+    if (isBoard(id)) { explicitBoardCard.current = selectedConceptId; showBoard(id); }
     if (id !== pane) navigate(id);
   }
   function toggleBoard() {
@@ -166,8 +197,31 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
               <PanelRightClose size={15} />收起黑板</button>
           </div>
           <DeskTabs tabs={boardTabs} active={desk.board} select={selectPane} label="黑板内容" />
+          {unit && <div className="desk-card-association" key={unit.id}>
+            {(boards.visual || associated) && <span>已对应卡片：《{unit.title}》</span>}
+            {boards.visual && <button type="button" className="btn" disabled={!Object.values(boards.edits).some(Boolean)}
+              onClick={() => { boards.reset(); selectPane(boards.visual!.board); }}>重置为本卡默认配图</button>}
+            {boards.visual?.summary && desk.board === boards.visual.board && !boards.edits[sceneField[boards.visual.board]] &&
+              <small className="desk-visual-summary"><MathText>{boards.visual.summary}</MathText></small>}
+            {!boards.visual && unit.textbookSource && <>
+              <span>当前卡片尚未绑定专属图像</span>
+              <CardGenerationButton label="AI 生成本卡配套图像" generate={async () => {
+                const result = await generateCardVisual(unit.id);
+                const visual = cardVisualSchema.parse(result.visual);
+                if (selectedId.current === unit.id) {
+                  boards.setDefault(visual);
+                  selectPane(visual.board);
+                }
+                await refreshLocal();
+              }}/>
+            </>}
+            {boards.storageError && <small role="alert">{boards.storageError}</small>}
+          </div>}
         </div>
-        {panels(boardTabs, desk.board)}
+        <CardBoardContext.Provider value={boards} key={boards.editorKey}>
+          {panels(boardTabs.filter(([id]) => id !== "pdf"), desk.board)}
+        </CardBoardContext.Provider>
+        {panels(boardTabs.filter(([id]) => id === "pdf"), desk.board)}
       </section>
     </div>
   </section>;

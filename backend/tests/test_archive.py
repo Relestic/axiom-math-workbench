@@ -14,6 +14,11 @@ def upload(client, payload, preview=False):
 def test_archive_roundtrip_and_validation(app, client):
     app.config["AXIOM"].local_mode = True
     storage = {"axiom-offline-bookmarks": '["uniform"]', "axiom-draft-uniform-2": "ε"}
+    diagram = {"version": 1, "title": "区间", "caption": "标出中点",
+               "viewBox": {"xMin": -1, "xMax": 1, "yMin": -1, "yMax": 1},
+               "nodes": [{"id": "center", "kind": "point", "x": 0, "y": 0}]}
+    storage.update({"axiom-diagram-scene": json.dumps(diagram),
+                    "axiom-card-visual-uniform": json.dumps({"board": "diagram", "diagramScene": diagram})})
     exported = client.post("/api/v1/archive/export", json={"storage": storage})
     assert exported.status_code == 200
     with zipfile.ZipFile(io.BytesIO(exported.data)) as archive:

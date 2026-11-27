@@ -5,12 +5,14 @@ import {
   applyFunctionActions,
   functionParameterHints,
   loadFunctionScene,
+  initialScene,
   type Scene,
 } from "../scene/functionScene";
 import { analyze } from "../../../pages/FunctionPlot";
 import { useWorkspaceEndpoint } from "../../../app/useWorkspaceEndpoint";
 import type { WorkspaceAction } from "../../../app/workspaceEndpoints";
 import { sceneRange } from "../scene/companionActions";
+import { useCardBoard } from "../cardBoardContext";
 
 export type FunctionWorkspaceProps = {
   onNavigate: (page: string) => void;
@@ -19,7 +21,9 @@ export type FunctionWorkspaceProps = {
 };
 
 export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
-  const [scene, setScene] = useState<Scene>(loadFunctionScene);
+  const card = useCardBoard();
+  const [scene, setScene] = useState<Scene>(() => card
+    ? applyFunctionScene(card.scenes.functionScene ?? initialScene) : loadFunctionScene());
   const [draft, setDraft] = useState<Scene>(scene);
   const [history, setHistory] = useState<Scene[]>([]);
   const [error, setError] = useState("");
@@ -43,6 +47,7 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
       const next = applyFunctionScene(value);
       setHistory((current) => [...current.slice(-19), scene]);
       setScene(next);
+      card?.remember({board:"explore", functionScene:next});
       setDraft(next);
       setError("");
       if (label) props.notify(label);
@@ -61,6 +66,7 @@ export function useFunctionWorkspace(props: FunctionWorkspaceProps) {
     const previous = history.at(-1);
     if (previous) {
       setScene(previous);
+      card?.remember({board:"explore", functionScene:previous});
       setDraft(previous);
       setHistory((current) => current.slice(0, -1));
       setError("");

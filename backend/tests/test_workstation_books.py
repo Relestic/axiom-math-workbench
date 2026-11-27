@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.adapters import llm, local_key
 from app.db import session_scope
-from app.models import Asset, Attempt, Concept, Exercise, ModelCall, Proof, Textbook, User
+from app.models import Asset, Attempt, Concept, Exercise, ModelCall, Proof, Textbook, User, VisualScene
 from app.modules.local_textbooks import normalize_title
 
 ROOT = "/api/v1/local"
@@ -339,6 +339,57 @@ def test_rich_proof_grounding_replacement_and_attribution(local, card_model, ori
         assert local.post(url).status_code == 502
     assert local.get(ROOT + "/bootstrap-extras").json["cards"] == [saved]
     assert local.post(ROOT + "/cards/uniform/proof").status_code == 404
+
+
+def test_card_visual_validates_updates_round_trips_and_is_removed_with_book(local, card_model):
+    book = upload(local).json
+    cid = extract_one(local, book["id"], card_model, [])
+    reply, prompts = card_model
+    path = f"{ROOT}/cards/{cid}/visual"
+    assert local.post(path, headers={"Origin": "https://outside.test"}).status_code == 403
+    assert local.post(ROOT + "/cards/uniform/visual").status_code == 404
+    box = {"xMin": -2, "xMax": 2, "yMin": -1, "yMax": 3}
+    diagram = {"version": 1, "title": "割线", "caption": "过两点作直线。", "viewBox": box,
+               "nodes": [{"kind": "segment", "id": "s", "from": [0, 0], "to": [1, 1]}]}
+    for board, field, scene in [
+        ("explore", "functionScene", {**box, "curves": [{"id": "f", "expression": "a*x"}], "activeId": "f"}),
+        ("surface", "surfaceScene", {"expression": "x**2+y"}),
+        ("diagram", "diagramScene", diagram),
+    ]:
+        reply.clear()
+        reply.update(board=board, summary="本卡配图", **{field: scene})
+        response = local.post(path)
+        assert response.status_code == 200, response.json
+        assert prompts[-1]["conditions"] and prompts[-1]["theorem"] and "formula" in prompts[-1]
+        visual = response.json["visual"]
+        assert visual["board"] == board
+        if board == "explore":
+            assert visual[field]["parameters"][0]["name"] == "a"
+        if board == "surface":
+            assert visual[field]["expression"] == "x^2+y"
+        if board == "diagram":
+            assert visual[field]["nodes"][0]["from"] == [0, 0]
+        assert local.get(ROOT + "/bootstrap-extras").json["cards"][0]["visual"] == visual
+    for invalid in [
+        {"board": "surface", "surfaceScene": {"expression": "a*x+y"}},
+        {"board": "explore", "functionScene": {**box, "curves": [{"id": "f", "expression": "unknown(x)"}], "activeId": "f"}},
+        {"board": "diagram", "diagramScene": {**diagram, "nodes": diagram["nodes"] * 2}},
+        {"board": "diagram", "diagramScene": {**diagram, "html": "<svg/>"}},
+    ]:
+        reply.clear()
+        reply.update(invalid)
+        assert local.post(path).status_code == 502
+    assert local.get(ROOT + "/bootstrap-extras").json["cards"][0]["visual"] == visual
+    with session_scope() as session:
+        row = session.scalars(select(VisualScene).where(VisualScene.title == cid)).one()
+        assert row.version == 3 and row.data_origin == "card-preset"
+        unrelated = VisualScene(user_id=row.user_id, title=cid, scene={})
+        session.add(unrelated)
+        session.flush()
+        preset_id, user_scene_id = row.id, unrelated.id
+    assert local.delete(f"{ROOT}/textbooks/{book['id']}").status_code == 204
+    with session_scope() as session:
+        assert session.get(VisualScene, preset_id) is None and session.get(VisualScene, user_scene_id)
 
 
 def test_exercise_generation_and_delete_after_attempt(local, card_model, second_headers):

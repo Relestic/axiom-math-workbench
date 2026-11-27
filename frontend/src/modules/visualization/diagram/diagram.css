@@ -1,0 +1,15 @@
+.diagram-workspace { display: grid; gap: 14px; color: var(--text); }
+.diagram-toolbar, .diagram-presets { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.diagram-toolbar { justify-content: space-between; }
+.diagram-figure { margin: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.diagram-figure h2 { margin: 0 0 8px; font-size: 17px; }
+.diagram-figure svg { display: block; width: 100%; background: var(--plot-bg); border-radius: 8px; }
+.diagram-annotation { font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.diagram-figure figcaption { margin-top: 10px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.diagram-prompt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.diagram-prompt :is(label, small) { grid-column: 1 / -1; }
+.diagram-prompt input { min-width: 0; padding: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 7px; }
+.diagram-workspace [role="alert"] { color: var(--plot-rose); }
+@container (max-width: 440px) {
+  .diagram-annotation { font-size: 17px; }
+}

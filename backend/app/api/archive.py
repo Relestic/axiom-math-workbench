@@ -30,9 +30,9 @@ STORAGE_KEYS = {
     "name", "theme", "last-page", "offline-concept", "offline-notes", "offline-attempts",
     "offline-bookmarks", "offline-diagnostic", "function-scene", "function-chat",
     "surface-scene", "surface-chat", "exploration", "exploration-chat", "observations",
-    "companion-muted",
+    "companion-muted", "diagram-scene",
 }
-DRAFT_KEY = re.compile(r"(?:draft|assistance|exercise-variant)-[\w.-]{1,160}")
+DRAFT_KEY = re.compile(r"(?:draft|assistance|exercise-variant|card-visual)-[\w.-]{1,160}")
 
 
 class WorkstationRequest(Request):

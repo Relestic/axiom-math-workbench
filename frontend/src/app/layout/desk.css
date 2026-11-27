@@ -96,6 +96,10 @@
   box-shadow: 0 1px 3px #131a3017;
 }
 .desk-board .desk-tabs button[aria-selected="true"] { color: var(--teal); }
+.desk-card-association { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
+  margin-top: 7px; color: var(--text-secondary); font-size: 12px; }
+.desk-card-association .btn { min-height: 26px; font-size: 11px; padding: 3px 8px; }
+.desk-visual-summary { flex-basis: 100%; color: var(--muted); }
 .desk-practice-switch { margin-top: 6px; }
 .desk-practice-switch button { flex: none; padding-inline: 10px; }
 .desk-practice-switch button[aria-pressed="true"] { background: var(--accent-soft); color: var(--primary); }

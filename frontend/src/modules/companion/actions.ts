@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { diagramSceneSchema, diagramNodeSchema, nodeId, viewBoxSchema } from "../visualization/diagram/schema";
 
 const decimal = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 const number = z.preprocess(value =>
@@ -26,6 +27,11 @@ const range = {
 };
 
 const action = z.discriminatedUnion("type", [
+  z.strictObject({type: z.literal("set_diagram"), scene: diagramSceneSchema.refine(
+    scene => scene.nodes.length >= 1 && scene.nodes.length <= 16, "一次绘制需要 1–16 个图元")}),
+  z.strictObject({type: z.literal("upsert_diagram_node"), node: diagramNodeSchema}),
+  z.strictObject({type: z.literal("remove_diagram_node"), id: nodeId}),
+  z.strictObject({type: z.literal("set_diagram_view"), viewBox: viewBoxSchema}),
   z.strictObject({type: z.literal("highlight_proof_step"), ref: z.string().min(1).max(160)}),
   z.strictObject({type: z.literal("set_scene_param"), name: z.string().min(1).max(100), value: number}),
   z.strictObject({type: z.literal("set_curve"), ...curve}),

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { builtinVisuals } from "../../data/offline/cardVisuals";
 import {
   offlineClassics,
   offlineCurriculum,
@@ -30,7 +31,7 @@ export function useTeachingContent(source: DataSource, localUnits: CurriculumUni
         exercises,
         bundle.catalog.tools,
         offlineSources,
-      );
+      ).map(unit => ({ ...unit, visual: builtinVisuals[unit.id] }));
       setServerContent({
         units,
         classics: mapClassicSets(

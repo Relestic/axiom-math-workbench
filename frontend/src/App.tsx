@@ -18,6 +18,7 @@ import {
   LogOut,
 } from "lucide-react";
 const Exploration = lazy(() => import("./pages/FunctionWorkspace"));
+const DiagramWorkspace = lazy(() => import("./modules/visualization/diagram/DiagramWorkspace"));
 const Textbook = lazy(() =>
   import("./pages/Learning").then((module) => ({ default: module.Textbook })),
 );
@@ -109,13 +110,6 @@ export default function App() {
       notify("请从左侧选择学习模块");
       return;
     }
-    if (
-      id === "explore" &&
-      ["textbook", "proof", "exercises", "knowledge-map"].includes(
-        page,
-      )
-    )
-      localStorage.setItem("axiom-explore-request", app.selectedConceptId);
     if (location.hash !== '#' + next) location.hash = next;
     setRoute(next);
     setActivePane(next.split('/')[1] || next);
@@ -360,6 +354,7 @@ export default function App() {
               case "review": return <Review {...common}/>;
               case "explore": return <Exploration {...common}/>;
               case "surface": return <SurfaceWorkspace/>;
+              case "diagram": return <DiagramWorkspace/>;
               case "pdf": return <TextbookReader position={reading} change={seekTextbook} openShelf={() => navigate("books")}/>;
             }
           }}/>}

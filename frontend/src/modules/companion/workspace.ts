@@ -10,7 +10,7 @@ import { fitCompanionContext } from "./context";
 export type { WorkspaceAction };
 export type DeskPanes = { study: string; board: string; collapsed: boolean };
 type Context = Record<string, unknown>;
-type Target = "proof" | "explore" | "surface";
+type Target = "proof" | "explore" | "surface" | "diagram";
 
 // A React state update can be queued before its new endpoint revision is registered.
 const applied = new WeakSet<WorkspaceEndpoint>();
@@ -36,6 +36,10 @@ function items(value: unknown) {
 function actionTarget(action: WorkspaceAction, context: Context): Target {
   switch (action.type) {
     case "highlight_proof_step": return "proof";
+    case "set_diagram":
+    case "upsert_diagram_node":
+    case "remove_diagram_node":
+    case "set_diagram_view": return "diagram";
     case "set_surface_expression":
     case "set_surface_range":
     case "set_surface_view": return "surface";
@@ -55,6 +59,7 @@ function workspaceSnapshot(page: string, context: Context, ready: boolean, isCur
     proof: getWorkspaceEndpoint("proof"),
     explore: getWorkspaceEndpoint("explore"),
     surface: getWorkspaceEndpoint("surface"),
+    diagram: getWorkspaceEndpoint("diagram"),
   };
   function applyActions(actions: readonly WorkspaceAction[]) {
     return isCurrent() && commit(endpoint, actions);
@@ -150,6 +155,8 @@ export function queryDeskWorkspace(studyPane: string, boardPane: string, boardCo
     };
   } else if (boardContext?.surface_scene) {
     context.surface_scene = fields(boardContext.surface_scene, ["expression", "range", "view"]);
+  } else if (boardContext?.diagram_scene) {
+    context.diagram_scene = boardContext.diagram_scene;
   }
   return workspaceSnapshot(studyPane, fitCompanionContext(context), Boolean(study) || studyPane === "review",
     () => getWorkspaceEndpoint(studyPane) === study && (!board || getWorkspaceEndpoint(boardPane) === board), true);

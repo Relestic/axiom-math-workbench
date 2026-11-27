@@ -1,4 +1,6 @@
 import type { AiReview } from "../modules/practice/review";
+import type { CardVisual } from "../modules/visualization/cardVisual";
+export type { CardVisual };
 export type LocalBook = {
   id: string;
   title: string;
@@ -6,6 +8,7 @@ export type LocalBook = {
   pages: { page: number; char_count: number; needs_ocr: boolean }[];
 };
 export type CurriculumUnit = {
+  visual?: CardVisual;
   id: string;
   title: string;
   short: string;

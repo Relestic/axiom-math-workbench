@@ -26,6 +26,7 @@ const quickQuestions: Record<string, string[]> = {
   review: ["梳理易错条件", "给个复习提示"],
   explore: ["解释当前图像", "怎样观察参数"],
   surface: ["解释当前曲面", "怎样观察曲面"],
+  diagram: ["解释当前图解", "标出关键构造"],
   pdf: ["回顾当前定义", "梳理条件"],
 };
 function object(value: unknown): Record<string,unknown> {
@@ -143,7 +144,7 @@ export function CompanionPanel({page, desk, stage, stageView}: {
       setNotice(companionErrorMessage(cause));
       return;
     }
-    if ((desk || ["textbook", "proof", "exercises", "explore", "surface"].includes(page)) && !workspace.ready) {
+    if ((desk || ["textbook", "proof", "exercises", "explore", "surface", "diagram"].includes(page)) && !workspace.ready) {
       setNotice("正在加载当前学习内容，请稍后再提问。");
       return;
     }
@@ -161,14 +162,15 @@ export function CompanionPanel({page, desk, stage, stageView}: {
     try {
       const details = workspace.context;
       const proof = object(details.proof), exercise = object(details.exercise);
-      const graphQuestion = /图像|图形|曲线|曲面|参数|黑板|切线/.test(question)
-        || (["explore","surface"].includes(page) && !/定义|条件|证明/.test(question));
+      const graphQuestion = /图像|图形|图解|曲线|曲面|参数|黑板|切线/.test(question)
+        || (["explore","surface","diagram"].includes(page) && !/定义|条件|证明/.test(question));
       const expression = graphQuestion ? string(object(details.function_scene).active_expression)
         ?? string(object(details.surface_scene).expression) : undefined;
       const reply = local
         ? localReply(question, unit, data.classics.find(c => c.id === unit.id), {
           step: graphQuestion ? undefined : string(object(proof.current_step).text), hint:string(exercise.hint),
           answer:string(exercise.draft_answer), expression,
+          diagram:graphQuestion ? string(object(details.diagram_scene).caption) : undefined,
         })
         : await requestReply(question, {
           page, concept_id:unit.id, title:unit.title, definition:unit.definition, formula:unit.formula, ...details,

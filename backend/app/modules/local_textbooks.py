@@ -18,6 +18,7 @@ from ..errors import ApiError
 from ..models import Asset, Attempt, Chapter, Concept, Exercise, Job, Proof, Textbook
 from ..serializers import exercise_out
 from .exercise_service import remove_textbook_exercises
+from . import card_visuals
 
 
 class PageRange(BaseModel):
@@ -171,7 +172,7 @@ def proof_summary(proof):
     }
 
 
-def card_summary(concept, book_id, book_card_ids):
+def card_summary(concept, book_id, book_card_ids, visual=None):
     refs = concept.prerequisites if isinstance(concept.prerequisites, list) else []
     prerequisites = dict.fromkeys(ref for ref in refs
                                   if isinstance(ref, str) and ref != concept.id and ref in book_card_ids)
@@ -181,6 +182,7 @@ def card_summary(concept, book_id, book_card_ids):
         "definition": concept.definition,
         "conditions": concept.conditions,
         "formula": concept.formula,
+        **({"visual": visual} if visual is not None else {}),
         "theorem": concept.summary,
         **proof_summary(concept.proofs[0] if concept.proofs else None),
         "prerequisites": list(prerequisites)[:3],
@@ -260,6 +262,18 @@ def generate_card_proof(session, user, card_id):
     return {"card_id": card_id, **proof_summary(proof)}
 
 
+def generate_card_visual(session, user, card_id):
+    concept, _ = lookup_card(session, user, card_id)
+    use_local_ai()
+    material = card_material(concept, None)
+    visual = card_visuals.generate_visual(session, user, material)
+    # The adapter has flushed the model call, acquiring SQLite's write lock.
+    # Recheck ownership after the network wait and before attaching the preset.
+    lookup_card(session, user, card_id)
+    card_visuals.save_preset(session, user.id, card_id, visual)
+    return visual
+
+
 def bootstrap(session, user):
     books = [
         book for book, _ in session.execute(owned_books(user).order_by(Textbook.created_at, Textbook.id))
@@ -268,6 +282,7 @@ def bootstrap(session, user):
         published_cards(user, [book.id for book in books]).options(selectinload(Concept.proofs))
     ).all()
     ids_by_book = defaultdict(set)
+    visuals = card_visuals.read_presets(session, user.id, [concept.id for concept, _ in cards])
     for concept, book_id in cards:
         ids_by_book[book_id].add(concept.id)
     parent_attempts = select(Attempt.id).where(Attempt.user_id == user.id)
@@ -280,7 +295,8 @@ def bootstrap(session, user):
     )
     return {
         "textbooks": [book_summary(book) for book in books],
-        "cards": [card_summary(concept, book_id, ids_by_book[book_id]) for concept, book_id in cards],
+        "cards": [card_summary(concept, book_id, ids_by_book[book_id], visuals.get(concept.id))
+                  for concept, book_id in cards],
         "exercises": [exercise_out(item, include_solution=True) for item in exercises],
     }
 
@@ -289,6 +305,7 @@ def remove_book(session, book, asset):
     remove_textbook_exercises(session, book.id)
     # Chapter.concepts uses SET NULL for shared curricula; these private generated cards belong to this book.
     for chapter in book.chapters:
+        card_visuals.remove_presets(session, asset.owner_id, [card.id for card in chapter.concepts])
         for card in list(chapter.concepts):
             if card.data_origin != "user" or card.created_by_id != asset.owner_id:
                 raise ApiError("conflict", "教材中仍有其他教学内容引用，暂时无法删除")

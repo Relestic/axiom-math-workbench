@@ -1,6 +1,7 @@
 import { mapAttempt } from "../../domain/mappers";
 import type { AttemptDto } from "../../domain/dto";
 import { z } from "zod";
+import { cardVisualSchema } from "../visualization/cardVisual";
 import type { Attempt, CurriculumUnit, Exercise, LocalBook } from "../../domain/types";
 
 const strings = z.array(z.string());
@@ -10,6 +11,7 @@ const book = z.object({
   pages:z.array(z.object({page, char_count:z.number().int().nonnegative(), needs_ocr:z.boolean()})),
 });
 const card = z.object({
+  visual:cardVisualSchema.nullish().catch(undefined),
   id:z.string(), title:z.string(), definition:z.string(), formula:z.string().default(""),
   conditions:strings, theorem:z.string(), proof:strings, textbook_id:z.string(), page_start:page, page_end:page,
   prerequisites: strings.default([]),
@@ -39,6 +41,7 @@ export function mapLocalCatalog(input: unknown): LocalCatalog {
     id:item.id, title:item.title, short:item.title, chapter:titles.get(item.textbook_id) || "本地教材",
     definition:item.definition, formula:item.formula, conditions:item.conditions, proof:item.proof,
     prerequisites:item.prerequisites, proofSteps:item.proof_steps, proofStatus:item.proof_status,
+    visual:item.visual ?? undefined,
     example:"", exercise:"", solution:[], hint:item.proof[0] || "", tools:[], source:"",
     textbookSource:{textbookId:item.textbook_id,pageStart:item.page_start,pageEnd:item.page_end,theorem:item.theorem},
   }));

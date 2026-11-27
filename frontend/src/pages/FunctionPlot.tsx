@@ -37,8 +37,8 @@ export function analyze(scene: Scene) {
       : null;
   const values =
     scene.mode === "continuity"
-      ? Array.from({ length: 201 }, (_, i) =>
-          fn(scene.x0 - scene.delta + (2 * scene.delta * i) / 200),
+      ? Array.from({ length: 199 }, (_, i) =>
+          fn(scene.x0 - scene.delta + (2 * scene.delta * (i + 1)) / 200),
         )
       : [];
   const invalid =

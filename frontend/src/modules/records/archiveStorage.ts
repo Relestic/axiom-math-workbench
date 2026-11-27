@@ -3,6 +3,8 @@ import { z } from "zod";
 import { validateScene } from "../../lib/plotScene";
 import { validRoutes, normalizeRoute } from "../../navigation";
 import { normalizeSurfaceScene } from "../visualization/three-d/engine";
+import { diagramSceneSchema } from "../visualization/diagram/schema";
+import { editsSchema, storedSurfaceSchema } from "../visualization/cardVisual";
 
 const id = z.string().min(1);
 const strings = z.array(z.string());
@@ -112,36 +114,6 @@ const exploration = z
   })
   .partial()
   .required({ topic: true, fn: true });
-const surface = z
-  .strictObject({
-    expression: id,
-    xMin: number,
-    xMax: number,
-    yMin: number,
-    yMax: number,
-    resolution: index.min(10).max(64),
-    view: z.strictObject({
-      azimuth: number.min(0).max(360),
-      elevation: number.min(5).max(85),
-      heightScale: number.min(0.2).max(3),
-      zoom: number.min(0.5).max(2),
-    }),
-    display: z.strictObject({
-      opacity: number.min(0.2).max(1),
-      wireframe: z.boolean(),
-      showAxes: z.boolean(),
-      palette: z.enum(["violet", "teal", "amber", "mono"]),
-    }),
-  })
-  .refine(
-    (scene) =>
-      scene.xMin >= -20 &&
-      scene.xMax <= 20 &&
-      scene.xMax > scene.xMin &&
-      scene.yMin >= -20 &&
-      scene.yMax <= 20 &&
-      scene.yMax > scene.yMin,
-  );
 const assistance = z.strictObject({ hint: z.boolean(), solution: z.boolean() });
 
 type ValidateEntry = (value: string) => unknown;
@@ -155,10 +127,11 @@ const validators = new Map<string, ValidateEntry>([
   ["axiom-offline-notes", json(z.array(note))],
   ["axiom-offline-bookmarks", json(z.array(id))],
   ["axiom-function-scene", (value) => validateScene(JSON.parse(value))],
+  ["axiom-diagram-scene", json(diagramSceneSchema)],
   ["axiom-function-chat", json(chat)],
   [
     "axiom-surface-scene",
-    (value) => normalizeSurfaceScene(surface.parse(JSON.parse(value))),
+    (value) => normalizeSurfaceScene(storedSurfaceSchema.parse(JSON.parse(value))),
   ],
   ["axiom-surface-chat", json(chat)],
   ["axiom-exploration", json(exploration)],
@@ -178,6 +151,7 @@ const validators = new Map<string, ValidateEntry>([
   ["axiom-last-page", (value) => z.enum(validRoutes).parse(value)],
 ]);
 const prefixes: [string, ValidateEntry][] = [
+  ["axiom-card-visual-", json(editsSchema)],
   ["axiom-draft-", (value) => value],
   ["axiom-assistance-", json(assistance)],
   [

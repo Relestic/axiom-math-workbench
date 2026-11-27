@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useCardBoard } from "../cardBoardContext";
 import { Boxes, Grid3X3, RotateCcw, SlidersHorizontal, Undo2, Wand2 } from "lucide-react";
 import { normalizeSurfaceScene } from "./engine";
 import { applySurfaceActions } from "./companionScene";
@@ -33,10 +34,13 @@ function persist(scene: SurfaceScene) {
 }
 
 export default function SurfaceWorkspace() {
-  const [scene, setScene] = useState<SurfaceScene>(readStoredScene);
+  const card = useCardBoard();
+  const [scene, setScene] = useState<SurfaceScene>(() => card
+    ? card.scenes.surfaceScene ?? defaultSurfaceScene : readStoredScene());
   const [draft, setDraft] = useState(scene.expression);
   const [undo, setUndo] = useState<SurfaceScene[]>([]);
   const [error, setError] = useState("");
+  useEffect(() => { persist(scene); }, [scene]);
 
   const commit = (
     next: SurfaceScene,
@@ -48,7 +52,7 @@ export default function SurfaceWorkspace() {
     }
     setScene(normalized);
     if (!options.keepDraft) setDraft(normalized.expression);
-    persist(normalized);
+    card?.remember({board:"surface", surfaceScene:normalized});
     setError("");
   };
 
@@ -97,7 +101,7 @@ export default function SurfaceWorkspace() {
     setScene(previous);
     setDraft(previous.expression);
     setUndo(undo.slice(0, -1));
-    persist(previous);
+    card?.remember({board:"surface", surfaceScene:previous});
     setError("");
   };
 

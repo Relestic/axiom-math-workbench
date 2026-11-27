@@ -24,6 +24,7 @@ from ..schemas.visual import (
     InterpretRequest,
 )
 from ..schemas.surface import SurfaceAIRequest
+from ..schemas.diagram import DIAGRAM_FORMAT, DiagramRequest, DiagramScene
 from ..serializers import attempt_out, job_out
 from ..workers.queue import enqueue, usage_summary
 from .local_only import require_local
@@ -84,6 +85,20 @@ def check_key():
     limit("ai")
     test_local_connection()
     return {"ok": True}
+
+
+@bp.post("/local-diagram")
+def local_diagram():
+    use_local_ai()
+    limit("legacy_ai")
+    payload = parse_json(DiagramRequest)
+    session = get_session()
+    _, scene = chat(session, [
+        {"role": "system", "content": "按学生描述绘制数学概念教学图，只输出完整图解。" + DIAGRAM_FORMAT},
+        {"role": "user", "content": payload.message},
+    ], purpose="diagram", max_tokens=4000, validator=DiagramScene.model_validate_json)
+    session.commit()
+    return {"scene": scene.model_dump(by_alias=True, exclude_none=True)}
 
 
 @bp.post("/local-surface")
