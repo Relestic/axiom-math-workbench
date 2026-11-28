@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 if /i "%~1"=="--rebuild" goto build
-if not exist "frontend\dist-portable\phase4.ready" goto build
+if not exist "frontend\dist-portable\phase5.ready" goto build
 if exist "frontend\dist-portable\index.html" goto start
 :build
 pushd "frontend"

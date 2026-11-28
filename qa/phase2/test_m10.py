@@ -154,20 +154,20 @@ def test_stale_bundle_and_explicit_rebuild_keep_learning_data(browser, sample_pd
                 _winapi.CreateJunction(str(package), str(link))
                 linked.append(link)
         dist = frontend / "dist-portable"
-        marker = dist / "phase4.ready"
+        marker = dist / "phase5.ready"
         assert marker.is_file(), "Build the current portable frontend before launcher QA"
         private = tmp_path / "rebuild-data"
         with run_batch(root, script, port, private) as url:
             original = inspect_launched_app(browser, url, sample_pdf, private)
         marker.unlink()
-        obsolete = dist / "phase3.ready"
-        obsolete.write_text("Phase 3\n", encoding="utf-8")
+        obsolete = dist / "phase4.ready"
+        obsolete.write_text("Phase 4\n", encoding="utf-8")
         for arguments in ((), ("--rebuild",)):
             (dist / "index.html").write_text("<html>旧版书桌：正反例</html>", encoding="utf-8")
             stale_asset = dist / "old-workbench-only.js"
             stale_asset.write_text("/* obsolete chunk */", encoding="ascii")
             with run_batch(root, script, port, private, *arguments) as url:
-                assert marker.read_text(encoding="utf-8").strip() == "Phase 4"
+                assert marker.read_text(encoding="utf-8").strip() == "Phase 5"
                 assert not obsolete.exists() and not stale_asset.exists()
                 inspect_launched_app(browser, url, sample_pdf, private, existing_book=original)
         assert not (root / "data").exists()
