@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -21,6 +21,8 @@ from sqlalchemy.orm import Session
 from ..api.local_only import require_local
 from ..config import Config
 from ..errors import ApiError
+from . import codex_cli
+from .llm_types import LLMError, LLMResult
 from .local_key import DEFAULT_BASE_URL, Credentials, LocalKeyStore, clean_base_url
 from ..models import ModelCall
 
@@ -28,25 +30,6 @@ CODE_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 REALTIME_PURPOSES = {
     "companion", "connection_test", "plot", "plot_change", "surface_plot", "diagram", "card_visual",
 }
-
-
-class LLMError(Exception):
-    def __init__(self, message: str, *, kind: str = "upstream", retryable: bool = False):
-        super().__init__(message)
-        self.message = message
-        self.kind = kind
-        self.retryable = retryable
-
-
-@dataclass
-class LLMResult:
-    text: str
-    provider: str
-    model: str
-    input_tokens: int = 0
-    output_tokens: int = 0
-    latency_ms: int = 0
-    raw: dict[str, Any] = field(default_factory=dict)
 
 
 def _config() -> Config:
@@ -61,7 +44,7 @@ def _local_config(credentials: Credentials) -> Config:
     return replace(
         current_app.config["AXIOM"],
         ai_provider=credentials.provider,
-        ai_base_url=credentials.base_url or DEFAULT_BASE_URL[credentials.provider],
+        ai_base_url=credentials.base_url or DEFAULT_BASE_URL.get(credentials.provider, ""),
         ai_model=credentials.model,
         ai_api_key=credentials.api_key,
     )
@@ -75,7 +58,7 @@ def use_local_ai(*, allow_mock: bool = False) -> Config:
         config = current_app.config["AXIOM"]
         if allow_mock and config.ai_provider == "mock":
             return config
-        raise ApiError("service_unavailable", "请先在顶部配置个人 DeepSeek Key")
+        raise ApiError("service_unavailable", "请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key")
     g.local_ai_credentials = credentials
     g.local_ai_config = _local_config(credentials)
     return g.local_ai_config
@@ -97,7 +80,7 @@ def test_local_connection() -> None:
             [{"role": "user", "content": "Reply with OK."}],
             purpose="connection_test",
             json_mode=False,
-            timeout=min(15, config.ai_timeout_seconds),
+            timeout=min(30 if config.ai_provider == "codex" else 15, config.ai_timeout_seconds),
             max_tokens=32,
             config=config,
             attempts=1,
@@ -107,6 +90,7 @@ def test_local_connection() -> None:
         _mark_local_result(credentials, ok=False)
         code, status = {
             "auth": ("invalid_key", 401),
+            "unconfigured": ("unconfigured", 503),
             "billing": ("insufficient_balance", 402),
             "timeout": ("timeout", 504),
             "network": ("network", 502),
@@ -254,6 +238,8 @@ def _post_chat(
     config = config or _config()
     if config.ai_provider == "mock":
         return _MockProvider().complete(messages, purpose=purpose, json_mode=json_mode)
+    if config.ai_provider == "codex":
+        return codex_cli.complete(messages, model=config.ai_model, json_mode=json_mode, timeout=timeout)
     if not config.ai_configured:
         raise LLMError("模型尚未配置", kind="unconfigured")
     payload: dict[str, Any] = {
@@ -338,10 +324,11 @@ def _post_chat(
                 "模型未返回可用内容（JSON 模式可能被截断），请重试或关闭 AI_JSON_MODE",
                 kind="invalid",
             )
-        escaped_key = json.dumps(config.ai_api_key)[1:-1]
-        content = content.replace(escaped_key, "[已隐藏]").replace(config.ai_api_key, "[已隐藏]")
         model = config.ai_model if personal else str(data.get("model") or config.ai_model)
-        model = model.replace(config.ai_api_key, "[已隐藏]")
+        if config.ai_api_key:
+            escaped_key = json.dumps(config.ai_api_key)[1:-1]
+            content = content.replace(escaped_key, "[已隐藏]").replace(config.ai_api_key, "[已隐藏]")
+            model = model.replace(config.ai_api_key, "[已隐藏]")
         elapsed = int((time.perf_counter() - started) * 1000)
         return LLMResult(
             text=_clean_content(content),
@@ -397,6 +384,8 @@ def chat(
     validator: Callable[[str], Any] | None = None,
 ) -> tuple[LLMResult, Any | None]:
     config = _config()
+    if config.ai_provider == "codex":
+        require_local()
     if config.ai_provider != "mock" and not config.ai_configured:
         raise ApiError(
             "service_unavailable",
@@ -427,6 +416,8 @@ def chat(
         if anonymous_calls >= config.ai_legacy_daily_limit:
             raise ApiError("rate_limited", "公开演示的 AI 额度已用完，请明天再试")
     timeout = timeout or config.ai_timeout_seconds
+    if config.ai_provider == "codex":
+        timeout = max(timeout, 90)
     started = time.perf_counter()
     record = ModelCall(
         user_id=user_id,
@@ -445,7 +436,7 @@ def chat(
             timeout=timeout,
             max_tokens=max_tokens,
             config=config,
-            attempts=1 if purpose == "page_ocr" else 2,
+            attempts=1 if purpose == "page_ocr" or config.ai_provider == "codex" else 2,
             personal=local_credentials is not None,
         )
         if local_credentials is not None:
@@ -485,6 +476,8 @@ def chat(
         if exc.kind == "unconfigured":
             raise ApiError("service_unavailable", exc.message)
         if exc.kind == "timeout":
+            if config.ai_provider == "codex":
+                raise ApiError("timeout", exc.message, status=504)
             raise ApiError("upstream_error", "模型请求超时，请稍后重试")
         if exc.kind == "rate_limit":
             raise ApiError("rate_limited", exc.message)
@@ -510,7 +503,7 @@ def provider_status() -> dict[str, Any]:
         "provider": config.ai_provider,
         "provider_label": config.ai_provider_label,
         "model": config.ai_model or ("axiom-mock-1" if config.ai_provider == "mock" else ""),
-        "endpoint_host": _host(config.ai_base_url),
+        "endpoint_host": "codex-cli" if config.ai_provider == "codex" else _host(config.ai_base_url),
         "json_mode": config.ai_json_effective,
         "reasoner": config.ai_is_reasoner,
         "daily_limit": config.ai_daily_call_limit,

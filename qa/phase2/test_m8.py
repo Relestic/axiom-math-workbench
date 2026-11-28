@@ -29,7 +29,7 @@ def test_local_pdf_shelf_persists_without_login(page, server, sample_pdf):
     expect(entry).to_be_visible()
     select_range(entry, 1, 1)
     entry.get_by_role("button", name="快速建书").click()
-    expect(page.get_by_text("请先在顶部配置个人 DeepSeek Key", exact=False).first).to_be_visible()
+    expect(page.get_by_text("请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key", exact=False).first).to_be_visible()
     server.restart()
     page.reload()
     expect(entry).to_be_visible()

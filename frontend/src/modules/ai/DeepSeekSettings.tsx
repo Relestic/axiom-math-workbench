@@ -21,6 +21,7 @@ export function DeepSeekSettings() {
   const [baseUrl, setBaseUrl] = useState("");
   const model = choice === ":custom" ? custom.trim() : choice;
   const label = providerLabels[provider];
+  const isCodex = provider === "codex";
   const savedEndpoint = provider === savedProvider && baseUrl.trim().replace(/\/+$/, "") === (status?.base_url || "");
   const keyInput = useRef<HTMLInputElement>(null);
   const [hasKey, setHasKey] = useState(false);
@@ -59,7 +60,7 @@ export function DeepSeekSettings() {
         text: {
           save: `${label} 设置已保存。`,
           test: `${label} 连接测试成功。`,
-          clear: `个人 ${label} Key 已清除。`,
+          clear: isCodex ? "本机 Codex 配置已清除。" : `个人 ${label} Key 已清除。`,
         }[action],
       });
     } catch (cause) {
@@ -113,9 +114,13 @@ export function DeepSeekSettings() {
               }}>
               <option value="deepseek">DeepSeek</option>
               <option value="openai">ChatGPT (OpenAI)</option>
+              <option value="codex">{providerLabels.codex}</option>
             </select>
           </label>
-          <label className="field-label">
+          {isCodex ? <>
+            <p className="muted">无需填写 API Key · 直接调用这台电脑已登录的 Codex CLI（支持看图识公式，单次响应约需数秒）。</p>
+            {status?.codex_detected === false && <p role="status">当前未在本机检测到 Codex CLI，请先安装并登录 Codex。</p>}
+          </> : <label className="field-label">
             {status?.configured && savedEndpoint ? "更换 " : ""}{provider === "openai" ? "OpenAI" : label} API Key
             <input
               ref={keyInput}
@@ -130,7 +135,7 @@ export function DeepSeekSettings() {
               }
               disabled={!!pending}
             />
-          </label>
+          </label>}
           <label className="field-label">
             模型
             <select
@@ -140,8 +145,10 @@ export function DeepSeekSettings() {
               disabled={!!pending}
               onChange={(event) => setChoice(event.target.value)}
             >
-              {providerModels[provider].map((id) => <option key={id} value={id}>{id}</option>)}
-              {provider === "openai" && <option value=":custom">自定义模型</option>}
+              {providerModels[provider].map((id) => <option key={id} value={id}>
+                {isCodex && id === "auto" ? "auto（跟随本机 Codex 默认模型）" : id}
+              </option>)}
+              {provider !== "deepseek" && <option value=":custom">自定义模型</option>}
             </select>
           </label>
           {choice === ":custom" && <label className="field-label">
@@ -150,12 +157,12 @@ export function DeepSeekSettings() {
               pattern="[a-zA-Z0-9._\-]{2,80}" title="2–80 个字母、数字、点、下划线或连字符"
               disabled={!!pending} onChange={(event) => setCustom(event.target.value)} />
           </label>}
-          <label className="field-label">
+          {!isCodex && <label className="field-label">
             自定义 HTTPS Base URL（可选）
             <input type="url" className="text-input" value={baseUrl} pattern="https://.+" maxLength={2048}
               placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.deepseek.com"}
               disabled={!!pending} onChange={(event) => setBaseUrl(event.target.value)} />
-          </label>
+          </label>}
           {provider === savedProvider && status?.migrated_from && (
             <p className="muted">
               已将 {status.migrated_from} 映射为 {status.model}，可继续使用原有 Key。
@@ -167,7 +174,7 @@ export function DeepSeekSettings() {
               type="submit"
               disabled={
                 !!pending ||
-                !model || (!hasKey && (!status?.configured || !savedEndpoint || model === status.model))
+                !model || (!isCodex && !hasKey && (!status?.configured || !savedEndpoint || model === status.model))
               }
             >
               {pending === "save" ? "正在保存…" : "保存"}
@@ -187,11 +194,11 @@ export function DeepSeekSettings() {
                 !!pending || provider !== savedProvider || (!status?.configured && status?.state !== "error")
               }
               onClick={() => {
-                if (window.confirm(`清除本机保存的 ${label} Key？`))
+                if (window.confirm(isCodex ? "清除本机 Codex 配置？" : `清除本机保存的 ${label} Key？`))
                   void run("clear");
               }}
             >
-              清除 Key
+              {isCodex ? "清除配置" : "清除 Key"}
             </button>
           </div>
         </>

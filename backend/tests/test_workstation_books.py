@@ -234,7 +234,7 @@ def test_card_generation_is_grounded_persistent_and_private(local, second_header
     selection = {"page_start": 1, "page_end": 1}
     missing = local.post(url + "/extract-cards", json=selection)
     assert (
-        missing.status_code == 503 and missing.json["error"]["message"] == "请先在顶部配置个人 DeepSeek Key"
+        missing.status_code == 503 and missing.json["error"]["message"] == "请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key"
     )
     local.put("/api/v1/ai/key", json={"api_key": "sk-workstation-fixture", "model": "deepseek-flash"})
     card = {

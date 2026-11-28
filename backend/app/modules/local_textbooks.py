@@ -1,6 +1,5 @@
 """Private textbook shelf, source-grounded cards and their persisted provenance."""
 
-import base64
 import hashlib
 import json
 import unicodedata
@@ -14,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from ..adapters.files import store_pdf
+from ..adapters.image_input import MAX_IMAGES, MAX_IMAGE_URL_LENGTH, decode_image_url
 from ..adapters.llm import chat, use_local_ai
 from ..adapters.pdf import page_data
 from ..errors import ApiError
@@ -29,30 +29,21 @@ class PageRange(BaseModel):
     page_end: int = Field(ge=1)
 
 
-MAX_IMAGE_BYTES = 4 * 1024 * 1024
-IMAGE_PREFIXES = {"data:image/jpeg;base64": b"\xff\xd8\xff", "data:image/png;base64": b"\x89PNG"}
-
-
 class OCRImage(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     page: int = Field(ge=1)
-    image_data_url: str = Field(max_length=23 + 4 * ((MAX_IMAGE_BYTES + 2) // 3))
+    image_data_url: str = Field(max_length=MAX_IMAGE_URL_LENGTH)
 
     @field_validator("image_data_url")
     @classmethod
     def validate_image(cls, value):
-        prefix, _, encoded = value.partition(",")
-        if prefix not in IMAGE_PREFIXES:
-            raise ValueError("仅支持 JPEG 或 PNG Data URL")
-        image = base64.b64decode(encoded, validate=True)
-        if len(image) > MAX_IMAGE_BYTES or not image.startswith(IMAGE_PREFIXES[prefix]):
-            raise ValueError("图片格式不匹配或超过 4 MB")
+        decode_image_url(value)
         return value
 
 
 class OCRRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    pages: list[OCRImage] = Field(min_length=1, max_length=3)
+    pages: list[OCRImage] = Field(min_length=1, max_length=MAX_IMAGES)
 
 
 class TranscribedPage(BaseModel):

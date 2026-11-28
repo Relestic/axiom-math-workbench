@@ -3,6 +3,7 @@ import { Undo2 } from "lucide-react";
 import { useWorkspaceEndpoint } from "../../../app/useWorkspaceEndpoint";
 import { apiFetch } from "../../../lib/api";
 import { useAIConnection } from "../../ai/connection";
+import { configureAIMessage } from "../../ai/models";
 import { useCardBoard } from "../cardBoardContext";
 import { applyDiagramActions } from "./actions";
 import { DiagramFigure } from "./DiagramFigure";
@@ -87,7 +88,7 @@ export default function DiagramWorkspace() {
       <input id="diagram-message" value={message} onChange={e => setMessage(e.target.value)} maxLength={2000}
         placeholder="例如：画出割线与它平行的切线" required/>
       <button className="btn primary" disabled={busy || !message.trim() || !status?.configured}>{busy ? "正在生成…" : "生成图解"}</button>
-      {status && !status.configured && <small className="muted">请先在顶部配置个人 DeepSeek Key</small>}
+      {status && !status.configured && <small className="muted">{configureAIMessage}</small>}
     </form>
     {error && <p role="alert">{error}</p>}
   </section>;

@@ -15,7 +15,8 @@ FIXTURE_KEY = "sk-m4-fixture-sensitive-token"
 
 
 @pytest.fixture
-def local(tmp_path):
+def local(tmp_path, monkeypatch):
+    monkeypatch.setenv("AXIOM_CODEX_BIN", str(tmp_path / "absent"))
     def start(**overrides):
         return create_app({
             "testing": True,
@@ -32,11 +33,11 @@ def local(tmp_path):
 def test_status_persistence_model_and_clear(local, tmp_path, caplog):
     client = local()
     assert client.get(f"{ROOT}/status").json == {
-        "configured": False, "model": "deepseek-flash", "state": "unset"
+        "configured": False, "model": "deepseek-flash", "state": "unset", "codex_detected": False
     }
     assert client.put(ROOT, json={"api_key": FIXTURE_KEY, "model": "deepseek-flash"}).status_code == 200
     status = client.put(ROOT, json={"model": "deepseek-v4-pro"})
-    assert status.json == {"configured": True, "model": "deepseek-v4-pro", "state": "ready"}
+    assert status.json == {"configured": True, "model": "deepseek-v4-pro", "state": "ready", "codex_detected": False}
     saved = next(tmp_path.glob("ai-key.*"))
     if os.name == "nt":
         assert FIXTURE_KEY.encode() not in saved.read_bytes()
@@ -66,7 +67,7 @@ def test_saved_legacy_key_is_immediately_usable(local, previous, current, monkey
         store.path.chmod(0o600)
 
     assert client.get(f"{ROOT}/status").json == {
-        "configured": True, "model": current, "state": "ready", "migrated_from": previous,
+        "configured": True, "model": current, "state": "ready", "migrated_from": previous, "codex_detected": False,
     }
     assert store.read().revision == "original"
     assert client.get("/api/ai/status").json["json_mode"] is True
@@ -80,7 +81,7 @@ def test_saved_legacy_key_is_immediately_usable(local, previous, current, monkey
     assert client.post(f"{ROOT}/test").json == {"ok": True}
     assert client.put(ROOT, json={"model": previous}).status_code == 422
     assert client.put(ROOT, json={"model": current}).json == {
-        "configured": True, "model": current, "state": "ready",
+        "configured": True, "model": current, "state": "ready", "codex_detected": False,
     }
 
 
@@ -233,7 +234,7 @@ def test_openai_personal_protocol(local, monkeypatch, model, reasoning):
     client = local()
     status = client.put(ROOT, json={"provider": "openai", "model": model, "api_key": FIXTURE_KEY})
     assert status.json == {"configured": True, "state": "ready", "model": model,
-                           "provider": "openai", "base_url": None}
+                           "provider": "openai", "base_url": None, "codex_detected": False}
 
     def post(url, **kwargs):
         assert url == "https://api.openai.com/v1/chat/completions"

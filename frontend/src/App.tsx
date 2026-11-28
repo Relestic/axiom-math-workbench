@@ -458,7 +458,7 @@ export default function App() {
                   {session.serverMode
                     ? "当前已登录后端：内容、练习、作答、笔记、诊断和学习进度都来自服务端。"
                     : "本地学习记录可在「书架与笔记」中导出和恢复。"}
-                  可从顶部 AI 徽章配置 DeepSeek 或 ChatGPT (OpenAI)。
+                  可从顶部 AI 徽章选择已登录的本机 Codex（免填 Key），或配置 DeepSeek、ChatGPT (OpenAI) 的 API Key。
                 </div>
                 <p>
                   图像页可输入 sin(a*x^2)，或配置模型后发送“换成分段函数”。

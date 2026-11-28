@@ -86,7 +86,7 @@ class Config:
     ai_base_url: str = ""
     ai_model: str = ""
     ai_api_key: str = field(default="", repr=False)
-    ai_provider: str = "none"  # none | openai | deepseek | mock
+    ai_provider: str = "none"  # none | openai | deepseek | codex (local) | mock
     ai_json_mode: bool = True
     ai_timeout_seconds: int = 60
     ai_daily_call_limit: int = 200
@@ -103,6 +103,8 @@ class Config:
 
     @property
     def ai_configured(self) -> bool:
+        if self.ai_provider == "codex":
+            return bool(self.ai_model)
         return bool(self.ai_base_url and self.ai_model and self.ai_api_key)
 
     @property
@@ -114,6 +116,7 @@ class Config:
         return {
             "deepseek": "DeepSeek",
             "openai": "OpenAI-compatible",
+            "codex": "本机 Codex CLI",
             "mock": "Mock",
             "none": "未配置",
         }.get(self.ai_provider, self.ai_provider)

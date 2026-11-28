@@ -55,7 +55,7 @@ def test_offline_proof_structure_and_calculation_grading(page, server):
     exercise = page.locator("#desk-pane-exercises")
     expect(exercise.locator(".grading-criteria")).to_be_visible()
     exercise.get_by_role("button", name=VARIANT_BUTTON).click()
-    expect(page.get_by_text("请先在顶部配置个人 DeepSeek Key", exact=False).first).to_be_visible()
+    expect(page.get_by_text("请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key", exact=False).first).to_be_visible()
     calculation = submit(page, server, "primitive", "exp(2*x)*(2*x-1)/4")
     assert calculation["ai_review"] is None
     result = calculation["feedback"]

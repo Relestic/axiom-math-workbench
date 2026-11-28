@@ -65,7 +65,7 @@ def test_offline_scoring_rating_retry_and_ownership(local):
     assert {a["id"] for a in extras["attempts"]} == {attempt["id"], numeric["id"]}
     missing = local.post(BASE + "/exercises/variant", json={"attempt_id": attempt["id"]})
     assert (
-        missing.status_code == 503 and missing.json["error"]["message"] == "请先在顶部配置个人 DeepSeek Key"
+        missing.status_code == 503 and missing.json["error"]["message"] == "请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key"
     )
     with session_scope() as session:
         record = session.get(Attempt, attempt["id"])

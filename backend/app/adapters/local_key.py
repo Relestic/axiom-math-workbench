@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from ..config import DEEPSEEK_LEGACY_MODELS, DEEPSEEK_MODELS as MODELS
 from ..errors import ApiError
+from .codex_cli import find_codex_binary
 
 DEFAULT_BASE_URL = {"deepseek": "https://api.deepseek.com", "openai": "https://api.openai.com/v1"}
 OPENAI_MODEL = re.compile(r"[a-zA-Z0-9._-]{2,80}")
@@ -28,7 +29,7 @@ _UNSET = object()
 def valid_model(provider, model) -> bool:
     if provider == "deepseek":
         return model in MODELS
-    return provider == "openai" and isinstance(model, str) and OPENAI_MODEL.fullmatch(model) is not None
+    return provider in ("openai", "codex") and isinstance(model, str) and OPENAI_MODEL.fullmatch(model) is not None
 
 
 def _public_ip(address: str) -> bool:
@@ -146,13 +147,17 @@ class LocalKeyStore:
             value = json.loads(raw)
             if (
                 not isinstance(value, dict)
-                or not valid_key(value.get("api_key"))
                 or not isinstance(value.get("model"), str)
                 or not isinstance(value.get("revision"), str)
             ):
                 raise ValueError("invalid credential file")
             saved_model = value["model"]
             provider = value.get("provider", "deepseek")
+            if provider == "codex":
+                if value.get("api_key") != "" or value.get("base_url") not in ("", None):
+                    raise ValueError("invalid Codex settings")
+            elif not valid_key(value.get("api_key")):
+                raise ValueError("invalid credential key")
             model = DEEPSEEK_LEGACY_MODELS.get(saved_model, saved_model) if provider == "deepseek" else saved_model
             if not valid_model(provider, model):
                 raise ValueError("invalid credential model")
@@ -168,13 +173,21 @@ class LocalKeyStore:
     def save(self, api_key: str | None = None, model: str = "", provider: str | None = None,
              base_url=_UNSET) -> None:
         platform = "deepseek" if provider is None else provider
-        if not valid_model(platform, model) or (api_key is not None and not valid_key(api_key)):
+        if platform == "codex":
+            if base_url not in (_UNSET, None, ""):
+                raise ApiError("unprocessable", "本机 Codex 不支持自定义 Base URL")
+            if model in (None, ""):
+                model = "auto"
+            api_key = ""
+        elif api_key is not None and not valid_key(api_key):
+            raise ApiError("unprocessable", "请检查 API Key 格式")
+        if not valid_model(platform, model):
             raise ApiError("unprocessable", "请检查提供商、模型名称和 API Key 格式")
         try:
             override = clean_base_url(base_url, resolve=True) if base_url is not _UNSET else None
         except ValueError as exc:
             raise ApiError("unprocessable", str(exc)) from None
-        if override == DEFAULT_BASE_URL[platform]:
+        if override == DEFAULT_BASE_URL.get(platform):
             override = None
         with self.lock:
             if api_key is None:
@@ -226,15 +239,16 @@ class LocalKeyStore:
                 self.failed_revision = None if ok else credentials.revision
 
     def status(self) -> dict:
+        detected = bool(find_codex_binary())
         with self.lock:
             try:
                 current = self.read()
             except ApiError:
-                return {"configured": False, "model": MODELS[0], "state": "error"}
+                return {"configured": False, "model": MODELS[0], "state": "error", "codex_detected": detected}
             if current is None:
-                return {"configured": False, "model": MODELS[0], "state": "unset"}
+                return {"configured": False, "model": MODELS[0], "state": "unset", "codex_detected": detected}
             state = "error" if current.revision == self.failed_revision else "ready"
-            status = {"configured": True, "model": current.model, "state": state}
+            status = {"configured": True, "model": current.model, "state": state, "codex_detected": detected}
             if not current.legacy_format:
                 status.update(provider=current.provider, base_url=current.base_url)
             if current.migrated_from:

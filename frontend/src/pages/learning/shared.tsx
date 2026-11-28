@@ -5,6 +5,7 @@ import { MathText } from "../../components/Math";
 import type { CurriculumUnit } from "../../domain/types";
 import { pageLabel } from "../../modules/teaching/localTextbooks";
 import { useAIConnection } from "../../modules/ai/connection";
+import { configureAIMessage } from "../../modules/ai/models";
 
 export type Props = {
   onNavigate: (page: string) => void;
@@ -31,7 +32,7 @@ export function CardGenerationButton({ label, generate }: { label: string; gener
   return <div>
     <button type="button" className="btn primary" disabled={busy || !status?.configured}
       onClick={() => void run()}><Sparkles size={15} />{busy ? "正在生成…" : label}</button>
-    {available !== null && !status?.configured && <p className="muted">请先在顶部配置个人 DeepSeek Key</p>}
+    {available !== null && !status?.configured && <p className="muted">{configureAIMessage}</p>}
     {error && <p role="alert">{error}</p>}
   </div>;
 }

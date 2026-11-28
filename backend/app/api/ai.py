@@ -60,10 +60,11 @@ def save_key():
     if not isinstance(payload, dict):
         raise ApiError("invalid_json", "请求体必须是 JSON 对象")
     api_key = payload.get("api_key")
+    provider = payload.get("provider", "deepseek")
     if (
         set(payload) - {"api_key", "model", "provider", "base_url"}
-        or payload.get("provider", "deepseek") not in ("deepseek", "openai")
-        or ("api_key" in payload and not valid_key(api_key))
+        or provider not in ("deepseek", "openai", "codex")
+        or ("api_key" in payload and not (provider == "codex" and api_key == "") and not valid_key(api_key))
     ):
         raise ApiError("unprocessable", "请检查提供商和 API Key 格式")
     store = local_key_store()
@@ -360,13 +361,14 @@ def legacy_status():
         require_local()
         status = local_key_store().status()
         provider = status.get("provider", "deepseek")
-        label = "ChatGPT (OpenAI)" if provider == "openai" else "DeepSeek"
+        label = {"openai": "ChatGPT (OpenAI)", "deepseek": "DeepSeek", "codex": "本机 Codex CLI"}[provider]
         reasoning = provider == "openai" and openai_reasoning_model(status["model"])
         return {
             **status,
             "provider": label,
             "provider_label": label,
-            "endpoint_host": urlsplit(status.get("base_url") or DEFAULT_BASE_URL[provider]).hostname,
+            "endpoint_host": ("codex-cli" if provider == "codex" else
+                              urlsplit(status.get("base_url") or DEFAULT_BASE_URL[provider]).hostname),
             "mode": provider if status["configured"] else "none",
             "reasoner": reasoning,
             "json_mode": config.ai_json_mode and not reasoning,

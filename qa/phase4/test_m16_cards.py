@@ -80,7 +80,7 @@ def test_complete_import_and_generate_again_in_desk(page, server):
     page.reload()
     generate = page.get_by_role("button", name="AI 生成本卡配套练习题", exact=True)
     expect(generate).to_be_disabled()
-    expect(page.locator("#desk-pane-exercises")).to_contain_text("请先在顶部配置个人 DeepSeek Key")
+    expect(page.locator("#desk-pane-exercises")).to_contain_text("请先在顶部配置本机 Codex、DeepSeek Key 或 OpenAI Key")
     key.update(configured=True, state="ready")
     page.reload()
     generate.click()

@@ -16,6 +16,7 @@ export async function fetchAIStatus(): Promise<AIStatus> {
 }
 
 export type KeyStatus = {
+  codex_detected?: boolean;
   configured: boolean;
   provider?: AIProvider;
   model: string;
@@ -34,7 +35,8 @@ export const saveKey = (model: string, key: string, provider: AIProvider = "deep
     "/api/v1/ai/key",
     {
       method: "PUT",
-      body: JSON.stringify({ provider, model, base_url: baseUrl.trim() || null, api_key: key || undefined }),
+      body: JSON.stringify(provider === "codex" ? { provider, model } :
+        { provider, model, base_url: baseUrl.trim() || null, api_key: key || undefined }),
     },
     local,
   );
@@ -46,16 +48,17 @@ export async function testKey() {
   const result = await apiFetch<{
     ok: boolean;
     code?: string;
-    error?: { code?: string };
+    error?: { code?: string; message?: string };
   }>("/api/v1/ai/key/test", { method: "POST" }, local);
   if (!result.ok) {
-    throw new ApiError(200, "连接测试失败", result.error?.code || result.code);
+    throw new ApiError(200, result.error?.message || "连接测试失败", result.error?.code || result.code);
   }
 }
 
 export function keyError(cause: unknown, fallback: string, provider: AIProvider = "deepseek"): string {
   const label = providerLabels[provider];
   if (cause instanceof ApiError) {
+    if (provider === "codex") return cause.message || fallback;
     if (cause.code === "invalid_key" || cause.status === 401)
       return `${label} Key 无效，请更换后再试。`;
     if (cause.code === "insufficient_balance" || cause.status === 402)

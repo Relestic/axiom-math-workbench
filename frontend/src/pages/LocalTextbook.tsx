@@ -3,13 +3,12 @@ import { BookOpen, FileText, Pencil, Sparkles, Trash2, Upload } from "lucide-rea
 import { useAppData } from "../app/DataProvider";
 import type { LocalBook } from "../domain/types";
 import { useAIConnection } from "../modules/ai/connection";
+import { configureAIMessage as keyMessage } from "../modules/ai/models";
 import { withPdfPageRenderer } from "../modules/teaching/pdfPageRenderer";
 import {
   buildTextbook, deleteTextbook, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
 } from "../modules/teaching/localTextbooks";
 import "./local-textbooks.css";
-
-const keyMessage = "请先在顶部配置个人 DeepSeek Key 或 OpenAI Key";
 
 function message(cause: unknown) {
   if (cause instanceof TypeError) return "无法连接本机工作台，请检查本地服务后重试。";

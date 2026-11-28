@@ -3,6 +3,7 @@ import { useAppData } from "../../app/DataProvider";
 import { MathText } from "../../components/Math";
 import type { Attempt } from "../../domain/types";
 import { useAIConnection } from "../ai/connection";
+import { configureAIMessage } from "../ai/models";
 import { generateLocalVariant } from "./api";
 import { explainAttempt } from "./review";
 import { selectExercise } from "./selection";
@@ -14,7 +15,7 @@ export function AttemptInsights({attempt,navigate}: {attempt:Attempt; navigate:(
   const [notice,setNotice] = useState("");
   const review = attempt.aiReview;
   async function generate() {
-    if (!status?.configured) {setNotice("请先在顶部配置个人 DeepSeek Key");return;}
+    if (!status?.configured) {setNotice(configureAIMessage);return;}
     if (!attempt.feedback) {setNotice("请先在本机工作台重新提交这条旧作答，再生成针对它的变式题。");return;}
     setBusy(true);setNotice("");
     try {
