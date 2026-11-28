@@ -16,6 +16,19 @@ from .llm_types import LLMError, LLMResult
 INSTRUCTIONS = "Important: Do NOT run any shell commands, file reads, or tools. Reply directly based ONLY on the prompt below."
 JSON_INSTRUCTIONS = "Output ONLY a raw valid JSON object without markdown code fences or extra text."
 NOT_INSTALLED = "未检测到本机 Codex CLI，请先安装并登录 Codex"
+CODEX_EFFORTS = ("auto", "none", "low", "medium", "high")
+REASONING_PURPOSES = frozenset({
+    "card_proof", "card_exercises", "exercise_variant", "attempt_review", "attempt_feedback", "exercise_generation",
+})
+
+
+def resolve_effort(effort: str | None, purpose: str = "") -> str:
+    if purpose == "connection_test":
+        return "none"
+    mode = effort or "auto"
+    if mode == "auto":
+        return "medium" if purpose in REASONING_PURPOSES else "none"
+    return mode if mode in CODEX_EFFORTS else "none"
 
 
 def find_codex_binary() -> Path | None:
@@ -151,11 +164,13 @@ def _failure(output):
     return LLMError("本机 Codex 调用失败")
 
 
-def complete(messages, *, model: str, json_mode: bool, timeout: int) -> LLMResult:
+def complete(messages, *, model: str, json_mode: bool, timeout: int, purpose: str = "",
+             reasoning_effort: str = "auto") -> LLMResult:
     binary = find_codex_binary()
     if binary is None:
         raise LLMError(NOT_INSTALLED, kind="unconfigured")
     started = time.perf_counter()
+    effort = resolve_effort(reasoning_effort, purpose)
     with tempfile.TemporaryDirectory(prefix="axiom-codex-") as temp:
         directory = Path(temp)
         work = directory / "work"
@@ -164,6 +179,8 @@ def complete(messages, *, model: str, json_mode: bool, timeout: int) -> LLMResul
         prompt, images = _prompt(messages, directory, json_mode)
         args = [str(binary.absolute()), "exec", "-C", str(work), "--skip-git-repo-check", "--ephemeral",
                 "--ignore-user-config", "-s", "read-only", "--color", "never", "-o", str(out)]
+        if effort != "none":
+            args.extend(["-c", f"model_reasoning_effort={effort}"])
         if model and model != "auto":
             args.extend(["-m", model])
         for image in images:

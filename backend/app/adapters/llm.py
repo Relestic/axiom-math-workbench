@@ -47,6 +47,7 @@ def _local_config(credentials: Credentials) -> Config:
         ai_base_url=credentials.base_url or DEFAULT_BASE_URL.get(credentials.provider, ""),
         ai_model=credentials.model,
         ai_api_key=credentials.api_key,
+        ai_reasoning_effort=credentials.reasoning_effort,
     )
 
 
@@ -239,7 +240,14 @@ def _post_chat(
     if config.ai_provider == "mock":
         return _MockProvider().complete(messages, purpose=purpose, json_mode=json_mode)
     if config.ai_provider == "codex":
-        return codex_cli.complete(messages, model=config.ai_model, json_mode=json_mode, timeout=timeout)
+        return codex_cli.complete(
+            messages,
+            model=config.ai_model,
+            json_mode=json_mode,
+            timeout=timeout,
+            purpose=purpose,
+            reasoning_effort=config.ai_reasoning_effort,
+        )
     if not config.ai_configured:
         raise LLMError("模型尚未配置", kind="unconfigured")
     payload: dict[str, Any] = {
@@ -417,7 +425,8 @@ def chat(
             raise ApiError("rate_limited", "公开演示的 AI 额度已用完，请明天再试")
     timeout = timeout or config.ai_timeout_seconds
     if config.ai_provider == "codex":
-        timeout = max(timeout, 90)
+        effort = codex_cli.resolve_effort(config.ai_reasoning_effort, purpose)
+        timeout = max(timeout, 180 if effort == "high" else 120 if effort == "medium" else 90)
     started = time.perf_counter()
     record = ModelCall(
         user_id=user_id,

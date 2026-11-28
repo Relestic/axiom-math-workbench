@@ -1,5 +1,5 @@
 import { ApiError, apiFetch, apiUrl } from "../../lib/api";
-import { providerLabels, type AIProvider, type LegacyDeepSeekModel } from "./models";
+import { providerLabels, type AIProvider, type CodexEffort, type LegacyDeepSeekModel } from "./models";
 export type { DeepSeekModel } from "./models";
 
 export type AIStatus = {
@@ -21,6 +21,7 @@ export type KeyStatus = {
   provider?: AIProvider;
   model: string;
   base_url?: string | null;
+  reasoning_effort?: CodexEffort;
   state: "ready" | "unset" | "error";
   migrated_from?: LegacyDeepSeekModel;
 };
@@ -30,13 +31,20 @@ const local = { auth: false };
 export const getKeyStatus = () =>
   apiFetch<KeyStatus>("/api/v1/ai/key/status", {}, local);
 
-export const saveKey = (model: string, key: string, provider: AIProvider = "deepseek", baseUrl = "") =>
+export const saveKey = (
+  model: string,
+  key: string,
+  provider: AIProvider = "deepseek",
+  baseUrl = "",
+  reasoningEffort: CodexEffort = "auto",
+) =>
   apiFetch<KeyStatus>(
     "/api/v1/ai/key",
     {
       method: "PUT",
-      body: JSON.stringify(provider === "codex" ? { provider, model } :
-        { provider, model, base_url: baseUrl.trim() || null, api_key: key || undefined }),
+      body: JSON.stringify(provider === "codex"
+        ? (reasoningEffort === "auto" ? { provider, model } : { provider, model, reasoning_effort: reasoningEffort })
+        : { provider, model, base_url: baseUrl.trim() || null, api_key: key || undefined }),
     },
     local,
   );

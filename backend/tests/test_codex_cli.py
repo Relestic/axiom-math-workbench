@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.adapters import codex_cli, llm
 from app.db import session_scope
 from app.models import ModelCall
-from test_workstation_books import JPEG, PNG, textbook_pdf, upload
+from test_workstation_books import EXERCISE, JPEG, PNG, textbook_pdf, upload
 
 KEY = "/api/v1/ai/key"
 INSTRUCTIONS = "Important: Do NOT run any shell commands, file reads, or tools. Reply directly based ONLY on the prompt below."
@@ -239,3 +239,51 @@ def test_codex_connection_errors(local, cli, monkeypatch, failure, code, status,
     if failure != "missing":
         [attempt] = calls(cli)
         assert not Path(attempt["cwd"]).parent.exists()
+
+
+def test_codex_auto_and_explicit_reasoning_effort(local, cli, monkeypatch):
+    assert codex_cli.resolve_effort("auto", "textbook_cards") == "none"
+    assert codex_cli.resolve_effort("auto", "page_ocr") == "none"
+    assert codex_cli.resolve_effort("auto", "companion") == "none"
+    assert codex_cli.resolve_effort("auto", "card_proof") == "medium"
+    assert codex_cli.resolve_effort("auto", "card_exercises") == "medium"
+    assert codex_cli.resolve_effort("auto", "attempt_review") == "medium"
+    assert codex_cli.resolve_effort("high", "connection_test") == "none"
+
+    assert local.put(KEY, json={"provider": "codex"}).status_code == 200
+    monkeypatch.setenv("FAKE_ANSWER", json.dumps({"exercises": [EXERCISE]}))
+    timeouts = []
+    complete = codex_cli.complete
+
+    def record_timeout(*args, **kwargs):
+        timeouts.append(kwargs["timeout"])
+        return complete(*args, **kwargs)
+
+    monkeypatch.setattr(codex_cli, "complete", record_timeout)
+    res = local.post("/api/v1/local/cards/uniform/exercises", json={"count": 1, "focus": "proof"})
+    assert res.status_code == 201, res.json
+    assert timeouts == [120]
+    [exercise_call] = calls(cli)
+    assert ["-c", "model_reasoning_effort=medium"] == exercise_call["args"][
+        exercise_call["args"].index("-c") : exercise_call["args"].index("-c") + 2
+    ]
+
+    saved_high = local.put(KEY, json={"provider": "codex", "model": "auto", "reasoning_effort": "high"})
+    assert saved_high.status_code == 200 and saved_high.json["reasoning_effort"] == "high"
+    monkeypatch.setenv("FAKE_ANSWER", json.dumps({"display_markdown": "已深度核对。", "actions": []}))
+    comp = local.post("/api/v1/ai/companion", json={"question": "核对极限", "context": {}})
+    assert comp.status_code == 200
+    assert timeouts[-1] == 180
+    high_call = calls(cli)[-1]
+    assert ["-c", "model_reasoning_effort=high"] == high_call["args"][
+        high_call["args"].index("-c") : high_call["args"].index("-c") + 2
+    ]
+
+    for bad in (
+        {"provider": "codex", "reasoning_effort": "extreme"},
+        {"provider": "deepseek", "api_key": "sk-deepseek-key", "model": "deepseek-flash", "reasoning_effort": "low"},
+    ):
+        assert local.put(KEY, json=bad).status_code == 422
+
+    reset = local.put(KEY, json={"provider": "codex", "model": "auto"})
+    assert reset.status_code == 200 and "reasoning_effort" not in reset.json

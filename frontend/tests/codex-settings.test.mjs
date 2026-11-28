@@ -11,12 +11,18 @@ const { saveKey, testKey, keyError } = await import(
 );
 
 test("Codex saves only the provider and model even if a previous draft held a key and URL", async t => {
+  const payloads = [];
   t.mock.method(globalThis, "fetch", async (url, init) => {
     assert.equal(url, "/api/v1/ai/key");
-    assert.deepEqual(JSON.parse(init.body), { provider: "codex", model: "auto" });
+    payloads.push(JSON.parse(init.body));
     return Response.json({ configured: true });
   });
   assert.equal((await saveKey("auto", "previous-key", "codex", "https://previous.example")).configured, true);
+  assert.equal((await saveKey("auto", "", "codex", "", "high")).configured, true);
+  assert.deepEqual(payloads, [
+    { provider: "codex", model: "auto" },
+    { provider: "codex", model: "auto", reasoning_effort: "high" },
+  ]);
 });
 
 test("Codex displays the backend's installation and login errors", async t => {

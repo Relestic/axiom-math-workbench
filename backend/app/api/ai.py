@@ -62,7 +62,7 @@ def save_key():
     api_key = payload.get("api_key")
     provider = payload.get("provider", "deepseek")
     if (
-        set(payload) - {"api_key", "model", "provider", "base_url"}
+        set(payload) - {"api_key", "model", "provider", "base_url", "reasoning_effort"}
         or provider not in ("deepseek", "openai", "codex")
         or ("api_key" in payload and not (provider == "codex" and api_key == "") and not valid_key(api_key))
     ):

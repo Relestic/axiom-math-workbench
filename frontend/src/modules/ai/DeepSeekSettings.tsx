@@ -6,7 +6,7 @@ import {
   testKey,
 } from "./api";
 import { useAIConnection } from "./connection";
-import { providerModels, providerLabels, type AIProvider } from "./models";
+import { codexEfforts, providerModels, providerLabels, type AIProvider, type CodexEffort } from "./models";
 
 export function aiStatusLabel(state: "ready" | "unset" | "error") {
   return { ready: "已就绪", unset: "未配置", error: "异常" }[state];
@@ -15,14 +15,17 @@ export function aiStatusLabel(state: "ready" | "unset" | "error") {
 export function DeepSeekSettings() {
   const { status, available, failed, setFailed, refresh } = useAIConnection();
   const savedProvider = status?.provider || "deepseek";
+  const savedEffort: CodexEffort = status?.reasoning_effort || "auto";
   const [provider, setProvider] = useState<AIProvider>(savedProvider);
   const [choice, setChoice] = useState("");
   const [custom, setCustom] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const [effort, setEffort] = useState<CodexEffort>(savedEffort);
   const model = choice === ":custom" ? custom.trim() : choice;
   const label = providerLabels[provider];
   const isCodex = provider === "codex";
-  const savedEndpoint = provider === savedProvider && baseUrl.trim().replace(/\/+$/, "") === (status?.base_url || "");
+  const savedEndpoint = provider === savedProvider && baseUrl.trim().replace(/\/+$/, "") === (status?.base_url || "") &&
+    (!isCodex || effort === savedEffort);
   const keyInput = useRef<HTMLInputElement>(null);
   const [hasKey, setHasKey] = useState(false);
   const [pending, setPending] = useState<"save" | "test" | "clear" | null>(
@@ -37,12 +40,13 @@ export function DeepSeekSettings() {
     setChoice(presets.includes(value) ? value : ":custom");
     setCustom(presets.includes(value) ? "" : value);
     setBaseUrl((saved && status?.base_url) || "");
+    setEffort(saved ? savedEffort : "auto");
     if (keyInput.current) keyInput.current.value = "";
     setHasKey(false);
   }
   useEffect(() => {
     selectProvider(savedProvider);
-  }, [savedProvider, status?.model, status?.base_url, status?.configured]);
+  }, [savedProvider, savedEffort, status?.model, status?.base_url, status?.configured]);
 
   async function run(action: "save" | "test" | "clear") {
     if (pending) return;
@@ -50,7 +54,7 @@ export function DeepSeekSettings() {
     setPending(action);
     setFeedback(undefined);
     try {
-      if (action === "save") await saveKey(model, key, provider, baseUrl);
+      if (action === "save") await saveKey(model, key, provider, baseUrl, effort);
       if (action === "test") await testKey();
       if (action === "clear") await clearKey();
       if (keyInput.current) keyInput.current.value = "";
@@ -156,6 +160,13 @@ export function DeepSeekSettings() {
             <input className="text-input" value={custom} required maxLength={80}
               pattern="[a-zA-Z0-9._\-]{2,80}" title="2–80 个字母、数字、点、下划线或连字符"
               disabled={!!pending} onChange={(event) => setCustom(event.target.value)} />
+          </label>}
+          {isCodex && <label className="field-label">
+            思考强度
+            <select className="text-input" aria-label="思考强度" value={effort} disabled={!!pending}
+              onChange={(event) => setEffort(event.target.value as CodexEffort)}>
+              {codexEfforts.map(([id, text]) => <option key={id} value={id}>{text}</option>)}
+            </select>
           </label>}
           {!isCodex && <label className="field-label">
             自定义 HTTPS Base URL（可选）

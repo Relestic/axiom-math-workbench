@@ -87,6 +87,7 @@ class Config:
     ai_model: str = ""
     ai_api_key: str = field(default="", repr=False)
     ai_provider: str = "none"  # none | openai | deepseek | codex (local) | mock
+    ai_reasoning_effort: str = "auto"
     ai_json_mode: bool = True
     ai_timeout_seconds: int = 60
     ai_daily_call_limit: int = 200

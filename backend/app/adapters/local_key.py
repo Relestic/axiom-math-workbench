@@ -18,7 +18,7 @@ from uuid import uuid4
 
 from ..config import DEEPSEEK_LEGACY_MODELS, DEEPSEEK_MODELS as MODELS
 from ..errors import ApiError
-from .codex_cli import find_codex_binary
+from .codex_cli import CODEX_EFFORTS, find_codex_binary
 
 DEFAULT_BASE_URL = {"deepseek": "https://api.deepseek.com", "openai": "https://api.openai.com/v1"}
 OPENAI_MODEL = re.compile(r"[a-zA-Z0-9._-]{2,80}")
@@ -125,6 +125,7 @@ class Credentials:
     migrated_from: str | None = None
     provider: str = "deepseek"
     base_url: str | None = None
+    reasoning_effort: str = "auto"
     legacy_format: bool = False
 
 
@@ -153,10 +154,12 @@ class LocalKeyStore:
                 raise ValueError("invalid credential file")
             saved_model = value["model"]
             provider = value.get("provider", "deepseek")
+            effort = value.get("reasoning_effort", "auto")
             if provider == "codex":
-                if value.get("api_key") != "" or value.get("base_url") not in ("", None):
+                if (value.get("api_key") != "" or value.get("base_url") not in ("", None)
+                        or effort not in CODEX_EFFORTS):
                     raise ValueError("invalid Codex settings")
-            elif not valid_key(value.get("api_key")):
+            elif not valid_key(value.get("api_key")) or "reasoning_effort" in value:
                 raise ValueError("invalid credential key")
             model = DEEPSEEK_LEGACY_MODELS.get(saved_model, saved_model) if provider == "deepseek" else saved_model
             if not valid_model(provider, model):
@@ -164,6 +167,7 @@ class LocalKeyStore:
             return Credentials(value["api_key"], model, value["revision"],
                                migrated_from=saved_model if saved_model != model else None,
                                provider=provider, base_url=clean_base_url(value.get("base_url")),
+                               reasoning_effort=effort if provider == "codex" else "auto",
                                legacy_format="provider" not in value)
         except FileNotFoundError:
             return None
@@ -171,14 +175,19 @@ class LocalKeyStore:
             raise ApiError("key_storage_error", "无法读取本地密钥，请重新保存", status=503) from None
 
     def save(self, api_key: str | None = None, model: str = "", provider: str | None = None,
-             base_url=_UNSET) -> None:
+             base_url=_UNSET, reasoning_effort: str | None = None) -> None:
         platform = "deepseek" if provider is None else provider
+        effort = "auto" if reasoning_effort in (None, "") else reasoning_effort
         if platform == "codex":
             if base_url not in (_UNSET, None, ""):
                 raise ApiError("unprocessable", "本机 Codex 不支持自定义 Base URL")
+            if effort not in CODEX_EFFORTS:
+                raise ApiError("unprocessable", "不支持的思考强度档位")
             if model in (None, ""):
                 model = "auto"
             api_key = ""
+        elif reasoning_effort not in (None, ""):
+            raise ApiError("unprocessable", "仅本机 Codex 支持思考强度设置")
         elif api_key is not None and not valid_key(api_key):
             raise ApiError("unprocessable", "请检查 API Key 格式")
         if not valid_model(platform, model):
@@ -202,6 +211,8 @@ class LocalKeyStore:
                 value["provider"] = platform
             if override:
                 value["base_url"] = override
+            if platform == "codex" and effort != "auto":
+                value["reasoning_effort"] = effort
             raw = json.dumps(value).encode("utf-8")
             temporary = None
             try:
@@ -251,6 +262,8 @@ class LocalKeyStore:
             status = {"configured": True, "model": current.model, "state": state, "codex_detected": detected}
             if not current.legacy_format:
                 status.update(provider=current.provider, base_url=current.base_url)
+            if current.provider == "codex" and current.reasoning_effort != "auto":
+                status["reasoning_effort"] = current.reasoning_effort
             if current.migrated_from:
                 status["migrated_from"] = current.migrated_from
             return status
