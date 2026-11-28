@@ -83,9 +83,11 @@ export function DeskCardNavigation() {
   const next = course.cards[index + 1];
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey || event.defaultPrevented) return;
+      if (event.ctrlKey || event.shiftKey || event.metaKey || event.defaultPrevented) return;
       if (event.target instanceof Element && event.target.closest('dialog, [role="dialog"]')) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (!event.altKey && event.target instanceof Element && event.target !== document.body &&
+        (!event.target.closest("#desk-study") || event.target.closest('input, select, textarea, [contenteditable], [role="tablist"]'))) return;
       event.preventDefault();
       const target = event.key === "ArrowLeft" ? previous : next;
       if (target) select(target.id);

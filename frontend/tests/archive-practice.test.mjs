@@ -20,3 +20,11 @@ test("archived examples resume the lecture and preserve both board conversations
     assert.deepEqual(validateLearningStorage(snapshot), {...snapshot, "axiom-last-page": "desk/textbook"});
   }
 });
+
+test("auto enrichment preference round trips as a boolean", () => {
+  for (const value of ["false", "true"]) {
+    const snapshot = {"axiom-auto-enrich": value};
+    assert.deepEqual(validateLearningStorage(snapshot), snapshot);
+  }
+  assert.throws(() => validateLearningStorage({"axiom-auto-enrich": "yes"}));
+});

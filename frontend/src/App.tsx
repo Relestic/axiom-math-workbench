@@ -81,6 +81,7 @@ export default function App() {
   const [deskPanes, setDeskPanes] = useState<DeskPanes>({study:"textbook", board:"explore", collapsed:false});
   const [reading, setReading] = useState({ bookId: "", page: 1, revision: 0 });
   const [openSourceWithStudy, setOpenSourceWithStudy] = useState(false);
+  const [activeBookBuilds, setActiveBookBuilds] = useState(0);
   useEffect(() => {
     if (section === "desk") setOpenSourceWithStudy(false);
   }, [section]);
@@ -364,9 +365,11 @@ export default function App() {
             {Object.entries(subpages[section]).map(([id,label]) => <button key={id} className={page === id ? "active" : ""}
               aria-current={page === id ? "page" : undefined} onClick={()=>navigate(id)}>{label}</button>)}
           </nav>}
-          {page === "books" && <LocalTextbook read={readTextbook} openCard={(id) => {
-            app.selectConcept(id); navigate("textbook");
-          }}/>}
+          {(page === "books" || activeBookBuilds > 0) && <div hidden={page !== "books"}>
+            <LocalTextbook read={readTextbook} openCard={(id) => {
+              app.selectConcept(id); navigate("textbook");
+            }} onBuildChange={active => setActiveBookBuilds(count => count + (active ? 1 : -1))} />
+          </div>}
           {page === "archive" && <LearningArchiveSettings/>}
           {page === "practice-map" && (
             <PracticeMap onNavigate={navigate} notify={notify} />

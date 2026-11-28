@@ -77,6 +77,7 @@ def test_ocr_filters_cached_pages_and_persists_blank_covers(local, app, monkeypa
                 {"type": "text", "text": "PDF 第 2 页"}, {"type": "image_url", "image_url": {"url": PNG}}]
         else:
             assert payload["model"] == model
+            assert [row["page"] for row in json.loads(payload["messages"][1]["content"])] == [1]
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(outputs.pop(0))}}]})
 
     monkeypatch.setattr(llm.httpx, "post", post)
@@ -85,8 +86,10 @@ def test_ocr_filters_cached_pages_and_persists_blank_covers(local, app, monkeypa
     assert response.status_code == 200, response.json
     assert response.json["pages"] == [book["pages"][0], {"page": 2, "char_count": 0,
                                                          "needs_ocr": False, "ocr_done": True}]
-    assert local.post(url + "/extract-cards", json={"page_start": 2, "page_end": 2}).json == {"cards": []}
+    assert local.post(url + "/extract-cards", json={"page_start": 1, "page_end": 2}).json == {"cards": []}
+    assert outputs == []
     local.delete("/api/v1/ai/key")
+    assert local.post(url + "/extract-cards", json={"page_start": 2, "page_end": 2}).json == {"cards": []}
     assert local.post(url + "/ocr-pages", json=request).json == response.json
     with session_scope() as session:
         assert session.get(Textbook, book["id"]).parse_meta["pages"][1]["text"] == ""

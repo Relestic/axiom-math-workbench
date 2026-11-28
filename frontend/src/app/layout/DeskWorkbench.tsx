@@ -4,6 +4,8 @@ import { BookOpen, PanelRightClose, PanelRightOpen, Presentation } from "lucide-
 import { CardGenerationButton, DeskCardNavigation } from "../../pages/learning/shared";
 import { useAppData } from "../DataProvider";
 import { generateCardVisual } from "../../modules/teaching/localTextbooks";
+import { useCardEnrichment } from "../../modules/teaching/useCardEnrichment";
+import type { CurriculumUnit } from "../../domain/types";
 import { cardVisualSchema, sceneField } from "../../modules/visualization/cardVisual";
 import { MathText } from "../../components/Math";
 import { useCardBoards } from "../../modules/visualization/useCardBoards";
@@ -22,6 +24,20 @@ type Tabs = ReadonlyArray<readonly [string, string]>;
 
 function isBoard(id: string) {
   return boardTabs.some(([value]) => value === id);
+}
+
+function CardEnrichmentBar({ unit }: { unit: CurriculumUnit }) {
+  const card = useCardEnrichment(unit);
+  return <div className="desk-enrichment" role="group" aria-label="本卡精配">
+    <label><input type="checkbox" checked={card.autoEnrich}
+      onChange={event => card.toggle(event.target.checked)} />翻到卡片自动精配</label>
+    {card.complete ? <span role="status">✓ 本卡证明 · 练习 · 配图已配齐</span> :
+      <button type="button" className="btn" disabled={!!card.busy || !card.configured}
+        onClick={card.generate}>一键精配本卡</button>}
+    {card.busy && <span role="status">{card.busy === "automatic" ?
+      "正在为本卡自动补齐证明、练习与配图…" : "正在精配本卡…"}</span>}
+    {!card.complete && !card.busy && card.error && <small role="alert">{card.error}</small>}
+  </div>;
 }
 
 function DeskTabs({ tabs, active, label, select }: {
@@ -87,6 +103,7 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
   const [desk, setDesk] = useState(() => openRoute(pane, undefined,
     initialBoard === "pdf" ? "pdf" : boards.visual?.board ?? associated ?? initialBoard));
   const seenCard = useRef(unit?.id);
+  const seenBoard = useRef(associated);
   const explicitBoardCard = useRef(isBoard(pane) ? selectedConceptId : "");
   const selectedId = useRef(selectedConceptId);
   useLayoutEffect(() => { selectedId.current = selectedConceptId; }, [selectedConceptId]);
@@ -96,13 +113,17 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
   if (pane !== desk.route) setDesk(openRoute(pane, desk));
   // Explicit tabs and Hiyori reveals win until the learner changes cards.
   useLayoutEffect(() => {
-    if (!unit || unit.id === seenCard.current) return;
+    if (!unit) return;
+    const sameCard = unit.id === seenCard.current;
+    const newBoard = !seenBoard.current && associated;
+    seenBoard.current = associated;
+    if (sameCard && (!newBoard || explicitBoardCard.current === unit.id)) return;
     const initialLoad = !seenCard.current;
     seenCard.current = unit.id;
     if (!associated || desk.board === "pdf" || (initialLoad && (isBoard(pane) || explicitBoardCard.current === unit.id))) return;
     if (isBoard(pane) && pane !== associated) navigate(associated);
     else showBoard(associated);
-  }, [unit?.id]);
+  }, [unit?.id, associated]);
   useLayoutEffect(() => {
     onPanesChange({ study: desk.study, board: desk.board, collapsed: desk.collapsed });
   }, [desk.study, desk.board, desk.collapsed, onPanesChange]);
@@ -178,6 +199,7 @@ export function DeskWorkbench({ pane, initialBoard, navigate, renderPane, onActi
               aria-controls="desk-board" aria-expanded={false} onClick={toggleBoard}>
               <PanelRightOpen size={15} />展开黑板</button>}
           </div>
+          {unit?.textbookSource && <CardEnrichmentBar key={unit.id} unit={unit} />}
           <DeskTabs tabs={studyTabs} active={desk.study} select={selectPane} label="学习步骤" />
           {(desk.study === "exercises" || desk.study === "review") &&
             <div className="desk-practice-switch" role="group" aria-label="练习与复盘">

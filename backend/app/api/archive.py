@@ -30,7 +30,7 @@ STORAGE_KEYS = {
     "name", "theme", "last-page", "offline-concept", "offline-notes", "offline-attempts",
     "offline-bookmarks", "offline-diagnostic", "function-scene", "function-chat",
     "surface-scene", "surface-chat", "exploration", "exploration-chat", "observations",
-    "companion-muted", "diagram-scene",
+    "companion-muted", "diagram-scene", "auto-enrich",
 }
 DRAFT_KEY = re.compile(r"(?:draft|assistance|exercise-variant|card-visual)-[\w.-]{1,160}")
 

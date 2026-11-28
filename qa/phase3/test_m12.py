@@ -54,7 +54,7 @@ def phase2_backend(server):
 def extract(book, page, first, last):
     select_range(book, first, last)
     with page.expect_response(re.compile(r"/extract-cards$")) as event:
-        book.get_by_role("button", name="生成学习卡片").click()
+        book.get_by_role("button", name="快速建书").click()
     response = event.value
     assert response.ok, response.text()
     assert "authorization" not in response.request.all_headers()

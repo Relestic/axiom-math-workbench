@@ -74,9 +74,11 @@ def restore_into_clean_workstation(page, server, archive_path):
     fresh = bootstrap(page, server)
     assert fresh["textbooks"] == [] and fresh["cards"] == [] and fresh["exercises"] == []
     page.once("dialog", lambda dialog: dialog.accept())
-    with page.expect_response(lambda r: r.url.endswith("/archive/import") and r.request.method == "POST") as restored:
-        page.locator(".learning-archive-settings input[type=file]").set_input_files(archive_path)
-    assert restored.value.ok, restored.value.text()
+    # The app restores browser preferences and reloads after the import response.
+    with page.expect_event("domcontentloaded"):
+        with page.expect_response(lambda r: r.url.endswith("/archive/import") and r.request.method == "POST") as restored:
+            page.locator(".learning-archive-settings input[type=file]").set_input_files(archive_path)
+        assert restored.value.ok, restored.value.text()
 
 
 def observe_speech(page):

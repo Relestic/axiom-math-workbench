@@ -58,6 +58,7 @@ def test_legacy_card_backfill_companion_reveal_and_single_undo(page, server):
     page.goto(server.url + "/#desk/diagram")
     expect(page.get_by_role("tab", name="文字图解", exact=True)).to_have_attribute("aria-selected", "true")
     page.get_by_role("combobox", name="选择课程或教材").select_option("b")
+    page.get_by_label("翻到卡片自动精配").uncheck()
     page.get_by_role("button", name="AI 生成本卡配套图像").click()
     figure = page.locator(".diagram-figure")
     expect(figure).to_contain_text(scene["title"])
@@ -110,13 +111,15 @@ def test_imported_card_surface_and_hiyori_diagram_survive_full_archive(page, ser
     page.goto(server.url + "/#shelf/books")
     book = drag_pdf(page, make_pdf(["Consider the graph of the real surface z = x times y."]))
     entry = page.get_by_role("article", name=book["title"])
-    entry.get_by_role("button", name="生成学习卡片").click()
+    entry.get_by_role("button", name="快速建书").click()
     expect(entry.get_by_role("status")).to_contain_text("已生成 1 张学习卡片")
-    saved = bootstrap(page, server)["cards"][0]
-    assert saved["visual"]["surfaceScene"]["expression"] == "x*y"
+    assert not bootstrap(page, server)["cards"][0].get("visual")
     entry.get_by_role("button", name="查看学习卡片").click()
     expect(page.get_by_role("tab", name="3D 曲面")).to_have_attribute("aria-selected", "true")
     expect(page.locator("#surface-expression")).to_have_value("x*y")
+    saved = bootstrap(page, server)["cards"][0]
+    assert saved["visual"]["surfaceScene"]["expression"] == "x*y"
+    page.get_by_label("翻到卡片自动精配").uncheck()
     page.get_by_role("textbox", name="向 Hiyori 提问").fill(question)
     page.get_by_role("button", name="发送", exact=True).click()
     expect(page.locator(".diagram-figure")).to_contain_text(diagram["title"])
@@ -126,6 +129,7 @@ def test_imported_card_surface_and_hiyori_diagram_survive_full_archive(page, ser
     expect(page.get_by_role("button", name="导出学习存档")).to_be_visible()
     assert bootstrap(page, server)["cards"][0]["visual"] == saved["visual"]
     page.goto(server.url + "/#desk/diagram")
+    expect(page.get_by_label("翻到卡片自动精配")).not_to_be_checked()
     expect(page.locator(".diagram-figure")).to_contain_text(diagram["title"])
     page.get_by_role("button", name="重置为本卡默认配图").click()
     expect(page.locator("#surface-expression")).to_have_value("x*y")

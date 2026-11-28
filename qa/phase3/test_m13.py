@@ -59,7 +59,7 @@ def import_book(page, pdf, title, count):
     entry = page.get_by_role("article", name=title, exact=True)
     select_range(entry, 1, count)
     with page.expect_response(re.compile(r"/extract-cards$")) as event:
-        entry.get_by_role("button", name="生成学习卡片").click()
+        entry.get_by_role("button", name="快速建书").click()
     assert event.value.ok, event.value.text()
     cards = event.value.json()["cards"]
     assert len(cards) == count

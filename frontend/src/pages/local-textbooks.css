@@ -15,9 +15,8 @@
 .shelf-book-heading svg { flex: none; color: var(--teal); }
 .shelf-book-heading h2 { margin: 0; overflow-wrap: anywhere; font-size: 17px; }
 .shelf-meta { margin: 12px 0; color: var(--muted); }
-.shelf-scan-list { max-height: 135px; overflow-y: auto; margin-bottom: 12px; color: var(--amber); }
 .shelf-book p, .textbook-shelf > p { font-size: 13px; }
-.shelf-scan-list p, .shelf-extract p, .shelf-inline p { margin: 5px 0; }
+.shelf-extract p, .shelf-inline p { margin: 5px 0; }
 .shelf-inline { margin-top: 12px; }
 .shelf-inline label, .reader-tools label { display: flex; align-items: center; gap: 6px; }
 .shelf-inline input, .reader-tools :is(input, select) {

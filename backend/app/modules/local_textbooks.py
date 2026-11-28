@@ -414,6 +414,10 @@ def extract_cards(session, user, book, selection):
         raise ApiError(
             "unprocessable", "请先识别第 " + "、".join(scanned) + " 页的扫描文字"
         )
+    selected = [page for page in selected if page["char_count"] > 0]
+    if not selected:
+        return []
+    source_pages = {page["page"] for page in selected}
     use_local_ai()
     index_query = published_cards(user, [book.id]).with_only_columns(Concept.id, Concept.name, Concept.page_start)
     prior = session.execute(index_query).all()
@@ -440,7 +444,7 @@ def extract_cards(session, user, book, selection):
         cards = []
         for candidate in CardBatch.model_validate_json(raw).cards:
             card = ExtractedCard.model_validate(candidate, context=title_counts)
-            if not start <= card.page_start <= card.page_end <= end:
+            if card.page_start not in source_pages or card.page_end not in source_pages or card.page_start > card.page_end:
                 raise ValueError("card references a page outside the supplied text")
             cards.append(card)
             title_counts[normalize_title(card.title)] += 1

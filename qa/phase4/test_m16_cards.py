@@ -38,12 +38,23 @@ def test_complete_import_and_generate_again_in_desk(page, server):
     page.route("**/extract-cards", extract)
     page.route("**/cards/limits/proof", prove)
     page.route("**/cards/limits/exercises", practice)
+    def draw(route):
+        calls.append("visual")
+        card["visual"] = {"board": "diagram", "diagramScene": {
+            "version": 1, "title": "邻域", "caption": "", "nodes": [],
+            "viewBox": {"xMin": -1, "xMax": 1, "yMin": -1, "yMax": 1}}}
+        route.fulfill(json={"visual": card["visual"]})
+
+    page.route("**/cards/limits/visual", draw)
     page.goto(server.url + "/#shelf/books")
     shelf = page.get_by_role("article", name=book["title"])
-    shelf.get_by_role("button", name="生成学习卡片").click()
+    shelf.get_by_role("button", name="快速建书").click()
     expect(shelf.get_by_role("status")).to_contain_text("已生成 1 张学习卡片")
-    assert calls == ["extract", "proof", "exercises"]
+    assert calls == ["extract"]
     shelf.get_by_role("button", name="查看学习卡片").click()
+    expect(page.get_by_text("✓ 本卡证明 · 练习 · 配图已配齐")).to_be_visible()
+    assert calls == ["extract", "proof", "exercises", "visual"]
+    page.get_by_label("翻到卡片自动精配").uncheck()
     page.get_by_role("tab", name="证明思路").click()
     proof = page.locator("#desk-pane-proof")
     expect(proof).to_contain_text("以下分步推导由 AI 根据本卡定义与条件补充拆解，非教材逐字原文")
@@ -77,31 +88,42 @@ def test_complete_import_and_generate_again_in_desk(page, server):
 
 
 def test_stop_after_extraction_retains_all_cards(page, server):
-    book = {"id": "b", "title": "区间讲义", "page_count": 1, "pages": [
-        {"page": 1, "char_count": 60, "needs_ocr": False}]}
+    book = {"id": "b", "title": "区间讲义", "page_count": 200, "pages": [
+        {"page": i, "char_count": 60, "needs_ocr": False} for i in range(1, 201)]}
     catalog = {"textbooks": [book], "cards": [], "exercises": []}
     pending = []
     page.route("**/local/bootstrap-extras", lambda route: route.fulfill(json=catalog))
-    page.route("**/local/cards/*/*", lambda route: pending.append(route))
+    requests = []
+    page.route("**/local/cards/*/*", lambda route: requests.append(route.request.url))
 
     def extract(route):
+        pending.append(route)
+        assert route.request.post_data_json == {"page_start": 1, "page_end": 10}
         catalog["cards"] = [
             {"id": str(i), "title": title, "definition": title, "theorem": "", "conditions": [], "proof": [],
-             "textbook_id": "b", "page_start": 1, "page_end": 1}
+             "textbook_id": "b", "page_start": 1, "page_end": 9}
             for i, title in enumerate(["开区间", "闭区间"])
         ]
-        route.fulfill(status=201, json={"cards": catalog["cards"]})
 
     page.route("**/extract-cards", extract)
     page.goto(server.url + "/#shelf/books")
     shelf = page.get_by_role("article", name=book["title"])
-    with page.expect_request("**/local/cards/0/proof"):
-        shelf.get_by_role("button", name="生成学习卡片").click()
-    expect(shelf.get_by_role("status")).to_contain_text("第 1 / 2 张卡的证明拆解")
+    shelf.get_by_role("button", name="选整本书").click()
+    with page.expect_request("**/extract-cards"):
+        shelf.get_by_role("button", name="快速建书").click()
+    expect(shelf.get_by_role("status")).to_contain_text("第 1–10 / 200 页")
+    nav = page.get_by_role("navigation", name="主导航")
+    nav.get_by_role("button", name="学习书桌").click()
+    nav.get_by_role("button", name="书架与笔记").click()
+    expect(shelf.get_by_role("status")).to_contain_text("第 1–10 / 200 页")
     shelf.get_by_role("button", name="停止后续生成").click()
-    pending[0].fulfill(status=404)
+    pending[0].fulfill(status=201, json={"cards": catalog["cards"]})
     expect(shelf.get_by_role("status")).to_contain_text("已生成 2 张学习卡片 · 已停止后续生成")
-    expect(shelf.get_by_role("alert")).to_contain_text("《开区间》的证明拆解")
+    expect(shelf.get_by_role("alert")).to_have_count(0)
+    shelf.get_by_role("button", name="接续未提页码").click()
+    expect(shelf.get_by_label("起始页")).to_have_value("10")
+    expect(shelf.get_by_label("结束页")).to_have_value("200")
+    assert requests == []
     assert len(pending) == 1
     shelf.get_by_role("button", name="查看学习卡片").click()
     expect(page.get_by_role("combobox", name="选择章节知识点").locator("option")).to_have_text(["开区间", "闭区间"])

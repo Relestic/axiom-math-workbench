@@ -3,13 +3,13 @@ import { BookOpen, FileText, Pencil, Sparkles, Trash2, Upload } from "lucide-rea
 import { useAppData } from "../app/DataProvider";
 import type { LocalBook } from "../domain/types";
 import { useAIConnection } from "../modules/ai/connection";
+import { withPdfPageRenderer } from "../modules/teaching/pdfPageRenderer";
 import {
-  cacheOCRPages, completeCards, deleteTextbook, extractCards, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
+  buildTextbook, deleteTextbook, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
 } from "../modules/teaching/localTextbooks";
 import "./local-textbooks.css";
 
 const keyMessage = "请先在顶部配置个人 DeepSeek Key 或 OpenAI Key";
-const scanMessage = (page: number) => `第 ${page} 页疑似图片扫描版，可用个人 AI 识别并缓存文字。`;
 
 function message(cause: unknown) {
   if (cause instanceof TypeError) return "无法连接本机工作台，请检查本地服务后重试。";
@@ -19,9 +19,10 @@ function message(cause: unknown) {
 type ShelfActions = {
   read: (id: string, page: number) => void;
   openCard: (id: string) => void;
+  onBuildChange: (active: boolean) => void;
 };
 
-function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook }) {
+function BookEntry({ book, read, openCard, onBuildChange }: ShelfActions & { book: LocalBook }) {
   const { data, refreshLocal } = useAppData();
   const ai = useAIConnection();
   const [editing, setEditing] = useState<"name" | "delete" | null>(null);
@@ -34,7 +35,6 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
   const [newCardId, setNewCardId] = useState("");
   const stop = useRef(false);
   const [generating, setGenerating] = useState(false);
-  const [failures, setFailures] = useState<string[]>([]);
   const scans = book.pages.filter((item) => item.needs_ocr);
   const cards = data.units.filter((item) => item.textbookSource?.textbookId === book.id);
   const latest = cards.find((item) => item.id === newCardId) || cards[0];
@@ -46,7 +46,6 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
     setBusy(label);
     setError("");
     setStatus("");
-    setFailures([]);
     try {
       await action();
       setEditing(null);
@@ -60,44 +59,22 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
   function generate(event: FormEvent) {
     event.preventDefault();
     setStatus("");
-    if (rangeStart > rangeEnd || rangeEnd - rangeStart >= 15) {
-      setError("请选择连续的 1 至 15 页，结束页应大于或等于起始页。");
-      return;
-    }
-    void run("正在生成学习卡片…", async () => {
+    void run("正在快速建书…", async () => {
       stop.current = false;
       setGenerating(true);
+      onBuildChange(true);
       try {
-        if (selectedScans.length) {
-          const { renderPdfPages } = await import("../modules/teaching/pdfPageRenderer");
-          for (let i = 0; i < selectedScans.length; i += 3) {
-            const pages = selectedScans.slice(i, i + 3).map(item => item.page);
-            setBusy(`正在识别扫描页 ${pages.join("、")}…`);
-            const images = await renderPdfPages(textbookPageUrl(book.id, pages[0]), pages);
-            if (!stop.current) {
-              await cacheOCRPages(book.id, images);
-              await refreshLocal();
-            }
-            if (stop.current) {
-              setStatus("已停止后续生成，已识别的页面保存在书架中。");
-              return;
-            }
-          }
-          setBusy("正在生成学习卡片…");
-        }
-        const { cards } = await extractCards(book.id, rangeStart, rangeEnd);
-        if (!cards.length) {
-          setStatus("所选页面没有可提取的知识卡片。");
-          return;
-        }
-        setNewCardId(cards[0].id);
-        const failed = (context: string, cause: unknown) =>
-          setFailures(previous => [...previous, context + "：" + message(cause)]);
-        await refreshLocal().catch(cause => failed("刷新书架", cause));
-        await completeCards(cards, { stopped: () => stop.current, progress: setBusy, failed, refresh: refreshLocal });
-        setStatus(`已生成 ${cards.length} 张学习卡片` + (stop.current ? " · 已停止后续生成" : ""));
+        const total = await withPdfPageRenderer(textbookPageUrl(book.id, rangeStart), renderPages =>
+          buildTextbook(book, rangeStart, rangeEnd, {
+            stopped: () => stop.current, progress: setBusy, cardsAdded: setNewCardId,
+            refresh: refreshLocal, renderPages,
+          }));
+        const count = `已生成 ${total} 张学习卡片`;
+        setStatus(stop.current ? count + " · 已停止后续生成" :
+          total ? count : "所选页码范围未发现可提取的定义或定理");
       } finally {
         setGenerating(false);
+        onBuildChange(false);
       }
     });
   }
@@ -134,42 +111,43 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
         })}>确认删除</button>
       <button className="btn" disabled={Boolean(busy)} autoFocus onClick={() => setEditing(null)}>取消</button>
     </div>}
-    <p className="shelf-meta">共 {book.page_count} 页 · {book.pages.length - scans.length} 个文字页 · {scans.length} 个疑似扫描页</p>
-    {scans.length > 0 && <div className="shelf-scan-list" aria-label="扫描页提示">
-      {scans.map(({ page }) => <p key={page}>{scanMessage(page)}</p>)}
-    </div>}
+    <p className="shelf-meta">共 {book.page_count} 页 · {cards.length} 张学习卡片</p>
     <div className="shelf-actions">
       <button className="btn" onClick={() => read(book.id, 1)}><BookOpen size={15} />在书桌阅读</button>
       {latest && <button className="btn" onClick={() => openCard(latest.id)}>查看学习卡片</button>}
     </div>
     <form className="shelf-extract" onSubmit={generate}>
       <div className="shelf-inline">
-        <label>起始页<input type="number" min={1} max={book.page_count} required value={start}
+        <label>起始页<input type="number" min={1} max={book.page_count} required disabled={generating} value={start}
           onChange={(event) => {
             const value = event.target.value;
             setStart(value);
             if (Number(value) > Number(end)) setEnd(value);
           }} /></label>
-        <label>结束页<input type="number" min={1} max={book.page_count} required value={end}
+        <label>结束页<input type="number" min={rangeStart || 1} max={book.page_count} required disabled={generating} value={end}
           onChange={(event) => setEnd(event.target.value)} /></label>
-        <button className="btn primary" disabled={Boolean(busy)}><Sparkles size={14} />
-          {selectedScans.length ? "识别扫描页并生成学习卡片" : "生成学习卡片"}</button>
+        <button type="button" className="btn" disabled={generating} onClick={() => {
+          setStart("1"); setEnd(String(book.page_count));
+        }}>选整本书</button>
+        <button type="button" className="btn" disabled={generating} onClick={() => {
+          const last = cards.reduce((max, card) => Math.max(max, card.textbookSource!.pageEnd), 0);
+          setStart(String(Math.min(last + 1, book.page_count))); setEnd(String(book.page_count));
+        }}>接续未提页码</button>
+        <button className="btn primary" disabled={Boolean(busy)}><Sparkles size={14} />快速建书</button>
         {generating && <button type="button" className="btn" disabled={stop.current} onClick={() => {
           stop.current = true;
           setBusy("正在等待当前请求结束，随后停止生成…");
         }}>停止后续生成</button>}
       </div>
+      {selectedScans.length > 0 && <p className="muted">含 {selectedScans.length} 页待识别扫描页 · 提取时将自动看图识公式并本地缓存</p>}
       {keyMissing && !error && <p className="muted">{keyMessage}</p>}
     </form>
     {error && <p role="alert" className="shelf-error">{error}</p>}
-    {failures.length > 0 && <ul role="alert" className="shelf-error">
-      {failures.map((item, i) => <li key={i}>{item}</li>)}
-    </ul>}
     {(busy || status) && <p role="status">{busy || status}</p>}
   </article>;
 }
 
-export function LocalTextbook({ read, openCard }: ShelfActions) {
+export function LocalTextbook(actions: ShelfActions) {
   const { localBooks, refreshLocal, data } = useAppData();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -222,7 +200,7 @@ export function LocalTextbook({ read, openCard }: ShelfActions) {
     </button>
     {error && <p role="alert" className="shelf-error">{error}</p>}
     {status && <p role="status">{status}</p>}
-    {localBooks.map((book) => <BookEntry key={book.id} book={book} read={read} openCard={openCard} />)}
+    {localBooks.map((book) => <BookEntry key={book.id} book={book} {...actions} />)}
   </section>;
 }
 

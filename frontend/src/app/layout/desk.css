@@ -62,6 +62,11 @@
 .desk-card-controls span { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 .desk-card-controls .btn { padding: 6px; min-height: 30px; }
 .desk-card-controls .btn:disabled { opacity: 0.45; }
+.desk-enrichment { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 10px;
+  margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); }
+.desk-enrichment label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.desk-enrichment .btn { min-height: 26px; padding: 3px 8px; font-size: 12px; }
+.desk-enrichment [role="alert"] { color: var(--rose); }
 .desk-tool-heading .desk-collapse {
   min-height: 30px;
   padding: 4px 8px;

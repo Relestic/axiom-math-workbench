@@ -18,7 +18,13 @@ def install(root):
         messages = payload["messages"]
         with (root / "model-requests.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps({"model": payload["model"], "messages": messages}) + "\n")
-        prompt = "\n".join(message["content"] for message in messages)
+        prompt = "\n".join(
+            part["text"]
+            for message in messages
+            for part in (message["content"] if isinstance(message["content"], list)
+                         else [{"type": "text", "text": message["content"]}])
+            if part["type"] == "text"
+        )
         for rule in rules:
             if "question" in rule and json.loads(messages[-1]["content"]).get("question") != rule["question"]:
                 continue

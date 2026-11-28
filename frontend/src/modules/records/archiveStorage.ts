@@ -147,6 +147,7 @@ const validators = new Map<string, ValidateEntry>([
   ["axiom-name", (value) => z.string().max(16).parse(value)],
   ["axiom-theme", (value) => z.enum(["light", "dark"]).parse(value)],
   ["axiom-companion-muted", json(z.boolean())],
+  ["axiom-auto-enrich", json(z.boolean())],
   ["axiom-offline-concept", (value) => id.parse(value)],
   ["axiom-last-page", (value) => z.enum(validRoutes).parse(value)],
 ]);
