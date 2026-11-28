@@ -1,15 +1,18 @@
 """Single-machine entry point for the complete portable distribution."""
 from __future__ import annotations
 
+import json
 import os
 import secrets
+import signal
+import socket
 import threading
 import webbrowser
 from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import abort, request, send_from_directory
-from werkzeug.serving import make_server
+from werkzeug.serving import ThreadedWSGIServer
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -20,6 +23,58 @@ if not (WEB / "index.html").is_file():
 load_dotenv(ROOT / "backend" / ".env", override=False)
 DATA = Path(os.environ.get("AXIOM_DATA_DIR") or ROOT / "data").resolve()
 DATA.mkdir(parents=True, exist_ok=True)
+PID_FILE = DATA / "portable-server.json"
+
+
+def _stop_previous_server(expected_port: int) -> None:
+    try:
+        info = json.loads(PID_FILE.read_text(encoding="utf8"))
+        old_pid = int(info["pid"])
+        old_port = int(info["port"])
+    except Exception:
+        return
+    if old_pid <= 0 or old_pid == os.getpid() or old_port != expected_port:
+        return
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel.OpenProcess(0x1000 | 0x0001 | 0x00100000, False, old_pid)
+        if not handle:
+            return
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            size = wintypes.DWORD(len(buf))
+            if kernel.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(size)):
+                exe = Path(buf.value).name.lower()
+                if exe.startswith("python"):
+                    kernel.TerminateProcess(handle, 0)
+                    kernel.WaitForSingleObject(handle, 5000)
+        finally:
+            kernel.CloseHandle(handle)
+    else:
+        try:
+            os.kill(old_pid, signal.SIGTERM)
+        except OSError:
+            return
+
+
+class _ExclusiveWSGIServer(ThreadedWSGIServer):
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self) -> None:
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+port = int(os.environ.get("AXIOM_PORT", "5186"))
+if not 1024 <= port <= 65535:
+    raise RuntimeError("AXIOM_PORT must be between 1024 and 65535")
+if __name__ == "__main__":
+    _stop_previous_server(port)
+
 secret_path = DATA / "session-secret.txt"
 if not secret_path.exists():
     secret_path.write_text(secrets.token_urlsafe(48), encoding="utf8")
@@ -28,9 +83,6 @@ from app import create_app
 from app.db import session_scope
 from app.seed.loader import seed_all
 
-port = int(os.environ.get("AXIOM_PORT", "5186"))
-if not 1024 <= port <= 65535:
-    raise RuntimeError("AXIOM_PORT must be between 1024 and 65535")
 app = create_app({
     "local_mode": True,
     "data_dir": DATA,
@@ -70,10 +122,11 @@ def static_file(path: str):
 
 if __name__ == "__main__":
     try:
-        server = make_server("127.0.0.1", port, app, threaded=True)
+        server = _ExclusiveWSGIServer("127.0.0.1", port, app)
     except (OSError, SystemExit):
         print(f"Port {port} is unavailable. Close another Axiom window or change AXIOM_PORT in .env.", flush=True)
         raise SystemExit(1)
+    PID_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}), encoding="utf8")
     url = f"http://127.0.0.1:{port}/"
     print(f"Axiom is ready: {url}\nKeep this window open. Press Ctrl+C to stop.", flush=True)
     if os.environ.get("AXIOM_NO_OPEN") != "1":
@@ -84,3 +137,9 @@ if __name__ == "__main__":
         pass
     finally:
         server.server_close()
+        try:
+            current = json.loads(PID_FILE.read_text(encoding="utf8"))
+            if current.get("pid") == os.getpid():
+                PID_FILE.unlink(missing_ok=True)
+        except Exception:
+            pass
