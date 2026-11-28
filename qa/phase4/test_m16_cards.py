@@ -7,7 +7,8 @@ def test_complete_import_and_generate_again_in_desk(page, server):
         {"page": 1, "char_count": 50, "needs_ocr": False}]}
     card = {"id": "limits", "title": "极限", "definition": "用邻域控制误差", "theorem": "", "proof": [],
             "conditions": ["同一邻域"], "textbook_id": book["id"], "page_start": 1, "page_end": 1}
-    steps = [{"n": 1, "title": "固定精度", "formula": "ε > 0", "text": "先给定任意正精度。",
+    card["formula"] = r"$u_t-ku_{xx}+Vu_x=0$。"
+    steps = [{"n": 1, "title": "固定精度", "formula": r"设 $u_1,u_2$ 为解，令 $w=u_1-u_2$。", "text": "先给定任意正精度。",
               "why": "半径取决于所给精度。", "uses": [], "conditions": ["精度为正"]}]
     catalog = {"textbooks": [book], "cards": [], "exercises": []}
     calls = []
@@ -55,12 +56,19 @@ def test_complete_import_and_generate_again_in_desk(page, server):
     expect(page.get_by_text("✓ 本卡证明 · 练习 · 配图已配齐")).to_be_visible()
     assert calls == ["extract", "proof", "exercises", "visual"]
     page.get_by_label("翻到卡片自动精配").uncheck()
+    lecture = page.locator("#desk-pane-textbook")
+    expect(lecture.locator(".local-formula-showcase .katex-display")).to_be_visible()
+    expect(lecture.locator(".local-step-formula .katex")).to_have_count(2)
+    expect(lecture.locator(".katex-error, .math-fallback")).to_have_count(0)
     page.get_by_role("tab", name="证明思路").click()
     proof = page.locator("#desk-pane-proof")
     expect(proof).to_contain_text("以下分步推导由 AI 根据本卡定义与条件补充拆解，非教材逐字原文")
     expect(proof.get_by_role("heading", name="固定精度")).to_be_visible()
     expect(proof.locator(".proof-why")).to_contain_text(steps[0]["why"])
-    expect(proof.locator(".proof-formula")).to_be_visible()
+    formula = proof.locator(".proof-formula")
+    expect(formula.locator(".katex")).to_have_count(2)
+    expect(formula).to_contain_text("为解，令")
+    assert "$" not in formula.inner_text()
     with page.expect_response("**/cards/limits/proof"):
         proof.get_by_role("button", name="AI 生成分步推导思路").click()
     page.get_by_role("tab", name="练习与复盘").click()

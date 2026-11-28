@@ -8,57 +8,102 @@ const symbols: Record<string, string> = {
   "ℝ": "\\mathbb{R}", "ℕ": "\\mathbb{N}", "ℤ": "\\mathbb{Z}",
   "×": "\\times ", "÷": "\\div ", "·": "\\cdot ", "≈": "\\approx ",
   "−": "-", "′": "'", "″": "''", "…": "\\ldots ", "，": ",\\;", "：": ":\\;",
+  "∂": "\\partial ", "∇": "\\nabla ", "∬": "\\iint ", "∭": "\\iiint ", "∮": "\\oint ",
+  "±": "\\pm ", "∓": "\\mp ", "∝": "\\propto ", "≡": "\\equiv ", "⊂": "\\subset ", "⊆": "\\subseteq ",
+  "½": "\\frac{1}{2}", "𝓏": "z", "\u200b": "", "；": ";\\quad ",
 };
-const subs = "₀₁₂₃₄₅₆₇₈₉ₙₖᵢⱼₐ";
-const supers = "⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺ˣᵇᶿ";
+const subs: Record<string, string> = {
+  "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+  "ₐ": "a", "ₑ": "e", "ₕ": "h", "ᵢ": "i", "ⱼ": "j", "ₖ": "k", "ₗ": "l", "ₘ": "m", "ₙ": "n",
+  "ₒ": "o", "ₚ": "p", "ᵣ": "r", "ₛ": "s", "ₜ": "t", "ᵤ": "u", "ᵥ": "v", "ₓ": "x", "ᵧ": "y",
+  "₌": "=", "₊": "+", "₋": "-", "₍": "(", "₎": ")",
+};
+const supers: Record<string, string> = {
+  "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
+  "⁺": "+", "⁻": "-", "⁼": "=", "⁽": "(", "⁾": ")", "ⁱ": "i", "ʲ": "j", "ᵏ": "k", "ⁿ": "n",
+  "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ᵃ": "a", "ᵇ": "b", "ᶜ": "c", "ᶿ": "\\theta ",
+};
+const symbolChars = new RegExp("[" + Object.keys(symbols).join("") + "]", "gu");
+const subRun = new RegExp("[" + Object.keys(subs).join("") + "]+", "gu");
+const superRun = new RegExp("[" + Object.keys(supers).join("") + "]+", "gu");
+const scriptChar = new RegExp("[" + Object.keys(subs).concat(Object.keys(supers)).join("") + "]", "u");
+const operators = /\b(sin|cos|tan|sinh|cosh|tanh|log|ln|exp|max|min|sup|inf|det|sgn|diag|erf|grad|div|curl)\b/g;
+const namedOperators = new Set(["sgn", "diag", "erf", "grad", "div", "curl"]);
+const compactIndices = /\b(?:[A-Za-z]\d+|[abcdfghpqrstuvwxyz][ijknm])+\b/g;
 
-export function toLatex(raw: string): string {
-  if (raw.includes("\\")) return raw;
-  return raw
-    .replace(/\.\.\./g, "\\ldots ")
-    .replace(/([A-Za-z0-9α-ωΑ-Ω)\]])_([A-Za-z0-9+-]{2,})/gu, "$1_{$2}")
-    .replace(/\b([A-Za-z])([0-9]+)\b/g, "$1_{$2}")
-    .replace(/([A-Za-z])([0-9]+)(?=[A-Za-z(])/g, "$1_{$2}")
-    .replace(/\b([abcdfghpqrstuvwxyz])([ijknm])([abcdfghpqrstuvwxyz])([ijknm])(?=\b|\()/g, "$1_{$2}$3_{$4}")
-    .replace(/\b([abcdfghpqrstuvwxyz])([ijknm])\b/g, "$1_{$2}")
-    .replace(/[₀-₉ₙₖᵢⱼₐ]+/gu, (s) => "_{" + Array.from(s, c => "0123456789nkija"[subs.indexOf(c)]).join("") + "}")
-    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺ˣᵇᶿ]+/gu, (s) => "^{" + Array.from(s, c => (c === "ᶿ" ? "\\theta " : "0123456789-+xb"[supers.indexOf(c)])).join("") + "}")
-    .replace(/√(?:\(([^()]*)\)|([a-zA-Z0-9]))/gu, (_, group, atom) => "\\sqrt{" + (group ?? atom) + "}")
-    .replace(/lim\(([^()]*)\)/gu, "\\lim_{$1}")
-    .replace(/\b(sin|cos|tan|log|ln|exp|max|min|sup|inf)\b/gu, "\\$1 ")
-    .replace(/[∀∃εδξηθαβπΔΣ∑∞∫≤≥≠∈∉∪∩→⇒⇔ℝℕℤ×÷·≈−′″…，：]/gu, c => symbols[c]);
+export function toLatex(raw: string, delimited = false): string {
+  let source = raw.replace(/[。；]+\s*$/u, "");
+  if (!delimited && !source.includes("\\")) {
+    // A card using TeX scripts already specifies its own subscript boundaries.
+    if (!/[_^{}]/.test(source)) {
+      source = source.replace(compactIndices, word => word.replace(/([A-Za-z])(\d+|[ijknm])/g, "$1_{$2}"));
+    }
+    source = source.replace(/\.\.\./g, "\\ldots ")
+      .replace(/√(?:\(([^()]*)\)|([a-zA-Z0-9]))/gu, (_, group, atom) => "\\sqrt{" + (group ?? atom) + "}")
+      .replace(/\^\(([^()]+)\)/g, "^{$1}")
+      .replace(/\blim\(([^()]*)\)/gu, "\\lim_{$1}")
+      .replace(operators, op => namedOperators.has(op) ? "\\operatorname{" + op + "}" : "\\" + op + " ");
+  }
+  return source
+    .replace(subRun, run => "_{" + Array.from(run, c => subs[c]).join("") + "}")
+    .replace(superRun, run => "^{" + Array.from(run, c => supers[c]).join("") + "}")
+    .replace(symbolChars, c => symbols[c]);
 }
 
-export type MathPart = { text: string; kind: "text" | "inline" | "block" };
+export type MathPart = { text: string; kind: "text" | "inline" | "block"; delimited: boolean };
 function legacyParts(text: string): MathPart[] {
   // Original teaching material interleaves Chinese prose with unmarked Unicode or ASCII notation.
   const pieces = text.split(/([\p{Script=Han}，。；：、！？“”「」（）\n]+)/gu);
   return pieces.filter(Boolean).map(part => {
+    const shortProduct = /^\s*(?:l[uvw]|[xyz]{2}|\d+[A-Za-z])\s*$/.test(part);
     const stripped = part
-      .replace(/\b(?:sin|cos|tan|exp|log|ln|lim|sup|inf|max|min|dx|dy|dt|du|dv)\b/g, "")
-      .replace(/(?:[A-Za-z]_[A-Za-z0-9+-]+|[A-Za-z][0-9]+|\b[abcdfghpqrstuvwxyz][ijknm]\b|(?:[abcdfghpqrstuvwxyz][ijknm]){2,}|\b[A-Za-z]{2}(?=\s*[=(+\-]))/g, "");
-    const hasProse = !part.includes("\\") && /\b[A-Za-z]{2,}\b/.test(stripped);
+      .replace(/(?:[_^]|\\[A-Za-z]+)\{[^{}]*\}/g, " ")
+      .replace(/\\[A-Za-z]+/g, " ")
+      .replace(operators, " ")
+      .replace(/\b(?:lim|(?:d[xyztsuvwSVA])+)\b/g, " ")
+      .replace(compactIndices, " ")
+      .replace(/_[A-Za-z0-9]/g, " ");
+    // Short products (bx, Tu, abt) and partial derivatives (uxx) occur next
+    // to operators in old PDE cards. A standalone word or name stays prose.
+    const tokens = stripped.match(/[A-Za-z]+|\S/gu) ?? [];
+    const hasProse = !shortProduct && tokens.some((word, i) => {
+      if (!/^[A-Za-z]{2}/.test(word)) return false;
+      const adjacent = (tokens[i - 1] ?? "") + (tokens[i + 1] ?? "");
+      return word.length > 3 || !(/[()[\]^,+\-=−′]/.test(adjacent) || scriptChar.test(adjacent));
+    });
     const formula = !hasProse && !/[\p{Script=Han}，。；：、！？“”「」（）\n]/u.test(part)
-      && (/[\\∀∃∫∑≤≥≠∈→⇒∞α-ωℝℕ₀-₉⁰-⁹=<>^_√|]/u.test(part)
+      && (shortProduct || /[\\∀∃∫∑ΣΔ≤≥≠∈→⇒∞α-ωℝℕℤ=<>^_√|∂∇∬∭∮±∓∝≡⊂⊆½𝓏−+]/u.test(part) || scriptChar.test(part)
         || /(?:[A-Za-z]\(|\[[a-z0-9,]+\]|\b[a-zA-Z][0-9]*\b|\b[abcdfghpqrstuvwxyz][ijknm]\b)/u.test(part))
       && !/https?:\/\//.test(part);
-    return { text: part, kind: formula ? "inline" : "text" };
+    return { text: part, kind: formula ? "inline" : "text", delimited: false };
   });
 }
 
 export function splitMath(text: string): MathPart[] {
   const parts: MathPart[] = [];
-  const open = /\$\$|\$|\\\(|\\\[/g;
+  // Consume escaped characters as pairs, so \$ and \\ never open or close math.
   let offset = 0;
-  for (let m = open.exec(text); m; m = open.exec(text)) {
-    parts.push(...legacyParts(text.slice(offset, m.index)));
-    const delimiter = m[0];
-    const closing = delimiter === "\\(" ? "\\)" : delimiter === "\\[" ? "\\]" : delimiter;
-    const end = text.indexOf(closing, open.lastIndex);
-    if (end < 0) return [...parts, { kind: "text", text: text.slice(m.index) }];
-    parts.push({ kind: delimiter === "$$" || delimiter === "\\[" ? "block" : "inline",
-      text: text.slice(open.lastIndex, end) });
-    offset = open.lastIndex = end + closing.length;
+  let closing = "";
+  let start = 0;
+  for (let i = 0; i < text.length;) {
+    if (closing && text.startsWith(closing, i)) {
+      parts.push({ kind: closing === "$$" || closing === "\\]" ? "block" : "inline",
+        text: text.slice(start, i), delimited: true });
+      i += closing.length;
+      offset = i;
+      closing = "";
+      continue;
+    }
+    const token = text[i] === "\\" ? text.slice(i, i + 2) : text.startsWith("$$", i) ? "$$" : text[i];
+    if (!closing && (token === "$" || token === "$$" || token === "\\(" || token === "\\[")) {
+      parts.push(...legacyParts(text.slice(offset, i)));
+      offset = i;
+      start = i + token.length;
+      closing = token === "\\(" ? "\\)" : token === "\\[" ? "\\]" : token;
+    }
+    i += token.length;
   }
-  return [...parts, ...legacyParts(text.slice(offset))];
+  if (closing) parts.push({ kind: "text", text: text.slice(offset), delimited: false });
+  else parts.push(...legacyParts(text.slice(offset)));
+  return parts;
 }

@@ -1,6 +1,6 @@
 import { ArrowRight, Bookmark, Check, ChevronLeft, ChevronRight, ExternalLink, FileText, Lightbulb, ListChecks } from "lucide-react";
 import { useState } from "react";
-import { MathText } from "../../components/Math";
+import { MathBlock, MathText } from "../../components/Math";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
 import { useAppData } from "../../app/DataProvider";
 import { generateCardProof } from "../../modules/teaching/localTextbooks";
@@ -84,7 +84,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
   }} />;
   if (!current) {
     return <article className="learning-page card local-lecture-card">
-      <h1>{unit.title}</h1>
+      <h1><MathText>{unit.title}</MathText></h1>
       <p>这张教材卡片没有收录证明步骤，可回到原页研读。</p>
       {generateButton}
       {unit.textbookSource && <SourcePageButton source={unit.textbookSource} read={onReadSource} />}
@@ -100,7 +100,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
       {unit.proofStatus === "ai_elaboration" && <p className="info-strip">以下分步推导由 AI 根据本卡定义与条件补充拆解，非教材逐字原文</p>}
       <div className="proof-layout">
         <aside className="card proof-outline">
-          <h3>{unit.id === "uniform" ? "Heine–Cantor 定理" : unit.title}</h3>
+          <h3><MathText>{unit.id === "uniform" ? "Heine–Cantor 定理" : unit.title}</MathText></h3>
           <p className="muted">分步推导 · {steps.length} 个步骤</p>
           <div className="proof-step-list">
             {steps.map(({ ref, title, index: i }) => (
@@ -135,7 +135,7 @@ function ProofSteps({ onNavigate, onSaveNote, notify, onReadSource }: SourceProp
               {step + 1} / {steps.length}
             </span>
           </div>
-          {current.formula && <div className="proof-formula"><MathText>{current.formula}</MathText></div>}
+          {current.formula && <div className="proof-formula"><MathBlock>{current.formula}</MathBlock></div>}
           <p className="proof-paragraph"><MathText>{current.text}</MathText></p>
           {current.why && <div className="proof-why">
             <Lightbulb size={20} />
