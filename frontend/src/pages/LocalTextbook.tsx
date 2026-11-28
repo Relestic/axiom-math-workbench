@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BookOpen, FileText, Pencil, Sparkles, Trash2, Upload } from "lucide-react";
 import { useAppData } from "../app/DataProvider";
 import type { LocalBook } from "../domain/types";
@@ -29,11 +29,18 @@ function BookEntry({ book, read, openCard, onBuildChange }: ShelfActions & { boo
   const [start, setStart] = useState("1");
   const [end, setEnd] = useState("1");
   const [busy, setBusy] = useState("");
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [newCardId, setNewCardId] = useState("");
   const stop = useRef(false);
   const [generating, setGenerating] = useState(false);
+  useEffect(() => {
+    if (!busy) { setElapsed(0); return; }
+    const started = Date.now();
+    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, [busy]);
   const scans = book.pages.filter((item) => item.needs_ocr);
   const cards = data.units.filter((item) => item.textbookSource?.textbookId === book.id);
   const latest = cards.find((item) => item.id === newCardId) || cards[0];
@@ -67,6 +74,7 @@ function BookEntry({ book, read, openCard, onBuildChange }: ShelfActions & { boo
           buildTextbook(book, rangeStart, rangeEnd, {
             stopped: () => stop.current, progress: setBusy, cardsAdded: setNewCardId,
             refresh: refreshLocal, renderPages,
+            windowSize: ai.status?.provider === "codex" ? 4 : 10,
           }));
         const count = `已生成 ${total} 张学习卡片`;
         setStatus(stop.current ? count + " · 已停止后续生成" :
@@ -143,6 +151,8 @@ function BookEntry({ book, read, openCard, onBuildChange }: ShelfActions & { boo
     </form>
     {error && <p role="alert" className="shelf-error">{error}</p>}
     {(busy || status) && <p role="status">{busy || status}</p>}
+    {busy && elapsed >= 2 && <p className="muted">已运行 {elapsed} 秒 · {ai.status?.provider === "codex" ?
+      "本机 Codex 每小批（4 页）约需 20–40 秒，每批完成后卡片会立即入库显示…" : "正在等待模型返回，每批完成后卡片会立即入库显示…"}</p>}
   </article>;
 }
 

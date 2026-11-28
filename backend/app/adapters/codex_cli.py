@@ -187,6 +187,9 @@ def complete(messages, *, model: str, json_mode: bool, timeout: int) -> LLMResul
             raise LLMError("无法读取本机 Codex 回复", kind="invalid") from None
         if not answer:
             raise LLMError("本机 Codex 未返回有效回复", kind="invalid")
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", answer, flags=re.MULTILINE).strip()
+        if cleaned:
+            answer = cleaned
         # Ignore a copy of the actual answer when reading CLI metadata.
         if stdout.strip() == answer:
             stdout = ""

@@ -56,14 +56,16 @@ export async function buildTextbook(book: LocalBook, start: number, end: number,
   cardsAdded: (firstId: string) => void;
   renderPages: (pages: number[]) => Promise<OCRPageImage[]>;
   refresh: () => Promise<void>;
+  windowSize?: number;
 }) {
   if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || start > end || end > book.page_count) {
     throw new Error(`请选择 1 至 ${book.page_count} 页内的连续页码范围。`);
   }
+  const step = Math.max(1, Math.min(15, options.windowSize ?? 10));
   let total = 0;
   let pages = book.pages;
-  for (let first = start; first <= end && !options.stopped(); first += 10) {
-    const last = Math.min(first + 9, end);
+  for (let first = start; first <= end && !options.stopped(); first += step) {
+    const last = Math.min(first + step - 1, end);
     const scans = pages.slice(first - 1, last).filter(page => page.needs_ocr).map(page => page.page);
     for (let i = 0; i < scans.length; i += 3) {
       const group = scans.slice(i, i + 3);
