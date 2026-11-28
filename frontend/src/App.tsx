@@ -63,6 +63,7 @@ import { searchRequest } from "./lib/api";
 import { useSession } from "./lib/session";
 import { aiStatusLabel, DeepSeekSettings } from "./modules/ai/DeepSeekSettings";
 import { useAIConnection } from "./modules/ai/connection";
+import { providerLabels } from "./modules/ai/models";
 
 const LearningArchiveSettings = lazy(() => import("./modules/records/LearningArchiveSettings")
   .then((module) => ({ default: module.LearningArchiveSettings })));
@@ -71,6 +72,7 @@ export default function App() {
   const session = useSession();
   const app = useAppData();
   const ai = useAIConnection();
+  const aiSettingsLabel = `个人 ${providerLabels[ai.status?.provider || "deepseek"]} 接入设置`;
   const aiState = ai.failed ? "error" : ai.status?.state || (ai.effective?.configured ? "ready" : "unset");
   const [route, setRoute] = useState(() => pageFromHash());
   const [section, subpage] = route.split("/");
@@ -263,7 +265,7 @@ export default function App() {
           <div className="topbar-right">
             <ThemeSwitch />
             <button className={`btn ai-status-badge ai-status-${aiState}`} onClick={() => setModal("ai")}
-              aria-label={`个人 DeepSeek 接入设置，AI ${aiStatusLabel(aiState)}`}>
+              aria-label={`${aiSettingsLabel}，AI ${aiStatusLabel(aiState)}`}>
               <Sparkles size={14} aria-hidden="true" />
               <span>AI {aiStatusLabel(aiState)}</span>
             </button>
@@ -424,7 +426,7 @@ export default function App() {
             className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label={modal === "ai" ? "个人 DeepSeek 接入设置" : "工作台设置"}
+            aria-label={modal === "ai" ? aiSettingsLabel : "工作台设置"}
           >
             <button
               className="icon-button modal-close"
@@ -436,7 +438,7 @@ export default function App() {
             </button>
             {modal === "ai" && (
               <>
-                <h2>个人 DeepSeek 接入设置</h2>
+                <h2>个人 AI 接入设置</h2>
                 <DeepSeekSettings />
               </>
             )}
@@ -453,7 +455,7 @@ export default function App() {
                   {session.serverMode
                     ? "当前已登录后端：内容、练习、作答、笔记、诊断和学习进度都来自服务端。"
                     : "本地学习记录可在「书架与笔记」中导出和恢复。"}
-                  可从顶部 AI 徽章打开个人 DeepSeek 接入设置。
+                  可从顶部 AI 徽章配置 DeepSeek 或 ChatGPT (OpenAI)。
                 </div>
                 <p>
                   图像页可输入 sin(a*x^2)，或配置模型后发送“换成分段函数”。

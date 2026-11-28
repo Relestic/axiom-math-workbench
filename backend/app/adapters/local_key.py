@@ -1,19 +1,84 @@
-"""Protected persistence for the workstation's DeepSeek connection."""
+"""Protected persistence for the workstation's personal AI connection."""
 
 from __future__ import annotations
 
 import ctypes
+import ipaddress
 import json
 import os
+import re
+import socket
 import stat
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import RLock
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from ..config import DEEPSEEK_LEGACY_MODELS, DEEPSEEK_MODELS as MODELS
 from ..errors import ApiError
+
+DEFAULT_BASE_URL = {"deepseek": "https://api.deepseek.com", "openai": "https://api.openai.com/v1"}
+OPENAI_MODEL = re.compile(r"[a-zA-Z0-9._-]{2,80}")
+HOST_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.I)
+_UNSET = object()
+
+
+def valid_model(provider, model) -> bool:
+    if provider == "deepseek":
+        return model in MODELS
+    return provider == "openai" and isinstance(model, str) and OPENAI_MODEL.fullmatch(model) is not None
+
+
+def _public_ip(address: str) -> bool:
+    ip = ipaddress.ip_address(address)
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        elif ip.is_site_local:
+            return False
+    return ip.is_global and not ip.is_multicast and not ip.is_reserved
+
+
+def clean_base_url(value, *, resolve=False, require_resolution=False) -> str | None:
+    if value is None or value == "":
+        return None
+    try:
+        if not isinstance(value, str) or len(value) > 2048 or any(
+            ch in "\\?#" or ch.isspace() or ord(ch) < 32 or ord(ch) == 127 for ch in value
+        ):
+            raise ValueError
+        parts = urlsplit(value)
+        host = (parts.hostname or "").rstrip(".")
+        if (parts.scheme != "https" or not host or parts.username is not None
+                or parts.port == 0 or "%" in parts.netloc
+                or not re.fullmatch(r"(?:\[[0-9a-fA-F:.]+\]|[^\[\]:]+)(?::[0-9]+)?", parts.netloc)):
+            raise ValueError
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            labels = host.encode("idna").decode("ascii").split(".")
+            if (len(labels) < 2 or not all(HOST_LABEL.fullmatch(label) for label in labels)
+                    or labels[-1] in {"localhost", "local", "internal", "lan", "localdomain"}
+                    or host.endswith(".home.arpa") or re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)", labels[-1])):
+                raise ValueError
+            if resolve or require_resolution:
+                try:
+                    addresses = socket.getaddrinfo(host, parts.port or 443, type=socket.SOCK_STREAM)
+                except socket.gaierror:
+                    # Settings may be saved offline. Connecting requires a public DNS result.
+                    addresses = []
+                if require_resolution and not addresses:
+                    raise ValueError
+                if any(not _public_ip(row[4][0]) for row in addresses):
+                    raise ValueError
+        else:
+            if not _public_ip(host):
+                raise ValueError
+    except ValueError:
+        raise ValueError("Base URL 必须是公网 HTTPS 地址，且不能包含账密、查询串或片段") from None
+    return value.rstrip("/")
 
 
 def valid_key(value: object) -> bool:
@@ -57,6 +122,9 @@ class Credentials:
     model: str
     revision: str = field(default_factory=lambda: uuid4().hex)
     migrated_from: str | None = None
+    provider: str = "deepseek"
+    base_url: str | None = None
+    legacy_format: bool = False
 
 
 class LocalKeyStore:
@@ -84,25 +152,44 @@ class LocalKeyStore:
             ):
                 raise ValueError("invalid credential file")
             saved_model = value["model"]
-            model = DEEPSEEK_LEGACY_MODELS.get(saved_model, saved_model)
-            if model not in MODELS:
+            provider = value.get("provider", "deepseek")
+            model = DEEPSEEK_LEGACY_MODELS.get(saved_model, saved_model) if provider == "deepseek" else saved_model
+            if not valid_model(provider, model):
                 raise ValueError("invalid credential model")
             return Credentials(value["api_key"], model, value["revision"],
-                               migrated_from=saved_model if saved_model != model else None)
+                               migrated_from=saved_model if saved_model != model else None,
+                               provider=provider, base_url=clean_base_url(value.get("base_url")),
+                               legacy_format="provider" not in value)
         except FileNotFoundError:
             return None
         except (ValueError, OSError):
             raise ApiError("key_storage_error", "无法读取本地密钥，请重新保存", status=503) from None
 
-    def save(self, api_key: str | None, model: str) -> None:
+    def save(self, api_key: str | None = None, model: str = "", provider: str | None = None,
+             base_url=_UNSET) -> None:
+        platform = "deepseek" if provider is None else provider
+        if not valid_model(platform, model) or (api_key is not None and not valid_key(api_key)):
+            raise ApiError("unprocessable", "请检查提供商、模型名称和 API Key 格式")
+        try:
+            override = clean_base_url(base_url, resolve=True) if base_url is not _UNSET else None
+        except ValueError as exc:
+            raise ApiError("unprocessable", str(exc)) from None
+        if override == DEFAULT_BASE_URL[platform]:
+            override = None
         with self.lock:
             if api_key is None:
                 existing = self.read()
-                if existing is None:
-                    raise ApiError("unprocessable", "请先输入个人 DeepSeek API Key")
+                if base_url is _UNSET and existing is not None:
+                    override = existing.base_url
+                if existing is None or existing.provider != platform or existing.base_url != override:
+                    raise ApiError("unprocessable", "请为所选平台和服务地址输入 API Key")
                 api_key = existing.api_key
-            credentials = Credentials(api_key, model)
-            raw = json.dumps({"api_key": api_key, "model": model, "revision": credentials.revision}).encode("utf-8")
+            value = {"api_key": api_key, "model": model, "revision": uuid4().hex}
+            if provider is not None or override:
+                value["provider"] = platform
+            if override:
+                value["base_url"] = override
+            raw = json.dumps(value).encode("utf-8")
             temporary = None
             try:
                 if os.name == "nt":
@@ -148,6 +235,8 @@ class LocalKeyStore:
                 return {"configured": False, "model": MODELS[0], "state": "unset"}
             state = "error" if current.revision == self.failed_revision else "ready"
             status = {"configured": True, "model": current.model, "state": state}
+            if not current.legacy_format:
+                status.update(provider=current.provider, base_url=current.base_url)
             if current.migrated_from:
                 status["migrated_from"] = current.migrated_from
             return status

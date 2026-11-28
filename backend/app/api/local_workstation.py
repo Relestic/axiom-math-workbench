@@ -116,6 +116,19 @@ def generate_cards(book_id):
     return {"cards": cards}, 201
 
 
+@bp.post("/textbooks/<book_id>/ocr-pages")
+def ocr_pages(book_id):
+    payload = parse_json(shelf.OCRRequest)
+    session = get_session()
+    # Two workstation tabs may submit overlapping pages while the first call is in flight.
+    with _shelf_write:
+        user = local_learner(session)
+        book, _ = shelf.owned_book(session, user, book_id)
+        shelf.transcribe_pages(session, user, book, payload.pages)
+        session.commit()
+        return shelf.book_summary(book)
+
+
 @bp.post("/cards/<card_id>/exercises")
 def card_exercises(card_id):
     session = get_session()

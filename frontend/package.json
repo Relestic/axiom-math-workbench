@@ -16,6 +16,7 @@
     "katex": "0.16.47",
     "lucide-react": "^0.468.0",
     "mathjs": "^15.2.0",
+    "pdfjs-dist": "^6.5.438",
     "pixi-live2d-display": "0.4.0",
     "pixi.js": "6.5.10",
     "plotly.js-basic-dist-min": "^4.2.0",

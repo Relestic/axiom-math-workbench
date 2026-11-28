@@ -1,5 +1,5 @@
 import { ApiError, apiFetch, apiUrl } from "../../lib/api";
-import type { DeepSeekModel, LegacyDeepSeekModel } from "./models";
+import { providerLabels, type AIProvider, type LegacyDeepSeekModel } from "./models";
 export type { DeepSeekModel } from "./models";
 
 export type AIStatus = {
@@ -17,7 +17,9 @@ export async function fetchAIStatus(): Promise<AIStatus> {
 
 export type KeyStatus = {
   configured: boolean;
-  model: DeepSeekModel;
+  provider?: AIProvider;
+  model: string;
+  base_url?: string | null;
   state: "ready" | "unset" | "error";
   migrated_from?: LegacyDeepSeekModel;
 };
@@ -27,12 +29,12 @@ const local = { auth: false };
 export const getKeyStatus = () =>
   apiFetch<KeyStatus>("/api/v1/ai/key/status", {}, local);
 
-export const saveKey = (model: DeepSeekModel, key: string) =>
-  apiFetch(
+export const saveKey = (model: string, key: string, provider: AIProvider = "deepseek", baseUrl = "") =>
+  apiFetch<KeyStatus>(
     "/api/v1/ai/key",
     {
       method: "PUT",
-      body: JSON.stringify(key ? { model, api_key: key } : { model }),
+      body: JSON.stringify({ provider, model, base_url: baseUrl.trim() || null, api_key: key || undefined }),
     },
     local,
   );
@@ -51,23 +53,22 @@ export async function testKey() {
   }
 }
 
-export function keyError(cause: unknown, fallback: string): string {
+export function keyError(cause: unknown, fallback: string, provider: AIProvider = "deepseek"): string {
+  const label = providerLabels[provider];
   if (cause instanceof ApiError) {
+    if (cause.code === "invalid_key" || cause.status === 401)
+      return `${label} Key 无效，请更换后再试。`;
+    if (cause.code === "insufficient_balance" || cause.status === 402)
+      return `${label} 余额不足（402），充值后可重新测试。`;
     switch (cause.code) {
-      case "invalid_key":
-        return "DeepSeek Key 无效，请更换后再试。";
-      case "insufficient_balance":
-        return "DeepSeek 余额不足（402），充值后可重新测试。";
       case "timeout":
-        return "连接 DeepSeek 超时，请稍后重试。";
+        return `连接 ${label} 超时，请稍后重试。`;
       case "network":
-        return "无法连接 DeepSeek，请检查网络后重试。";
+        return `无法连接 ${label}，请检查网络后重试。`;
       case "rate_limited":
-        return "DeepSeek 请求过于频繁，请稍后重试。";
+        return `${label} 请求过于频繁，请稍后重试。`;
     }
-    if (cause.status === 401) return "DeepSeek Key 无效，请更换后再试。";
-    if (cause.status === 402)
-      return "DeepSeek 余额不足（402），充值后可重新测试。";
+    if (cause.status === 422) return cause.message;
   }
   return fallback;
 }

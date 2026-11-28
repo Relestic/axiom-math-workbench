@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, request
 from sqlalchemy import select
@@ -10,9 +11,9 @@ from sqlalchemy import select
 from ..adapters.llm import (
     chat, daily_call_count, local_key_store, provider_status, test_local_connection, use_local_ai,
 )
-from ..adapters.local_key import MODELS, valid_key
+from ..adapters.local_key import DEFAULT_BASE_URL, valid_key
 from ..auth import current_user, require_auth
-from ..config import Config
+from ..config import Config, openai_reasoning_model
 from ..db import get_session
 from ..errors import ApiError, parse_json
 from ..models import Attempt, Conversation, Exercise
@@ -58,16 +59,15 @@ def save_key():
         raise ApiError("invalid_json", "请求体不是有效的 JSON") from None
     if not isinstance(payload, dict):
         raise ApiError("invalid_json", "请求体必须是 JSON 对象")
-    model = payload.get("model")
     api_key = payload.get("api_key")
     if (
-        set(payload) - {"api_key", "model"}
-        or model not in MODELS
+        set(payload) - {"api_key", "model", "provider", "base_url"}
+        or payload.get("provider", "deepseek") not in ("deepseek", "openai")
         or ("api_key" in payload and not valid_key(api_key))
     ):
-        raise ApiError("unprocessable", "请选择支持的 DeepSeek 模型并检查 API Key 格式")
+        raise ApiError("unprocessable", "请检查提供商和 API Key 格式")
     store = local_key_store()
-    store.save(api_key, model)
+    store.save(**payload)
     return store.status()
 
 
@@ -359,14 +359,17 @@ def legacy_status():
     if config.local_mode and not config.is_production:
         require_local()
         status = local_key_store().status()
+        provider = status.get("provider", "deepseek")
+        label = "ChatGPT (OpenAI)" if provider == "openai" else "DeepSeek"
+        reasoning = provider == "openai" and openai_reasoning_model(status["model"])
         return {
             **status,
-            "provider": "DeepSeek",
-            "provider_label": "DeepSeek",
-            "endpoint_host": "api.deepseek.com",
-            "mode": "deepseek" if status["configured"] else "none",
-            "reasoner": False,
-            "json_mode": config.ai_json_mode,
+            "provider": label,
+            "provider_label": label,
+            "endpoint_host": urlsplit(status.get("base_url") or DEFAULT_BASE_URL[provider]).hostname,
+            "mode": provider if status["configured"] else "none",
+            "reasoner": reasoning,
+            "json_mode": config.ai_json_mode and not reasoning,
         }
     data = provider_status()
     return {

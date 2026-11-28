@@ -4,10 +4,9 @@ import {
   keyError,
   saveKey,
   testKey,
-  type DeepSeekModel,
 } from "./api";
 import { useAIConnection } from "./connection";
-import { deepSeekModels } from "./models";
+import { providerModels, providerLabels, type AIProvider } from "./models";
 
 export function aiStatusLabel(state: "ready" | "unset" | "error") {
   return { ready: "已就绪", unset: "未配置", error: "异常" }[state];
@@ -15,36 +14,52 @@ export function aiStatusLabel(state: "ready" | "unset" | "error") {
 
 export function DeepSeekSettings() {
   const { status, available, failed, setFailed, refresh } = useAIConnection();
-  const [model, setModel] = useState<DeepSeekModel>(
-    status?.model || deepSeekModels[0],
-  );
+  const savedProvider = status?.provider || "deepseek";
+  const [provider, setProvider] = useState<AIProvider>(savedProvider);
+  const [choice, setChoice] = useState("");
+  const [custom, setCustom] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const model = choice === ":custom" ? custom.trim() : choice;
+  const label = providerLabels[provider];
+  const savedEndpoint = provider === savedProvider && baseUrl.trim().replace(/\/+$/, "") === (status?.base_url || "");
   const keyInput = useRef<HTMLInputElement>(null);
   const [hasKey, setHasKey] = useState(false);
   const [pending, setPending] = useState<"save" | "test" | "clear" | null>(
     null,
   );
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean }>();
+  function selectProvider(next: AIProvider) {
+    const saved = next === savedProvider;
+    const presets = providerModels[next];
+    const value = (saved && status?.model) || presets[0];
+    setProvider(next);
+    setChoice(presets.includes(value) ? value : ":custom");
+    setCustom(presets.includes(value) ? "" : value);
+    setBaseUrl((saved && status?.base_url) || "");
+    if (keyInput.current) keyInput.current.value = "";
+    setHasKey(false);
+  }
   useEffect(() => {
-    setModel(status?.model || deepSeekModels[0]);
-  }, [status?.model]);
+    selectProvider(savedProvider);
+  }, [savedProvider, status?.model, status?.base_url, status?.configured]);
 
   async function run(action: "save" | "test" | "clear") {
     if (pending) return;
     const key = keyInput.current?.value.trim() || "";
-    if (keyInput.current && action === "save") keyInput.current.value = "";
-    if (action === "save") setHasKey(false);
     setPending(action);
     setFeedback(undefined);
     try {
-      if (action === "save") await saveKey(model, key);
+      if (action === "save") await saveKey(model, key, provider, baseUrl);
       if (action === "test") await testKey();
       if (action === "clear") await clearKey();
+      if (keyInput.current) keyInput.current.value = "";
+      setHasKey(false);
       setFailed(false);
       setFeedback({
         text: {
-          save: "DeepSeek 设置已保存。",
-          test: "DeepSeek 连接测试成功。",
-          clear: "个人 DeepSeek Key 已清除。",
+          save: `${label} 设置已保存。`,
+          test: `${label} 连接测试成功。`,
+          clear: `个人 ${label} Key 已清除。`,
         }[action],
       });
     } catch (cause) {
@@ -58,6 +73,7 @@ export function DeepSeekSettings() {
             test: "连接测试失败，请检查本地服务后重试。",
             clear: "清除失败，请检查本地服务后重试。",
           }[action],
+          provider,
         ),
       });
     } finally {
@@ -89,7 +105,18 @@ export function DeepSeekSettings() {
       {available === true && (
         <>
           <label className="field-label">
-            {status?.configured ? "更换 DeepSeek API Key" : "DeepSeek API Key"}
+            提供商
+            <select className="text-input" aria-label="提供商" value={provider} disabled={!!pending}
+              onChange={(event) => {
+                setFeedback(undefined);
+                selectProvider(event.target.value as AIProvider);
+              }}>
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">ChatGPT (OpenAI)</option>
+            </select>
+          </label>
+          <label className="field-label">
+            {status?.configured && savedEndpoint ? "更换 " : ""}{provider === "openai" ? "OpenAI" : label} API Key
             <input
               ref={keyInput}
               className="text-input"
@@ -99,7 +126,7 @@ export function DeepSeekSettings() {
               maxLength={512}
               onChange={(event) => setHasKey(!!event.target.value.trim())}
               placeholder={
-                status?.configured ? "留空可保留当前 Key" : "输入个人 API Key"
+                status?.configured && savedEndpoint ? "留空可保留当前 Key" : "输入个人 API Key"
               }
               disabled={!!pending}
             />
@@ -108,16 +135,28 @@ export function DeepSeekSettings() {
             模型
             <select
               className="text-input"
-              value={model}
+              aria-label="模型"
+              value={choice}
               disabled={!!pending}
-              onChange={(event) =>
-                setModel(event.target.value as DeepSeekModel)
-              }
+              onChange={(event) => setChoice(event.target.value)}
             >
-              {deepSeekModels.map((id) => <option key={id} value={id}>{id}</option>)}
+              {providerModels[provider].map((id) => <option key={id} value={id}>{id}</option>)}
+              {provider === "openai" && <option value=":custom">自定义模型</option>}
             </select>
           </label>
-          {status?.migrated_from && (
+          {choice === ":custom" && <label className="field-label">
+            自定义模型名称
+            <input className="text-input" value={custom} required maxLength={80}
+              pattern="[a-zA-Z0-9._\-]{2,80}" title="2–80 个字母、数字、点、下划线或连字符"
+              disabled={!!pending} onChange={(event) => setCustom(event.target.value)} />
+          </label>}
+          <label className="field-label">
+            自定义 HTTPS Base URL（可选）
+            <input type="url" className="text-input" value={baseUrl} pattern="https://.+" maxLength={2048}
+              placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.deepseek.com"}
+              disabled={!!pending} onChange={(event) => setBaseUrl(event.target.value)} />
+          </label>
+          {provider === savedProvider && status?.migrated_from && (
             <p className="muted">
               已将 {status.migrated_from} 映射为 {status.model}，可继续使用原有 Key。
             </p>
@@ -128,7 +167,7 @@ export function DeepSeekSettings() {
               type="submit"
               disabled={
                 !!pending ||
-                (!hasKey && (!status?.configured || model === status.model))
+                !model || (!hasKey && (!status?.configured || !savedEndpoint || model === status.model))
               }
             >
               {pending === "save" ? "正在保存…" : "保存"}
@@ -136,7 +175,7 @@ export function DeepSeekSettings() {
             <button
               className="btn"
               type="button"
-              disabled={!!pending || !status?.configured}
+              disabled={!!pending || hasKey || !status?.configured || !savedEndpoint || model !== status.model}
               onClick={() => void run("test")}
             >
               {pending === "test" ? "正在测试…" : "测试连接"}
@@ -145,10 +184,10 @@ export function DeepSeekSettings() {
               className="btn"
               type="button"
               disabled={
-                !!pending || (!status?.configured && status?.state !== "error")
+                !!pending || provider !== savedProvider || (!status?.configured && status?.state !== "error")
               }
               onClick={() => {
-                if (window.confirm("清除本机保存的 DeepSeek Key？"))
+                if (window.confirm(`清除本机保存的 ${label} Key？`))
                   void run("clear");
               }}
             >

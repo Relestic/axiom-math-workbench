@@ -13,6 +13,7 @@ import {
   type AIStatus,
   type KeyStatus,
 } from "./api";
+import { providerLabels } from "./models";
 
 type AIConnection = {
   status: KeyStatus | null;
@@ -56,7 +57,7 @@ export function AIConnectionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const effective = status?.configured
-    ? { configured: true, provider_label: "DeepSeek", model: status.model }
+    ? { configured: true, provider_label: providerLabels[status.provider || "deepseek"], model: status.model }
     : legacy?.configured
       ? legacy
       : null;

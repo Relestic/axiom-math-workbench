@@ -223,3 +223,68 @@ def test_stale_check_cannot_mark_replacement_key_failed(local, monkeypatch):
     monkeypatch.setattr(llm.httpx, "post", post)
     assert client.post(f"{ROOT}/test").json["error"]["code"] == "invalid_key"
     assert client.get(f"{ROOT}/status").json["state"] == "ready"
+
+
+@pytest.mark.parametrize("model,reasoning", [
+    ("gpt-4o-mini", False), ("gpt-4o", False), ("gpt-4.1-mini", False), ("gpt-4.1", False),
+    ("my.Model_2", False), ("o1-preview", True), ("o3-mini", True), ("o4-mini", True), ("gpt-5-new", True),
+])
+def test_openai_personal_protocol(local, monkeypatch, model, reasoning):
+    client = local()
+    status = client.put(ROOT, json={"provider": "openai", "model": model, "api_key": FIXTURE_KEY})
+    assert status.json == {"configured": True, "state": "ready", "model": model,
+                           "provider": "openai", "base_url": None}
+
+    def post(url, **kwargs):
+        assert url == "https://api.openai.com/v1/chat/completions"
+        assert kwargs["trust_env"] is True
+        payload = kwargs["json"]
+        assert "thinking" not in payload and payload["model"] == model
+        assert ("max_completion_tokens" in payload) == reasoning
+        assert ("max_tokens" in payload) != reasoning
+        assert ("temperature" in payload) != reasoning
+        return httpx.Response(200, json={"choices": [{"message": {"content": "OK"}}]})
+
+    monkeypatch.setattr(llm.httpx, "post", post)
+    assert client.post(f"{ROOT}/test").json == {"ok": True}
+    assert local().get(f"{ROOT}/status").json == status.json
+    assert client.get("/api/ai/status").json["mode"] == "openai"
+    assert client.delete(ROOT).json["state"] == "unset"
+
+
+def test_personal_custom_endpoint_and_switch(local, monkeypatch):
+    monkeypatch.setattr(local_key.socket, "getaddrinfo", lambda *a, **k: [(0, 0, 0, "", ("8.8.8.8", 443))])
+    client = local()
+    base = "https://example.test/v1"
+    settings = {"provider": "openai", "model": "my-model", "api_key": FIXTURE_KEY, "base_url": base + "/"}
+    assert client.put(ROOT, json=settings).json["base_url"] == base
+    assert client.put(ROOT, json={"provider": "openai", "model": "my-model2"}).json["base_url"] == base
+    assert client.put(ROOT, json={"model": "deepseek-flash"}).status_code == 422
+    assert client.put(ROOT, json={**settings, "provider": "deepseek"}).status_code == 422
+    assert client.put(ROOT, json={**settings, "model": "bad/model"}).status_code == 422
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append(url)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "OK"}}]})
+
+    monkeypatch.setattr(llm.httpx, "post", post)
+    assert client.post(f"{ROOT}/test").json == {"ok": True}
+    assert calls == [base + "/chat/completions"]
+    monkeypatch.setattr(local_key.socket, "getaddrinfo", lambda *a, **k: [(0, 0, 0, "", ("10.2.3.4", 443))])
+    assert client.post(f"{ROOT}/test").status_code == 502
+    assert len(calls) == 1
+    assert client.put(ROOT, json=settings).status_code == 422
+
+
+@pytest.mark.parametrize("base", [
+    "http://example.org", "https://name:secret@example.org/v1", "https://example.org/v1?q=1",
+    "https://example.org/v1#x", "https://localhost", "https://service.local", "https://[::1]/v1",
+    "https://127.1", "https://169.254.1.3", "https://192.168.1.3", "https://[fd00::2]",
+    "https://example.org:65536", "https://example.org\\@localhost", 17,
+])
+def test_invalid_personal_base_urls(local, base):
+    client = local()
+    response = client.put(ROOT, json={"provider": "openai", "model": "gpt-4o", "api_key": FIXTURE_KEY,
+                                      "base_url": base})
+    assert response.status_code == 422 and not client.get(f"{ROOT}/status").json["configured"]

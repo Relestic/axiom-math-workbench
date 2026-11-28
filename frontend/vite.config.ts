@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { createAIMiddleware } from "./server/ai";
@@ -20,6 +21,20 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      {
+        name: "pdfjs-offline-resources",
+        apply: "build",
+        generateBundle() {
+          // PDF.js requests CMaps, fonts and scan decoders by their original filenames.
+          for (const dir of ["cmaps", "standard_fonts", "wasm"]) {
+            const root = resolve("node_modules/pdfjs-dist", dir);
+            for (const name of readdirSync(root)) {
+              this.emitFile({ type: "asset", fileName: `assets/pdfjs/${dir}/${name}`,
+                source: readFileSync(resolve(root, name)) });
+            }
+          }
+        },
+      },
       {
         name: "katex-offline-woff2",
         enforce: "pre",

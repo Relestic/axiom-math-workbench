@@ -222,7 +222,7 @@ export function CompanionPanel({page, desk, stage, stageView}: {
       {!turns.length && <p className="companion-intro">{status?.configured
         ? "可以问我当前的证明、图像或作答。" : "选一个问题，从当前知识点的本地讲义开始。"}</p>}
       {turns.map((m,i) => <article key={i} className={"companion-bubble " + m.role}>
-        <small>{m.role === "user" ? "你" : m.local ? "Hiyori · 本地讲义" : "Hiyori · DeepSeek"}</small>
+        <small>{m.role === "user" ? "你" : m.local ? "Hiyori · 本地讲义" : "Hiyori · AI"}</small>
         <BubbleText text={m.content}/>
         {m.actionNotice && <p className="companion-notice" role="status">{m.actionNotice}</p>}
         {m.spoken && !muted && <button type="button" className="read-reply" onClick={() => void read(m.spoken!)}>朗读</button>}

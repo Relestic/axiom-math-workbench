@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +16,8 @@ from app.models import Asset, Attempt, Concept, Exercise, ModelCall, Proof, Text
 from app.modules.local_textbooks import normalize_title
 
 ROOT = "/api/v1/local"
+JPEG = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff\xe0").decode()
+PNG = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n").decode()
 
 
 def textbook_pdf(page_text=b"Uniform continuity on compact intervals."):
@@ -50,6 +53,87 @@ def upload(client, data=None):
     return client.post(
         ROOT + "/textbooks", data={"file": (io.BytesIO(data or textbook_pdf()), "数学讲义.pdf")}
     )
+
+
+@pytest.mark.parametrize("provider,model,vision", [
+    ("deepseek", "deepseek-v4-pro", "deepseek-flash"), ("openai", "o1-preview", "gpt-4o-mini"),
+    ("openai", "o3-mini", "gpt-4o-mini"), ("openai", "gpt-4.1", "gpt-4.1"),
+    ("openai", "gpt-5-mini", "gpt-5-mini"),
+])
+def test_ocr_filters_cached_pages_and_persists_blank_covers(local, app, monkeypatch, provider, model, vision):
+    book = upload(local).json
+    url = ROOT + "/textbooks/" + book["id"]
+    monkeypatch.setattr(app.config["AXIOM"], "ai_daily_call_limit", 0)
+    assert local.put("/api/v1/ai/key", json={"provider": provider, "model": model,
+                                             "api_key": "test-only-personal-key"}).status_code == 200
+    outputs = [{"pages": [{"page": 2, "text": ""}]}, {"cards": []}]
+
+    def post(url, **kwargs):
+        payload = kwargs["json"]
+        assert kwargs["trust_env"] == (provider == "openai")
+        if len(outputs) == 2:
+            assert payload["model"] == vision
+            assert payload["messages"][1]["content"] == [
+                {"type": "text", "text": "PDF 第 2 页"}, {"type": "image_url", "image_url": {"url": PNG}}]
+        else:
+            assert payload["model"] == model
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(outputs.pop(0))}}]})
+
+    monkeypatch.setattr(llm.httpx, "post", post)
+    request = {"pages": [{"page": 1, "image_data_url": JPEG}, {"page": 2, "image_data_url": PNG}]}
+    response = local.post(url + "/ocr-pages", json=request)
+    assert response.status_code == 200, response.json
+    assert response.json["pages"] == [book["pages"][0], {"page": 2, "char_count": 0,
+                                                         "needs_ocr": False, "ocr_done": True}]
+    assert local.post(url + "/extract-cards", json={"page_start": 2, "page_end": 2}).json == {"cards": []}
+    local.delete("/api/v1/ai/key")
+    assert local.post(url + "/ocr-pages", json=request).json == response.json
+    with session_scope() as session:
+        assert session.get(Textbook, book["id"]).parse_meta["pages"][1]["text"] == ""
+        records = session.scalars(select(ModelCall).where(ModelCall.purpose == "page_ocr")).all()
+        assert [(r.model, r.status) for r in records] == [(vision, "ok")]
+
+
+def test_ocr_concurrent_offline_cache_and_input_validation(local, app):
+    book = upload(local, textbook_pdf(b"")).json
+    url = ROOT + "/textbooks/" + book["id"] + "/ocr-pages"
+    pages = [{"page": 1, "image_data_url": JPEG}, {"page": 2, "image_data_url": PNG}]
+    assert local.post(url, json={"pages": pages}, headers={"Origin": "https://outside.invalid"}).status_code == 403
+    oversized = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff" + bytes(4*1024**2 - 2)).decode()
+    for invalid in ([], pages * 2, [pages[0]] * 2, [{"page": 3, "image_data_url": JPEG}],
+                    [{"page": True, "image_data_url": JPEG}], [{"page": 0, "image_data_url": JPEG}],
+                    [{"page": 1, "image_data_url": JPEG.replace("jpeg", "png")}],
+                    [{"page": 1, "image_data_url": "data:image/png;base64,!!!!"}],
+                    [{"page": 1, "image_data_url": oversized}]):
+        assert local.post(url, json={"pages": invalid}).status_code == 422
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: app.test_client().post(url, json={"pages": pages}), range(2)))
+    assert results[0].status_code == results[1].status_code == 200
+    assert results[0].json == results[1].json
+    with session_scope() as session:
+        assert len(session.scalars(select(ModelCall).where(ModelCall.purpose == "page_ocr")).all()) == 1
+        for page in session.get(Textbook, book["id"]).parse_meta["pages"]:
+            assert page["ocr_done"] and page["char_count"] == len(page["text"]) and "$x^2$" in page["text"]
+
+
+def test_bad_ocr_reply_leaves_all_pages_retryable(local, monkeypatch):
+    book = upload(local, textbook_pdf(b"")).json
+    url = ROOT + "/textbooks/" + book["id"] + "/ocr-pages"
+    assert local.put("/api/v1/ai/key", json={"api_key": "fixture-only", "model": "deepseek-flash"}).status_code == 200
+    reply = {"pages": [{"page": 2, "text": "some text"}, {"page": 2, "text": ""}]}
+    monkeypatch.setattr(llm.httpx, "post", lambda *a, **k: httpx.Response(200, json={
+        "choices": [{"message": {"content": json.dumps(reply)}}]}))
+    result = local.post(url, json={"pages": [{"page": page, "image_data_url": JPEG} for page in (1, 2)]})
+    assert result.status_code == 502
+    with session_scope() as session:
+        assert all(p["needs_ocr"] for p in session.get(Textbook, book["id"]).parse_meta["pages"])
+        assert session.scalar(select(ModelCall.status).where(ModelCall.purpose == "page_ocr")) == "invalid"
+
+
+def test_server_key_still_obeys_daily_quota(app, client, student_headers, monkeypatch):
+    monkeypatch.setattr(app.config["AXIOM"], "ai_daily_call_limit", 0)
+    response = client.post("/api/v1/ai/test", headers=student_headers)
+    assert response.status_code == 429 and response.json["error"]["code"] == "rate_limited"
 
 
 def test_shelf_file_metadata_dedup_and_deletion(local):
@@ -464,6 +548,7 @@ def test_card_exercises_validation_owner_and_quota(local, app, monkeypatch, card
         assert local.post(f"{ROOT}/cards/{cid}/{action}").status_code == 404
     calls = len(prompts)
     monkeypatch.setattr(app.config["AXIOM"], "ai_daily_call_limit", 1)
-    assert local.post(url).status_code == 429 and len(prompts) == calls
+    reply["exercises"] = [EXERCISE]
+    assert local.post(url).status_code == 201 and len(prompts) == calls + 1
     local.delete("/api/v1/ai/key")
-    assert local.post(url).status_code == 503 and len(prompts) == calls
+    assert local.post(url).status_code == 503 and len(prompts) == calls + 1

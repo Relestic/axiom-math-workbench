@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from ..api.local_only import require_local
 from ..config import Config
 from ..errors import ApiError
-from .local_key import Credentials, LocalKeyStore
+from .local_key import DEFAULT_BASE_URL, Credentials, LocalKeyStore, clean_base_url
 from ..models import ModelCall
 
 CODE_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
@@ -60,24 +60,22 @@ def local_key_store() -> LocalKeyStore:
 def _local_config(credentials: Credentials) -> Config:
     return replace(
         current_app.config["AXIOM"],
-        ai_provider="deepseek",
-        ai_base_url="https://api.deepseek.com",
+        ai_provider=credentials.provider,
+        ai_base_url=credentials.base_url or DEFAULT_BASE_URL[credentials.provider],
         ai_model=credentials.model,
         ai_api_key=credentials.api_key,
     )
 
 
-def _require_credentials() -> Credentials:
+def use_local_ai(*, allow_mock: bool = False) -> Config:
+    """Use the protected personal settings for subsequent calls in this request."""
     require_local()
     credentials = local_key_store().read()
     if credentials is None:
+        config = current_app.config["AXIOM"]
+        if allow_mock and config.ai_provider == "mock":
+            return config
         raise ApiError("service_unavailable", "请先在顶部配置个人 DeepSeek Key")
-    return credentials
-
-
-def use_local_ai() -> Config:
-    """Use the protected personal settings for subsequent calls in this request."""
-    credentials = _require_credentials()
     g.local_ai_credentials = credentials
     g.local_ai_config = _local_config(credentials)
     return g.local_ai_config
@@ -92,8 +90,8 @@ def _mark_local_result(credentials: Credentials, *, ok: bool) -> None:
 
 
 def test_local_connection() -> None:
-    credentials = _require_credentials()
-    config = _local_config(credentials)
+    config = use_local_ai()
+    credentials = g.local_ai_credentials
     try:
         _post_chat(
             [{"role": "user", "content": "Reply with OK."}],
@@ -137,12 +135,17 @@ class _MockProvider:
         user_text = ""
         for message in reversed(messages):
             if message.get("role") == "user":
-                user_text = str(message.get("content", ""))
+                content = message.get("content", "")
+                user_text = ("\n".join(part["text"] for part in content if part.get("type") == "text")
+                             if isinstance(content, list) else content)
                 break
         if purpose in {"plot", "plot_change"}:
             payload = self._plot_payload(user_text)
         elif purpose == "surface_plot":
             payload = self._surface_payload(user_text)
+        elif purpose == "page_ocr":
+            payload = {"pages": [{"page": int(number), "text": f"模拟转写第 {number} 页：$x^2$。"}
+                                 for number in re.findall(r"PDF 第 (\d+) 页", user_text)]}
         elif purpose == "interpret":
             payload = {
                 "message": "这是模拟模型的解释：图像中的 ε 带与 δ 邻域帮助你区分逐点控制与统一控制。",
@@ -257,7 +260,7 @@ def _post_chat(
         "model": config.ai_model,
         "messages": messages,
         "stream": False,
-        "max_tokens": max_tokens,
+        ("max_completion_tokens" if config.ai_openai_reasoning else "max_tokens"): max_tokens,
     }
     if config.ai_provider == "deepseek" and purpose in REALTIME_PURPOSES:
         payload["thinking"] = {"type": "disabled"}
@@ -266,9 +269,11 @@ def _post_chat(
     if json_mode and config.ai_json_effective:
         payload["response_format"] = {"type": "json_object"}
     started = time.perf_counter()
-    connection_options = {"trust_env": False} if personal else {}
+    connection_options = {"trust_env": config.ai_provider == "openai"} if personal else {}
     for attempt in range(attempts):
         try:
+            if personal and config.ai_base_url != DEFAULT_BASE_URL[config.ai_provider]:
+                clean_base_url(config.ai_base_url, require_resolution=True)
             response = httpx.post(
                 config.ai_endpoint,
                 headers={
@@ -314,7 +319,8 @@ def _post_chat(
             data = response.json()
             message = data["choices"][0]["message"]
             content = message.get("content")
-            if personal and purpose == "connection_test" and message.get("reasoning_content"):
+            if personal and purpose == "connection_test" and (message.get("reasoning_content") or
+                    (config.ai_openai_reasoning and data["choices"][0].get("finish_reason") == "length")):
                 # A bounded probe can spend its entire token budget on reasoning.
                 content = "OK"
             usage = data.get("usage") or {}
@@ -397,9 +403,15 @@ def chat(
             "模型尚未配置。请设置 AXIOM_AI_PROVIDER=deepseek、AI_MODEL 和 AI_API_KEY，"
             "或继续使用本地公式编辑与模板练习。",
         )
-    if user_id and daily_call_count(session, user_id) >= config.ai_daily_call_limit:
+    local_credentials = g.get("local_ai_credentials")
+    if purpose == "page_ocr":
+        if config.ai_provider == "deepseek":
+            config = replace(config, ai_model="deepseek-flash")
+        elif config.ai_provider == "openai" and config.ai_model.lower().startswith(("o1", "o3")):
+            config = replace(config, ai_model="gpt-4o-mini")
+    if local_credentials is None and user_id and daily_call_count(session, user_id) >= config.ai_daily_call_limit:
         raise ApiError("rate_limited", "今日模型调用额度已用完")
-    if not user_id:
+    if local_credentials is None and not user_id:
         start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
@@ -416,7 +428,6 @@ def chat(
             raise ApiError("rate_limited", "公开演示的 AI 额度已用完，请明天再试")
     timeout = timeout or config.ai_timeout_seconds
     started = time.perf_counter()
-    local_credentials = g.get("local_ai_credentials")
     record = ModelCall(
         user_id=user_id,
         job_id=job_id,
@@ -433,6 +444,8 @@ def chat(
             json_mode=json_mode,
             timeout=timeout,
             max_tokens=max_tokens,
+            config=config,
+            attempts=1 if purpose == "page_ocr" else 2,
             personal=local_credentials is not None,
         )
         if local_credentials is not None:

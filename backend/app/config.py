@@ -22,6 +22,10 @@ DEEPSEEK_LEGACY_MODELS = {
 }
 
 
+def openai_reasoning_model(model: str) -> bool:
+    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
+
+
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
@@ -115,8 +119,12 @@ class Config:
         }.get(self.ai_provider, self.ai_provider)
 
     @property
+    def ai_openai_reasoning(self) -> bool:
+        return self.ai_provider == "openai" and openai_reasoning_model(self.ai_model)
+
+    @property
     def ai_is_reasoner(self) -> bool:
-        return "reasoner" in self.ai_model.lower() or "thinking" in self.ai_model.lower()
+        return self.ai_openai_reasoning or "reasoner" in self.ai_model.lower() or "thinking" in self.ai_model.lower()
 
     @property
     def ai_json_effective(self) -> bool:

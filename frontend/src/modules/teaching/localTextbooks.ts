@@ -2,6 +2,7 @@ import type { LocalBook } from "../../domain/types";
 import type { ExerciseDto } from "../../domain/dto";
 import { apiFetch } from "../../lib/api";
 import type { CardVisual } from "../visualization/cardVisual";
+import type { OCRPageImage } from "./pdfPageRenderer";
 
 const libraryPath = "/api/v1/local/textbooks";
 const local = { auth: false };
@@ -21,6 +22,11 @@ export function deleteTextbook(id: string) {
 export function extractCards(id: string, start: number, end: number) {
   return apiFetch<{ cards: { id: string; title: string }[] }>(`${bookPath(id)}/extract-cards`, {
     method: "POST", body: JSON.stringify({ page_start: start, page_end: end }),
+  }, local);
+}
+export function cacheOCRPages(id: string, pages: OCRPageImage[]) {
+  return apiFetch<LocalBook>(`${bookPath(id)}/ocr-pages`, {
+    method: "POST", body: JSON.stringify({ pages }),
   }, local);
 }
 export function generateCardProof(id: string) {

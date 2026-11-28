@@ -4,12 +4,12 @@ import { useAppData } from "../app/DataProvider";
 import type { LocalBook } from "../domain/types";
 import { useAIConnection } from "../modules/ai/connection";
 import {
-  completeCards, deleteTextbook, extractCards, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
+  cacheOCRPages, completeCards, deleteTextbook, extractCards, renameTextbook, textbookPageUrl, uploadTextbook, type ReadingPosition,
 } from "../modules/teaching/localTextbooks";
 import "./local-textbooks.css";
 
-const keyMessage = "请先在顶部配置个人 DeepSeek Key";
-const scanMessage = (page: number) => `第 ${page} 页疑似图片扫描版，暂不支持自动提取文字卡片，但仍可原页对照阅读`;
+const keyMessage = "请先在顶部配置个人 DeepSeek Key 或 OpenAI Key";
+const scanMessage = (page: number) => `第 ${page} 页疑似图片扫描版，可用个人 AI 识别并缓存文字。`;
 
 function message(cause: unknown) {
   if (cause instanceof TypeError) return "无法连接本机工作台，请检查本地服务后重试。";
@@ -64,16 +64,32 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
       setError("请选择连续的 1 至 15 页，结束页应大于或等于起始页。");
       return;
     }
-    if (selectedScans.length) {
-      setError(scanMessage(selectedScans[0].page));
-      return;
-    }
     void run("正在生成学习卡片…", async () => {
       stop.current = false;
       setGenerating(true);
       try {
+        if (selectedScans.length) {
+          const { renderPdfPages } = await import("../modules/teaching/pdfPageRenderer");
+          for (let i = 0; i < selectedScans.length; i += 3) {
+            const pages = selectedScans.slice(i, i + 3).map(item => item.page);
+            setBusy(`正在识别扫描页 ${pages.join("、")}…`);
+            const images = await renderPdfPages(textbookPageUrl(book.id, pages[0]), pages);
+            if (!stop.current) {
+              await cacheOCRPages(book.id, images);
+              await refreshLocal();
+            }
+            if (stop.current) {
+              setStatus("已停止后续生成，已识别的页面保存在书架中。");
+              return;
+            }
+          }
+          setBusy("正在生成学习卡片…");
+        }
         const { cards } = await extractCards(book.id, rangeStart, rangeEnd);
-        if (!cards.length) throw new Error("所选页码未生成卡片，请检查原文后重试。");
+        if (!cards.length) {
+          setStatus("所选页面没有可提取的知识卡片。");
+          return;
+        }
         setNewCardId(cards[0].id);
         const failed = (context: string, cause: unknown) =>
           setFailures(previous => [...previous, context + "：" + message(cause)]);
@@ -136,7 +152,8 @@ function BookEntry({ book, read, openCard }: ShelfActions & { book: LocalBook })
           }} /></label>
         <label>结束页<input type="number" min={1} max={book.page_count} required value={end}
           onChange={(event) => setEnd(event.target.value)} /></label>
-        <button className="btn primary" disabled={Boolean(busy)}><Sparkles size={14} />生成学习卡片</button>
+        <button className="btn primary" disabled={Boolean(busy)}><Sparkles size={14} />
+          {selectedScans.length ? "识别扫描页并生成学习卡片" : "生成学习卡片"}</button>
         {generating && <button type="button" className="btn" disabled={stop.current} onClick={() => {
           stop.current = true;
           setBusy("正在等待当前请求结束，随后停止生成…");
