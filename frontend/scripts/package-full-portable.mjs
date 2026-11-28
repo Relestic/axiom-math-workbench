@@ -11,6 +11,7 @@ import {
   rm,
 } from "node:fs/promises";
 import { dirname, join, resolve, relative } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -122,17 +123,31 @@ AXIOM_LEGACY_AI=true
   );
   for (const [path, info] of Object.entries(lock.packages)) {
     if (!path || info.dev) continue;
-    const folder = join(frontend, path),
-      metadata = JSON.parse(
-        await readFile(join(folder, "package.json"), "utf8"),
-      );
-    const files = (await readdir(folder)).filter((n) =>
+    const folder = join(frontend, path);
+    let entries;
+    try {
+      entries = await readdir(folder);
+    } catch (error) {
+      if (info.optional && error.code === "ENOENT") continue;
+      throw error;
+    }
+    const metadata = JSON.parse(
+      await readFile(join(folder, "package.json"), "utf8"),
+    );
+    const files = entries.filter((n) =>
       /^(licen[sc]e|notice|copying|copyright)([._-]|$)/i.test(n),
     );
     if (metadata.name === "javascript-natural-sort" && !files.length)
       files.push("naturalSort.js", "package.json", "README.md");
     if (metadata.name === "seedrandom" && !files.length)
       files.push("seedrandom.js", "README.md");
+    let licenseFolder = folder;
+    if (metadata.name === "@napi-rs/canvas-win32-x64-msvc" && !files.length) {
+      // The Windows binary's MIT license ships with the main canvas package.
+      const require = createRequire(join(folder, "package.json"));
+      licenseFolder = dirname(require.resolve("@napi-rs/canvas/package.json"));
+      files.push("LICENSE");
+    }
     if (!files.length) throw new Error(`Missing license: ${metadata.name}`);
     const destination = join(
       output,
@@ -141,8 +156,8 @@ AXIOM_LEGACY_AI=true
     );
     await mkdir(destination, { recursive: true });
     for (const file of files)
-      if ((await stat(join(folder, file))).isFile())
-        await copyFile(join(folder, file), join(destination, file));
+      if ((await stat(join(licenseFolder, file))).isFile())
+        await copyFile(join(licenseFolder, file), join(destination, file));
   }
   await copyFile(
     join(runtime, "site-packages", pdf.licenses[0]),
