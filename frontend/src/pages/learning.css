@@ -1,8 +1,175 @@
 .learning-page {
   font-size: 13px;
 }
-.local-lecture-card h1 { font-size: 21px; }
-.local-lecture-card li, .local-lecture-card p { line-height: 1.85; }
+.local-lecture-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 26px;
+}
+.local-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.local-card-topbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.local-card-kicker {
+  font-size: 12px;
+  color: var(--muted);
+}
+.local-card-source {
+  margin-left: auto;
+}
+.local-lecture-card h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+.local-formula-showcase {
+  padding: 12px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  text-align: center;
+}
+.local-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.local-definition-box {
+  padding: 16px 18px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 12px;
+}
+.local-theorem-box {
+  padding: 16px 18px;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-border);
+  border-left: 4px solid var(--amber-solid);
+  border-radius: 12px;
+}
+.learning-page .badge.local-amber-badge {
+  background: var(--surface);
+  color: var(--amber);
+  border: 1px solid var(--amber-border);
+}
+.learning-page .badge.local-teal-badge {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+.local-prose {
+  font-size: 14.5px;
+  line-height: 1.95;
+  color: var(--text);
+}
+.local-prose .math-block {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.local-condition-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.local-condition-list .condition-row {
+  margin: 0;
+  padding: 11px 13px;
+  background: var(--surface-raised);
+  align-items: center;
+}
+.local-condition-text {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text);
+}
+.local-proof-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.local-proof-step {
+  padding: 14px 16px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.local-proof-step.local-proof-plain {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+.local-step-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.local-step-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.local-step-title {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.local-step-formula {
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+.local-step-body {
+  font-size: 13.8px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  min-width: 0;
+}
+.local-step-body .math-block {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.local-card-actions {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.local-proof-cta {
+  margin-left: auto;
+}
 .learning-page .section-title {
   gap: 9px;
   flex-wrap: wrap;

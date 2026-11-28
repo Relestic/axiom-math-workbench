@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 import { useAppData } from "../../app/DataProvider";
 import { useWorkspaceEndpoint } from "../../app/useWorkspaceEndpoint";
-import { MathText } from "../../components/Math";
+import { MathBlock, MathText } from "../../components/Math";
 import { DefinitionTokens, Heading, SourcePageButton, useUnit, type SourceProps } from "./shared";
 
 export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: SourceProps) {
@@ -42,21 +42,81 @@ export function Textbook({ onNavigate, onSaveNote, notify, onReadSource }: Sourc
   if (unit.textbookSource) {
     const source = unit.textbookSource;
     const book = app.localBooks.find((item) => item.id === source.textbookId);
+    const richSteps = unit.proofSteps?.length ? unit.proofSteps : null;
+    const showFormula = Boolean(unit.formula && unit.formula.trim() && unit.formula !== source.theorem);
     return <article className="learning-page card local-lecture-card">
-      <p className="muted">{book?.title || "本地教材"} · 学习卡片</p>
-      <h1>{unit.title}</h1>
-      <SourcePageButton source={source} read={onReadSource} />
-      <h3>定义</h3><p><MathText>{unit.definition}</MathText></p>
-      {unit.conditions.length > 0 && <><h3>条件</h3><ul>{unit.conditions.map((value, index) => <li key={index}><MathText>{value}</MathText></li>)}</ul></>}
-      {source.theorem && <><h3>定理</h3><p><MathText>{source.theorem}</MathText></p></>}
-      {unit.formula && unit.formula !== source.theorem && <p><MathText>{unit.formula}</MathText></p>}
-      {unit.proof.length > 0 && <><h3>{unit.proofStatus === "ai_elaboration" ? "AI 补充分步推导" : "证明思路"}</h3>
-        <ol>{unit.proof.map((value, index) => <li key={index}><MathText>{value}</MathText></li>)}</ol></>}
-      <div className="button-row">
+      <header className="local-card-header">
+        <div className="local-card-topbar">
+          <span className="badge purple">{book?.title || "本地教材"}</span>
+          <span className="local-card-kicker">学习卡片</span>
+          <div className="local-card-source">
+            <SourcePageButton source={source} read={onReadSource} />
+          </div>
+        </div>
+        <h1><MathText>{unit.title}</MathText></h1>
+      </header>
+
+      {showFormula && <div className="local-formula-showcase" aria-label="核心公式">
+        <MathBlock>{unit.formula}</MathBlock>
+      </div>}
+
+      <section className="local-section local-definition-box">
+        <div className="section-title">
+          <span className="badge purple">概念</span>
+          <h3>定义</h3>
+        </div>
+        <div className="local-prose"><MathText>{unit.definition}</MathText></div>
+      </section>
+
+      {unit.conditions.length > 0 && <section className="local-section">
+        <div className="section-title">
+          <span className="badge dark">前提</span>
+          <h3>条件</h3>
+          <small className="muted">共 {unit.conditions.length} 项适用前提</small>
+        </div>
+        <ul className="local-condition-list">
+          {unit.conditions.map((value, index) => <li className="condition-row" key={index}>
+            <span className="check-icon"><Check size={13} /></span>
+            <div className="local-condition-text"><MathText>{value}</MathText></div>
+            <span className="condition-number">{String(index + 1).padStart(2, "0")}</span>
+          </li>)}
+        </ul>
+      </section>}
+
+      {source.theorem && <section className="local-section local-theorem-box">
+        <div className="section-title">
+          <span className="badge local-amber-badge">核心命题</span>
+          <h3>定理</h3>
+        </div>
+        <div className="local-prose"><MathText>{source.theorem}</MathText></div>
+      </section>}
+
+      {unit.proof.length > 0 && <section className="local-section">
+        <div className="section-title">
+          <span className="badge local-teal-badge">{unit.proofStatus === "ai_elaboration" ? "AI 拆解" : "教材推导"}</span>
+          <h3>{unit.proofStatus === "ai_elaboration" ? "AI 补充分步推导" : "证明思路"}</h3>
+          <small className="muted">共 {(richSteps ?? unit.proof).length} 步</small>
+        </div>
+        <ol className="local-proof-steps">
+          {richSteps ? richSteps.map((step) => <li className="local-proof-step" key={step.n}>
+            <div className="local-step-head">
+              <span className="local-step-num">{String(step.n).padStart(2, "0")}</span>
+              <strong className="local-step-title"><MathText>{step.title}</MathText></strong>
+            </div>
+            {step.formula && <div className="local-step-formula"><MathBlock>{step.formula}</MathBlock></div>}
+            <div className="local-step-body"><MathText>{step.text}</MathText></div>
+          </li>) : unit.proof.map((value, index) => <li className="local-proof-step local-proof-plain" key={index}>
+            <span className="local-step-num">{String(index + 1).padStart(2, "0")}</span>
+            <div className="local-step-body"><MathText>{value}</MathText></div>
+          </li>)}
+        </ol>
+      </section>}
+
+      <footer className="button-row local-card-actions">
         <button className="btn" onClick={toggle}><Bookmark size={14} />{bookmarked.includes(unit.id) ? "已收藏" : "收藏"}</button>
         <button className="btn" onClick={() => onSaveNote(`${unit.title}：${unit.definition}`, unit.id)}>记入笔记</button>
-        {unit.proof.length > 0 && <button className="btn primary" onClick={() => onNavigate("proof")}>逐步读证明 <ArrowRight size={14} /></button>}
-      </div>
+        {unit.proof.length > 0 && <button className="btn primary local-proof-cta" onClick={() => onNavigate("proof")}>逐步读证明 <ArrowRight size={14} /></button>}
+      </footer>
     </article>;
   }
   return (

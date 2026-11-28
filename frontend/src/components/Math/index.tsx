@@ -28,9 +28,11 @@ export function MathBlock({ children }: { children: string }) {
 }
 export const MathText = memo(function MathText({ children }: { children: string }) {
   const parts = useMemo(() => splitMath(children), [children]);
-  return <>{parts.map((part, i) => part.kind === "text"
-    ? <Fragment key={i}>{part.text}</Fragment>
-    : <Formula key={i} source={part.text} block={part.kind === "block"} />)}</>;
+  return <>{parts.map((part, i) => {
+    if (part.kind === "text") return <Fragment key={i}>{part.text}</Fragment>;
+    const chainedDisplay = part.kind === "inline" && part.text.length >= 42 && (part.text.match(/=/g)?.length ?? 0) >= 2;
+    return <Formula key={i} source={part.text} block={part.kind === "block" || chainedDisplay} />;
+  })}</>;
 });
 
 export function SymbolBar({ inputRef, value, onChange }: {
